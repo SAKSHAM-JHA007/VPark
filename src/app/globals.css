@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --canvas-bg: #f9f8f5;
+  --surface-bg: #ffffff;
+  --surface-alt: #f2f0eb;
+  --hairline: #e4e2db;
+  --hairline-strong: #cecbc2;
+  --ink: #181715;
+  --ink-secondary: #636058;
+  --ink-tertiary: #949187;
+  --transit-accent: #0b45b8;
+  --transit-accent-hover: #083491;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+}
+
+.dark {
+  --canvas-bg: #141312;
+  --surface-bg: #1b1a18;
+  --surface-alt: #232220;
+  --hairline: #2b2a26;
+  --hairline-strong: #3b3a35;
+  --ink: #f4f3ef;
+  --ink-secondary: #9c9990;
+  --ink-tertiary: #6b6962;
+  --transit-accent: #3370ff;
+  --transit-accent-hover: #1f5fe8;
+}
+
+body {
+  color: var(--ink);
+  background-color: var(--canvas-bg);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures for numbers, rates, and timestamps */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Precise hairline dividers */
+.hairline-b {
+  border-bottom: 1px solid var(--hairline);
+}
+.hairline-t {
+  border-top: 1px solid var(--hairline);
+}
+.hairline-r {
+  border-right: 1px solid var(--hairline);
+}
+.hairline-l {
+  border-left: 1px solid var(--hairline);
+}
+.hairline-all {
+  border: 1px solid var(--hairline);
+}
+
+/* WCAG 2.2 AA visible keyboard focus outline */
+:focus-visible {
+  outline: 2px solid var(--transit-accent);
+  outline-offset: 2px;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--canvas-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--hairline-strong);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-secondary);
+}

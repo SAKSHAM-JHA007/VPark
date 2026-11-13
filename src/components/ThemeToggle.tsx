@@ -1,0 +1,65 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { Sun, Moon } from 'lucide-react';
+
+interface ThemeToggleProps {
+  className?: string;
+}
+
+export function ThemeToggle({ className = '' }: ThemeToggleProps) {
+  const [isDark, setIsDark] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const isCurrentlyDark = document.documentElement.classList.contains('dark');
+    setIsDark(isCurrentlyDark);
+
+    const handleThemeChange = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+
+    window.addEventListener('vpark-theme-change', handleThemeChange);
+    return () => window.removeEventListener('vpark-theme-change', handleThemeChange);
+  }, []);
+
+  const toggleTheme = () => {
+    const nextDark = !isDark;
+    setIsDark(nextDark);
+
+    if (nextDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('vpark_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('vpark_theme', 'light');
+    }
+
+    window.dispatchEvent(new Event('vpark-theme-change'));
+  };
+
+  // Avoid layout shift during hydration
+  if (!mounted) {
+    return (
+      <div className={`w-7 h-7 rounded-sm border border-[var(--hairline)] ${className}`} />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className={`w-7 h-7 flex items-center justify-center rounded-sm border border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface-bg)] text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-colors ${className}`}
+    >
+      {isDark ? (
+        <Sun className="w-3.5 h-3.5 text-amber-500" />
+      ) : (
+        <Moon className="w-3.5 h-3.5 text-[var(--ink)]" />
+      )}
+    </button>
+  );
+}
+

@@ -1,0 +1,68 @@
+import type { Metadata, Viewport } from 'next';
+import './globals.css';
+
+export const metadata: Metadata = {
+  title: 'VPark · Find Your Spot. Own Your Time. | Bengaluru Parking',
+  description:
+    'Discover verified residential and commercial parking spaces near you in Yelahanka, Bengaluru, or rent out your unused space safely with VPark.',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.svg',
+  },
+  openGraph: {
+    title: 'VPark · Find Your Spot. Own Your Time.',
+    description:
+      'Verified two-sided parking marketplace in Bengaluru. Rent your unused space or find convenient parking near your destination.',
+    type: 'website',
+    locale: 'en_IN',
+    siteName: 'VPark',
+    images: [
+      {
+        url: '/favicon.svg',
+        width: 512,
+        height: 512,
+        alt: 'VPark Bengaluru Verified Parking',
+      },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#0A5CFF',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('vpark_theme');
+                  var supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  if (theme === 'dark' || (!theme && supportDarkMode)) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-screen flex flex-col bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-150">
+        {children}
+      </body>
+    </html>
+  );
+}

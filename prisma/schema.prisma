@@ -1,0 +1,249 @@
+// Canonical PostgreSQL + PostGIS schema aligned with VPARK PRD v2.2 (Section 9)
+// Money stored strictly as integer paise; timestamps preferred over booleans; soft deletes enabled.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DELETION_PENDING
+}
+
+enum RoleName {
+  PROVIDER
+  DRIVER
+  ADMIN
+}
+
+enum ProviderType {
+  OWNER
+  OPERATOR
+  MANAGER
+}
+
+enum VehicleType {
+  TWO_WHEELER
+  HATCHBACK
+  SEDAN
+  SUV
+  EV
+}
+
+enum SpaceType {
+  PRIVATE
+  COMMERCIAL
+  OTHER
+  PUBLIC
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_REVIEW
+  NEEDS_INFO
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+model User {
+  id              String        @id @default(uuid()) @db.Uuid
+  fullName        String        @map("full_name") @db.VarChar(150)
+  email           String?       @unique
+  phone           String        @unique // E.164 format (+91XXXXXXXXXX)
+  passwordHash    String?       @map("password_hash")
+  emailVerifiedAt DateTime?     @map("email_verified_at") @db.Timestamptz
+  phoneVerifiedAt DateTime?     @map("phone_verified_at") @db.Timestamptz
+  accountStatus   AccountStatus @default(ACTIVE) @map("account_status")
+  lastLoginAt     DateTime?     @map("last_login_at") @db.Timestamptz
+  deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  userRoles       UserRole[]
+  providerProfile ProviderProfile?
+  driverProfile   DriverProfile?
+  vehicles        Vehicle[]
+  consents        Consent[]
+  listings        ParkingListing[]
+  verifications   ListingVerification[] @relation("ReviewerVerifications")
+  auditLogs       AuditLog[]            @relation("ActorAuditLogs")
+
+  @@map("users")
+}
+
+model Role {
+  id        String     @id @default(uuid()) @db.Uuid
+  roleName  RoleName   @unique @map("role_name")
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  grantedAt DateTime @default(now()) @map("granted_at") @db.Timestamptz
+  grantedBy String   @map("granted_by")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model ProviderProfile {
+  userId       String       @id @map("user_id") @db.Uuid
+  providerType ProviderType @map("provider_type")
+  displayName  String       @map("display_name") @db.VarChar(150)
+  businessName String?      @map("business_name") @db.VarChar(200)
+  payoutMeta   Json?        @map("payout_meta") // Reserved for R3
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("provider_profiles")
+}
+
+model DriverProfile {
+  userId      String @id @map("user_id") @db.Uuid
+  preferences Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("driver_profiles")
+}
+
+model Vehicle {
+  id                 String      @id @default(uuid()) @db.Uuid
+  userId             String      @map("user_id") @db.Uuid
+  registrationNumber String      @map("registration_number") @db.VarChar(32)
+  vehicleType        VehicleType @map("vehicle_type")
+  isDefault          Boolean     @default(false) @map("is_default")
+  deletedAt          DateTime?   @map("deleted_at") @db.Timestamptz
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("vehicles")
+}
+
+model Consent {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  documentType    String   @map("document_type") @db.VarChar(64)
+  documentVersion String   @map("document_version") @db.VarChar(32)
+  acceptedAt      DateTime @default(now()) @map("accepted_at") @db.Timestamptz
+  ipAddress       String   @map("ip_address") @db.VarChar(64)
+  userAgent       String   @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("consents")
+}
+
+model OtpChallenge {
+  id         String    @id @default(uuid()) @db.Uuid
+  phone      String
+  codeHash   String    @map("code_hash")
+  purpose    String    @db.VarChar(32)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz
+  attempts   Int       @default(0)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([phone, createdAt])
+  @@map("otp_challenges")
+}
+
+model ParkingListing {
+  id              String                                @id @default(uuid()) @db.Uuid
+  providerId      String                                @map("provider_id") @db.Uuid
+  status          ListingStatus                         @default(DRAFT)
+  spaceType       SpaceType                             @map("space_type")
+  title           String                                @db.VarChar(200)
+  address         String
+  locality        String                                @db.VarChar(120)
+  latitude        Float
+  longitude       Float
+  location        Unsupported("geography(Point, 4326)")
+  capacity        Int
+  vehicleTypes    VehicleType[]                         @map("vehicle_types")
+  covered         Boolean
+  dimensionsNotes String?                               @map("dimensions_notes")
+  priceHourly     Int                                   @map("price_hourly") // stored in integer paise
+  priceDaily      Int?                                  @map("price_daily") // stored in integer paise
+  priceMonthly    Int?                                  @map("price_monthly") // stored in integer paise
+  accessNotes     String?                               @map("access_notes")
+  lastConfirmedAt DateTime?                             @map("last_confirmed_at") @db.Timestamptz
+  deletedAt       DateTime?                             @map("deleted_at") @db.Timestamptz
+  createdAt       DateTime                              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime                              @updatedAt @map("updated_at") @db.Timestamptz
+
+  provider      User                  @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  images        ListingImage[]
+  verifications ListingVerification[]
+
+  @@index([providerId])
+  @@index([status])
+  @@map("parking_listings")
+}
+
+model ListingImage {
+  id        String @id @default(uuid()) @db.Uuid
+  listingId String @map("listing_id") @db.Uuid
+  url       String
+  sortOrder Int    @default(0) @map("sort_order")
+
+  listing ParkingListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@map("listing_images")
+}
+
+model ListingVerification {
+  id               String        @id @default(uuid()) @db.Uuid
+  listingId        String        @map("listing_id") @db.Uuid
+  status           ListingStatus
+  reviewerId       String        @map("reviewer_id") @db.Uuid
+  reason           String?
+  evidenceObjectId String?       @map("evidence_object_id") // private encrypted object key
+  reviewedAt       DateTime      @default(now()) @map("reviewed_at") @db.Timestamptz
+
+  listing  ParkingListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer User           @relation("ReviewerVerifications", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([listingId])
+  @@index([reviewerId])
+  @@map("listing_verifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String   @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(80)
+  entityType String   @map("entity_type") @db.VarChar(40)
+  entityId   String   @map("entity_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  actor User @relation("ActorAuditLogs", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
