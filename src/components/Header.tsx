@@ -73,44 +73,53 @@ export function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[var(--surface-bg)] border-b border-[var(--hairline)] select-none">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-15 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 bg-[#0B0C10] border-b border-neutral-800 text-white select-none">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo + Primary Navigation */}
-        <div className="flex items-center gap-6 lg:gap-10">
+        <div className="flex items-center gap-6 lg:gap-8">
           <button
             type="button"
             onClick={() => onTabChange('search')}
-            className="flex items-center gap-2.5 text-left rounded-sm focus-visible:outline-2 py-0.5"
+            className="flex items-center gap-2.5 text-left rounded-sm focus-visible:outline-none"
           >
-            <VParkLogo className="h-7 sm:h-8 w-auto" />
-            <span className="hidden sm:inline-block text-[9px] font-mono tracking-widest text-[var(--ink-tertiary)] uppercase border-l border-[var(--hairline)] pl-2.5 py-0.5">
-              Pilot · BLR/YEL
-            </span>
+            <VParkLogo className="h-8 w-auto" />
           </button>
 
-          <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1 text-xs">
+          <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1.5 text-xs">
             <button
               type="button"
               onClick={() => onTabChange('search')}
-              className={`px-3 py-1.5 rounded-sm font-mono text-xs uppercase tracking-wider transition-colors ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                 activeTab === 'search'
-                  ? 'bg-[var(--surface-alt)] text-[var(--transit-accent)] font-semibold border-b-2 border-[var(--transit-accent)]'
-                  : 'text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-alt)]'
+                  ? 'bg-neutral-800 text-white shadow-xs'
+                  : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
               }`}
             >
-              <span className="opacity-40 mr-1.5">01</span>{t.findParking}
+              {t.findParking}
             </button>
 
             <button
               type="button"
               onClick={handleListSpaceClick}
-              className={`px-3 py-1.5 rounded-sm font-mono text-xs uppercase tracking-wider transition-colors ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                 activeTab === 'provider'
-                  ? 'bg-[var(--surface-alt)] text-[var(--transit-accent)] font-semibold border-b-2 border-[var(--transit-accent)]'
-                  : 'text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-alt)]'
+                  ? 'bg-neutral-800 text-white shadow-xs'
+                  : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
               }`}
             >
-              <span className="opacity-40 mr-1.5">02</span>{t.listSpace}
+              {t.listSpace}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onTabChange('monthly')}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                activeTab === 'monthly'
+                  ? 'bg-neutral-800 text-white shadow-xs'
+                  : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
+              }`}
+            >
+              For Businesses
             </button>
 
             <button
@@ -119,42 +128,52 @@ export function Header({
                 onTabChange('search');
                 setTimeout(onScrollHowItWorks, 50);
               }}
-              className="px-3 py-1.5 rounded-sm font-mono text-xs uppercase tracking-wider text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-colors"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-neutral-300 hover:text-white hover:bg-neutral-800/60 transition-colors inline-flex items-center gap-1"
             >
-              <span className="opacity-40 mr-1.5">03</span>{t.howItWorks}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onTabChange('monthly')}
-              className={`px-3 py-1.5 rounded-sm font-mono text-xs uppercase tracking-wider transition-colors ${
-                activeTab === 'monthly'
-                  ? 'bg-[var(--surface-alt)] text-[var(--transit-accent)] font-semibold border-b-2 border-[var(--transit-accent)]'
-                  : 'text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-alt)]'
-              }`}
-            >
-              <span className="opacity-40 mr-1.5">04</span>{t.monthlyPasses}
+              <span>{t.howItWorks}</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
             </button>
 
             {hasAdmin && (
               <button
                 type="button"
                 onClick={() => onTabChange('admin')}
-                className={`px-3 py-1.5 rounded-sm font-mono text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${
                   activeTab === 'admin'
-                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold border-b-2 border-amber-600'
-                    : 'text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-alt)]'
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
                 }`}
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                 {t.adminConsole}
               </button>
             )}
           </nav>
         </div>
 
-        {/* Right Side: Theme Toggle + Log in / Profile */}
-        <div className="flex items-center gap-2">
+        {/* Right Side: Location, Language, Theme Toggle, Log in / Profile */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Location Badge */}
+          <div className="hidden lg:flex items-center gap-1 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-200 text-xs">
+            <span className="text-[#0A5CFF] font-bold text-xs">📍</span>
+            <span className="font-medium text-[11px]">Bengaluru</span>
+            <ChevronDown className="w-3 h-3 text-neutral-400 ml-0.5" />
+          </div>
+
+          {/* Language Selector */}
+          {onLangChange && (
+            <div className="relative group">
+              <button
+                type="button"
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
+                title="Change language"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span className="uppercase text-[11px] font-semibold">{currentLang}</span>
+              </button>
+            </div>
+          )}
+
           <ThemeToggle />
 
           {currentUser && (
@@ -163,11 +182,11 @@ export function Header({
               onClick={() => onTabChange('bookings')}
               aria-label="My Bookings & Notifications"
               title="My Bookings & Notifications"
-              className="relative p-2 rounded-sm border border-[var(--hairline)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-colors"
+              className="relative p-2 rounded-full border border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
             >
               <Bell className="w-3.5 h-3.5" />
               {bookingsCount > 0 && (
-                <span className="absolute -top-1 -right-1 px-1 rounded-sm bg-[var(--transit-accent)] text-white text-[9px] font-mono leading-tight">
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-[#0A5CFF] text-white text-[9px] font-bold leading-tight">
                   {bookingsCount}
                 </span>
               )}
@@ -179,9 +198,16 @@ export function Header({
               <button
                 type="button"
                 onClick={() => onOpenLogin('driver')}
-                className="px-3.5 py-1.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] text-white font-mono text-xs uppercase tracking-wider transition-colors"
+                className="px-3 py-1.5 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
               >
                 {t.logIn}
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenLogin('driver')}
+                className="px-4 py-1.5 rounded-full bg-white hover:bg-neutral-100 text-neutral-950 text-xs font-bold transition-all shadow-sm"
+              >
+                Sign up
               </button>
             </div>
           ) : (
@@ -191,15 +217,15 @@ export function Header({
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 aria-expanded={showProfileMenu}
                 aria-label="Open account menu"
-                className="flex items-center gap-2 p-1.5 pl-2 pr-2 rounded-sm border border-[var(--hairline)] hover:bg-[var(--surface-alt)] transition-colors"
+                className="flex items-center gap-2 p-1.5 pl-2.5 pr-2 rounded-full border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-white transition-colors"
               >
-                <div className="w-5 h-5 rounded-xs bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[var(--ink)] flex items-center justify-center font-mono font-bold text-[10px]">
+                <div className="w-5 h-5 rounded-full bg-[#0A5CFF] text-white flex items-center justify-center font-bold text-[10px]">
                   {(currentUser.name || 'V')[0].toUpperCase()}
                 </div>
-                <span className="hidden sm:inline text-xs font-mono text-[var(--ink)] max-w-[120px] truncate">
+                <span className="hidden sm:inline text-xs font-medium text-neutral-200 max-w-[120px] truncate">
                   {currentUser.name || currentUser.phone}
                 </span>
-                <ChevronDown className="w-3 h-3 text-[var(--ink-tertiary)]" />
+                <ChevronDown className="w-3 h-3 text-neutral-400" />
               </button>
 
               {showProfileMenu && (

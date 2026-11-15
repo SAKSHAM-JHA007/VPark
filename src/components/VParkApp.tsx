@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   Building2,
   Car,
+  Store,
   Mail,
   Phone,
   ArrowRight,
@@ -363,22 +364,21 @@ export function VParkApp({
               </div>
             )}
 
-            {/* SWISS TRANSIT SEARCH TERMINAL */}
+            {/* PLAN YOUR PARKING SEARCH CONSOLE */}
             <div
               id="vpark-search"
               ref={searchSectionRef}
-              className="w-full bg-[var(--surface-bg)] border-b border-[var(--hairline)] py-8 sm:py-10 px-4 sm:px-6 lg:px-8"
+              className="w-full bg-[var(--canvas-bg)] border-b border-[var(--hairline)] py-6 sm:py-8 px-4 sm:px-6 lg:px-8"
             >
-              <div className="max-w-7xl mx-auto space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+              <div className="max-w-7xl mx-auto space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
                   <div>
-                    <div className="font-mono text-[10px] tracking-widest uppercase text-[var(--transit-accent)] flex items-center gap-1.5 mb-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--transit-accent)]" />
-                      Municipal Pilot Dispatch · Sector 01 (Yelahanka)
-                    </div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight uppercase text-[var(--ink)] leading-none">
-                      Find Verified Parking Bays
+                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--ink)] leading-none">
+                      Plan your parking
                     </h1>
+                    <p className="text-xs text-[var(--ink-secondary)] mt-1.5">
+                      Verified parking discovery and reservation across Yelahanka pilot anchors.
+                    </p>
                   </div>
                   <div className="font-mono text-[11px] text-[var(--ink-tertiary)] flex items-center gap-2">
                     <span>SECTOR 01</span>
@@ -387,71 +387,113 @@ export function VParkApp({
                   </div>
                 </div>
 
-                {/* High-Density Unified Search Terminal */}
-                <div className="border border-[var(--hairline-strong)] bg-[var(--surface-bg)] grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-[var(--hairline-strong)]">
-                  <div className="md:col-span-4 p-3 flex flex-col justify-center">
-                    <label className="font-mono text-[9px] uppercase tracking-wider text-[var(--ink-tertiary)] block mb-1">
-                      01 / Destination Anchor
-                    </label>
-                    <select
-                      aria-label="Destination location in Yelahanka"
-                      value={selectedAnchor.id}
-                      onChange={(e) => {
-                        const a = YELAHANKA_ANCHORS.find((item) => item.id === e.target.value);
-                        if (a) setSelectedAnchor(a);
-                      }}
-                      className="w-full bg-transparent font-bold text-xs uppercase text-[var(--ink)] focus:outline-none cursor-pointer truncate"
-                    >
-                      {YELAHANKA_ANCHORS.map((anchor) => (
-                        <option key={anchor.id} value={anchor.id} className="dark:bg-slate-900">
-                          {anchor.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-3 p-3 flex flex-col justify-center">
-                    <label className="font-mono text-[9px] uppercase tracking-wider text-[var(--ink-tertiary)] block mb-1">
-                      02 / Reservation Date
-                    </label>
-                    <select
-                      aria-label="Select parking date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full bg-transparent font-bold text-xs uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
-                    >
-                      <option value="Today" className="dark:bg-slate-900">Today</option>
-                      <option value="Tomorrow" className="dark:bg-slate-900">Tomorrow</option>
-                      <option value="This Weekend" className="dark:bg-slate-900">This Weekend</option>
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-3 p-3 flex flex-col justify-center">
-                    <label className="font-mono text-[9px] uppercase tracking-wider text-[var(--ink-tertiary)] block mb-1">
-                      03 / Time Window
-                    </label>
-                    <select
-                      aria-label="Select parking time range"
-                      value={selectedTimeRange}
-                      onChange={(e) => setSelectedTimeRange(e.target.value)}
-                      className="w-full bg-transparent font-bold text-xs uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
-                    >
-                      <option value="2:00 PM – 6:00 PM" className="dark:bg-slate-900">14:00 – 18:00 (Standard)</option>
-                      <option value="9:00 AM – 1:00 PM" className="dark:bg-slate-900">09:00 – 13:00 (Morning)</option>
-                      <option value="6:00 PM – 10:00 PM" className="dark:bg-slate-900">18:00 – 22:00 (Evening)</option>
-                      <option value="All Day (24 hrs)" className="dark:bg-slate-900">24-Hour Pass</option>
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-2 p-2 flex items-center justify-stretch">
+                {/* Unified Rounded Search Card */}
+                <div className="bg-[var(--surface-bg)] rounded-3xl border border-[var(--hairline-strong)] p-4 sm:p-5 shadow-xs space-y-4">
+                  {/* Mode Tabs */}
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={fetchListings}
-                      className="w-full h-full py-2.5 px-4 bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] text-white font-mono text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors rounded-none"
+                      onClick={() => setActiveTab('search')}
+                      className="px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 bg-blue-50 text-[#0A5CFF] dark:bg-blue-950/60 dark:text-blue-400"
                     >
-                      <span>Search</span>
-                      <span>→</span>
+                      <Car className="w-3.5 h-3.5" />
+                      <span>Find Parking</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!currentUser) openLoginModal('provider');
+                        else setActiveTab('provider');
+                      }}
+                      className="px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 text-[var(--ink-secondary)] hover:text-[var(--ink)] transition-colors"
+                    >
+                      <Store className="w-3.5 h-3.5" />
+                      <span>Rent Your Space</span>
+                    </button>
+                  </div>
+
+                  {/* Horizontal Inputs Bar */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                    {/* Location */}
+                    <div className="md:col-span-4 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3">
+                      <MapPin className="w-4 h-4 text-[#0A5CFF] flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
+                          Location
+                        </span>
+                        <select
+                          aria-label="Destination location in Yelahanka"
+                          value={selectedAnchor.id}
+                          onChange={(e) => {
+                            const a = YELAHANKA_ANCHORS.find((item) => item.id === e.target.value);
+                            if (a) setSelectedAnchor(a);
+                          }}
+                          className="w-full bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
+                        >
+                          {YELAHANKA_ANCHORS.map((anchor) => (
+                            <option key={anchor.id} value={anchor.id} className="dark:bg-slate-900">
+                              {anchor.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <ChevronDown className="w-3.5 h-3.5 text-[var(--ink-tertiary)]" />
+                    </div>
+
+                    {/* Date */}
+                    <div className="md:col-span-3 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3">
+                      <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
+                          Date
+                        </span>
+                        <select
+                          aria-label="Select parking date"
+                          value={selectedDate}
+                          onChange={(e) => setSelectedDate(e.target.value)}
+                          className="w-full bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
+                        >
+                          <option value="Today" className="dark:bg-slate-900">Today</option>
+                          <option value="Tomorrow" className="dark:bg-slate-900">Tomorrow</option>
+                          <option value="This Weekend" className="dark:bg-slate-900">This Weekend</option>
+                        </select>
+                      </div>
+                      <ChevronDown className="w-3.5 h-3.5 text-[var(--ink-tertiary)]" />
+                    </div>
+
+                    {/* Time */}
+                    <div className="md:col-span-3 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3">
+                      <Clock className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
+                          Time
+                        </span>
+                        <select
+                          aria-label="Select parking time range"
+                          value={selectedTimeRange}
+                          onChange={(e) => setSelectedTimeRange(e.target.value)}
+                          className="w-full bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
+                        >
+                          <option value="2:00 PM – 6:00 PM" className="dark:bg-slate-900">14:00 – 18:00 (Standard)</option>
+                          <option value="9:00 AM – 1:00 PM" className="dark:bg-slate-900">09:00 – 13:00 (Morning)</option>
+                          <option value="6:00 PM – 10:00 PM" className="dark:bg-slate-900">18:00 – 22:00 (Evening)</option>
+                          <option value="All Day (24 hrs)" className="dark:bg-slate-900">24-Hour Pass</option>
+                        </select>
+                      </div>
+                      <ChevronDown className="w-3.5 h-3.5 text-[var(--ink-tertiary)]" />
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="md:col-span-2">
+                      <button
+                        type="button"
+                        onClick={fetchListings}
+                        className="w-full py-3.5 px-4 rounded-2xl bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-500/20 active:scale-[0.99]"
+                      >
+                        <span>Search Parking</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
