@@ -39,7 +39,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[var(--canvas-bg)] text-[var(--ink)] flex flex-col justify-between">
       <header className="bg-[var(--surface-bg)] border-b border-[var(--hairline)] px-4 sm:px-6 lg:px-8 h-15 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <VParkLogo className="w-7 h-7" />
+          <VParkLogo className="w-8 h-8" />
           <div className="flex items-baseline gap-2">
             <span className="text-base font-bold tracking-tight uppercase leading-none">
               {APP_CONFIG.appName}

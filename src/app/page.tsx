@@ -79,7 +79,7 @@ export default function RootLoginPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-15 flex items-center justify-between gap-4">
           {/* Brand Logo */}
           <div className="flex items-center gap-3">
-            <VParkLogo className="w-7 h-7" />
+            <VParkLogo className="w-8 h-8" />
             <div className="flex items-baseline gap-2.5">
               <span className="text-base font-bold tracking-tight uppercase leading-none">
                 {APP_CONFIG.appName}

@@ -82,7 +82,7 @@ export function Header({
             onClick={() => onTabChange('search')}
             className="flex items-center gap-2.5 text-left rounded-sm focus-visible:outline-2"
           >
-            <VParkLogo className="w-7 h-7" />
+            <VParkLogo className="w-8 h-8" />
             <div className="flex flex-col">
               <span className="text-base font-bold tracking-tight text-[var(--ink)] uppercase leading-none">
                 {t.appName}

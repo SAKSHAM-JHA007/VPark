@@ -7,7 +7,11 @@ export const metadata: Metadata = {
     'Discover verified residential and commercial parking spaces near you in Yelahanka, Bengaluru, or rent out your unused space safely with VPark.',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/logo.jpg', type: 'image/jpeg' },
+    ],
+    apple: '/logo.jpg',
   },
   openGraph: {
     title: 'VPark · Find Your Spot. Own Your Time.',
@@ -18,9 +22,9 @@ export const metadata: Metadata = {
     siteName: 'VPark',
     images: [
       {
-        url: '/favicon.svg',
-        width: 512,
-        height: 512,
+        url: '/logo.jpg',
+        width: 1024,
+        height: 1024,
         alt: 'VPark Bengaluru Verified Parking',
       },
     ],
