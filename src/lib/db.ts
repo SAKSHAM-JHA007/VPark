@@ -39,6 +39,7 @@ import {
   calculateRankingScore,
 } from './engine.mjs';
 import { hashOtp, verifyOtpHash } from './otp-crypto.mjs';
+import { sqliteUserDb } from './sqlite-user-db';
 
 export interface DatabaseState {
   users: User[];
@@ -1163,6 +1164,11 @@ class Database {
 
   private persist() {
     this.saveDatabase(this.state);
+    try {
+      sqliteUserDb.syncAll(this.state.users, this.state.consents, this.state.otpChallenges);
+    } catch (err) {
+      console.error('[db] Error syncing to user.db:', err);
+    }
   }
 
   public getPrivateUploadsDir(): string {
@@ -2451,3 +2457,4 @@ class Database {
 const globalForDb = globalThis as unknown as { vparkDb: Database };
 export const db = globalForDb.vparkDb || new Database();
 if (process.env.NODE_ENV !== 'production') globalForDb.vparkDb = db;
+export { sqliteUserDb };
