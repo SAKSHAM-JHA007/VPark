@@ -38,16 +38,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[var(--canvas-bg)] text-[var(--ink)] flex flex-col justify-between">
       <header className="bg-[var(--surface-bg)] border-b border-[var(--hairline)] px-4 sm:px-6 lg:px-8 h-15 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5">
-          <VParkLogo className="w-8 h-8" />
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-bold tracking-tight uppercase leading-none">
-              {APP_CONFIG.appName}
-            </span>
-            <span className="text-[10px] font-mono tracking-widest uppercase text-[var(--ink-tertiary)] border-l border-[var(--hairline)] pl-2">
-              Authentication Terminal
-            </span>
-          </div>
+        <Link href="/" className="flex items-center gap-3">
+          <VParkLogo className="h-7 sm:h-8 w-auto" />
+          <span className="hidden sm:inline-block text-[10px] font-mono tracking-widest uppercase text-[var(--ink-tertiary)] border-l border-[var(--hairline)] pl-3 py-0.5">
+            Authentication Terminal
+          </span>
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle />

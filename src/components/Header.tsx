@@ -80,17 +80,12 @@ export function Header({
           <button
             type="button"
             onClick={() => onTabChange('search')}
-            className="flex items-center gap-2.5 text-left rounded-sm focus-visible:outline-2"
+            className="flex items-center gap-2.5 text-left rounded-sm focus-visible:outline-2 py-0.5"
           >
-            <VParkLogo className="w-8 h-8" />
-            <div className="flex flex-col">
-              <span className="text-base font-bold tracking-tight text-[var(--ink)] uppercase leading-none">
-                {t.appName}
-              </span>
-              <span className="text-[9px] font-mono tracking-widest text-[var(--ink-tertiary)] uppercase mt-0.5">
-                Pilot · BLR/YEL
-              </span>
-            </div>
+            <VParkLogo className="h-7 sm:h-8 w-auto" />
+            <span className="hidden sm:inline-block text-[9px] font-mono tracking-widest text-[var(--ink-tertiary)] uppercase border-l border-[var(--hairline)] pl-2.5 py-0.5">
+              Pilot · BLR/YEL
+            </span>
           </button>
 
           <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1 text-xs">

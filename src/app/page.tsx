@@ -79,15 +79,10 @@ export default function RootLoginPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-15 flex items-center justify-between gap-4">
           {/* Brand Logo */}
           <div className="flex items-center gap-3">
-            <VParkLogo className="w-8 h-8" />
-            <div className="flex items-baseline gap-2.5">
-              <span className="text-base font-bold tracking-tight uppercase leading-none">
-                {APP_CONFIG.appName}
-              </span>
-              <span className="text-[10px] font-mono tracking-widest uppercase text-[var(--ink-tertiary)] border-l border-[var(--hairline)] pl-2.5">
-                Pilot Zone 01 · Yelahanka
-              </span>
-            </div>
+            <VParkLogo className="h-7 sm:h-8 w-auto" />
+            <span className="hidden sm:inline-block text-[10px] font-mono tracking-widest uppercase text-[var(--ink-tertiary)] border-l border-[var(--hairline)] pl-3 py-0.5">
+              Pilot Zone 01 · Yelahanka
+            </span>
           </div>
 
           {/* Right Navigation */}
