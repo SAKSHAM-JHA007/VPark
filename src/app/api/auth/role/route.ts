@@ -15,6 +15,12 @@ export async function POST(req: NextRequest) {
 
     // Explicit demo evaluation mode switcher (cycles seeded personas without cross-account privilege escalation)
     if (switchDemoUser || action === 'SWITCH_DEMO_PERSONA') {
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { success: false, error: 'Demo persona switching is disabled in production environments.' },
+          { status: 403 }
+        );
+      }
       const targetUserId =
         role === 'ADMIN' ? 'usr_admin_1' : role === 'PROVIDER' ? 'usr_owner_1' : 'usr_driver_1';
       const demoUser = db.getUserById(targetUserId);

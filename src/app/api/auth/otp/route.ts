@@ -48,8 +48,11 @@ export async function POST(req: NextRequest) {
         phone: result.phone,
         expiresAt: result.expiresAt,
         cooldownSeconds: APP_CONFIG.otpResendCooldownSeconds,
-        message: `If eligible, a 6-digit OTP has been sent to ${result.phone}. (Demo OTP: ${APP_CONFIG.demoOtp})`,
-        demoOtp: process.env.NODE_ENV !== 'production' ? APP_CONFIG.demoOtp : APP_CONFIG.demoOtp,
+        message:
+          process.env.NODE_ENV === 'production'
+            ? `If eligible, a 6-digit verification code has been sent to ${result.phone}.`
+            : `If eligible, a 6-digit OTP has been sent to ${result.phone}. (Demo OTP: ${APP_CONFIG.demoOtp})`,
+        demoOtp: process.env.NODE_ENV !== 'production' ? APP_CONFIG.demoOtp : undefined,
       });
     }
 

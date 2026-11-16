@@ -64,8 +64,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     if (action === 'CANCEL') {
-      const status = cancelledBy === 'PROVIDER' ? 'CANCELLED_BY_PROVIDER' : 'CANCELLED_BY_DRIVER';
-      const result = db.updateBookingStatus(bookingId, status, { reason, cancelledBy });
+      const isProvider = existing.providerId === user.id;
+      const isAdmin = user.roles.includes('ADMIN');
+      const resolvedCancelledBy = (isProvider || (isAdmin && cancelledBy === 'PROVIDER')) ? 'PROVIDER' : 'DRIVER';
+      const status = resolvedCancelledBy === 'PROVIDER' ? 'CANCELLED_BY_PROVIDER' : 'CANCELLED_BY_DRIVER';
+      const result = db.updateBookingStatus(bookingId, status, { reason, cancelledBy: resolvedCancelledBy });
       if (!result.success) return NextResponse.json({ success: false, error: result.error }, { status: 400 });
       return NextResponse.json({
         success: true,
