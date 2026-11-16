@@ -1,6 +1,6 @@
-# Parkora (VPark) — Bengaluru Smart Parking & Reservation Platform
+# VPark — Bengaluru Smart Parking & Reservation Platform
 
-> Implementation of **Vpark: Product Requirements Document (Version 2.0)** for the **Yelahanka Pilot Micro-Market, Bengaluru, India**. Built with Next.js 14, React 18, TypeScript, Tailwind CSS, and a robust transactional database engine with PostGIS-equivalent spatial distance computation.
+> Implementation of the [Product Requirements Document](docs/PRD.md) for the **Yelahanka Pilot Micro-Market, Bengaluru, India**. Built with Next.js 14, React 18, TypeScript, Tailwind CSS, and an active SQLite / relational transactional database engine with PostGIS-equivalent spatial distance computation.
 
 ---
 
@@ -33,13 +33,13 @@
 ### 3. Categories, Freshness & Trust (PRD Section 8.3 & 8.6)
 - **Private:** Provider-submitted, admin-verified right-to-rent documents. Bookable.
 - **Commercial:** Operator-submitted or partner agreement. Bookable.
-- **Public (Discovery Only):** Surveyed on-street parking. Explicitly marked: *Discovery-only context. Parkora does not control or take reservations for public spaces.* Not bookable.
+- **Public (Discovery Only):** Surveyed on-street parking. Explicitly marked: *Discovery-only context. VPark does not control or take reservations for public spaces.* Not bookable.
 - **Freshness Indicator:** Listings confirmed within 30 days = **Fresh**. Listings $>30$ days without reconfirmation = **Stale** (flagged and penalised by $-0.25$ in search ranking).
 - **Provider Reconfirmation:** Providers have a 1-click **"Reconfirm Availability"** button in their dashboard to reset freshness and boost search ranking.
 
 ### 4. Booking Engine & Overbooking Prevention (PRD Section 8.8, 8.9, 8.10, 12)
 - **BOOK-1 Pricing Snapshot:**
-  - Base Parking Fee + 12% Parkora Platform Fee + GST (9% CGST + 9% SGST on fee) = Total Amount Payable (INR ₹).
+  - Base Parking Fee + 12% VPark Platform Fee + GST (9% CGST + 9% SGST on fee) = Total Amount Payable (INR ₹).
 - **BOOK-2 10-Minute Reservation Hold:**
   - Locking a slot creates an atomic `SlotHold` with a 10-minute visual countdown timer.
   - Active holds decrement available capacity to eliminate double bookings.

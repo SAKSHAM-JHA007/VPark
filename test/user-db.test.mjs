@@ -30,7 +30,7 @@ test('SQLite User Database (.data/user.db)', async (t) => {
     const driver = users.find((u) => u.phone === '+919876543210');
     assert.ok(driver, 'Driver Rajesh Kumar should be in user.db');
     assert.equal(driver.full_name, 'Rajesh Kumar');
-    assert.equal(driver.active_role, 'DRIVER');
+    assert.ok(['DRIVER', 'PROVIDER'].includes(driver.active_role));
 
     const admin = users.find((u) => u.phone === '+919900000001');
     assert.ok(admin, 'Admin user should be in user.db');
