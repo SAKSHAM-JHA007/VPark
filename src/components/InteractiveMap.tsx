@@ -1,9 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SearchResultItem } from '@/types';
 import { DemandAnchor } from '@/lib/constants';
-import { Plus, Minus, Navigation } from 'lucide-react';
+import {
+  Plus,
+  Minus,
+  Navigation,
+  ExternalLink,
+  MapPin,
+  Key,
+  Layers,
+  Check,
+  X,
+  Compass,
+} from 'lucide-react';
 
 interface InteractiveMapProps {
   results: SearchResultItem[];
@@ -13,6 +24,43 @@ interface InteractiveMapProps {
   onLocateMe?: () => void;
 }
 
+declare global {
+  interface Window {
+    google?: any;
+    initGoogleMapCallback?: () => void;
+  }
+}
+
+// Google Maps Custom Styling for Light and Dark Modes
+const DARK_MAP_STYLES = [
+  { elementType: 'geometry', stylers: [{ color: '#1a1d24' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1d24' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#16231c' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#6b7280' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2b303c' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca3af' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3b4252' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1f2835' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3d19c' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2f3948' }] },
+  { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0d131f' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
+  { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#17263c' }] },
+];
+
+const LIGHT_MAP_STYLES = [
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9e8fd' }] },
+  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#f5f7fa' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#fed7aa' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#dcfce7' }] },
+];
+
 export function InteractiveMap({
   results,
   selectedItem,
@@ -20,216 +68,459 @@ export function InteractiveMap({
   selectedAnchor,
   onLocateMe,
 }: InteractiveMapProps) {
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [locationHint, setLocationHint] = useState<string | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const googleMapInstance = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const anchorMarkerRef = useRef<any>(null);
 
-  const minLat = 13.055;
-  const maxLat = 13.125;
-  const minLng = 77.575;
-  const maxLng = 77.625;
+  // API Key state: check env or localStorage
+  const [apiKey, setApiKey] = useState<string>('');
+  const [keyInput, setKeyInput] = useState<string>('');
+  const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
+  const [isJsApiLoaded, setIsJsApiLoaded] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [mapType, setMapType] = useState<'roadmap' | 'satellite' | 'hybrid'>('roadmap');
 
-  const toX = (lng: number) => {
-    return Math.max(10, Math.min(90, ((lng - minLng) / (maxLng - minLng)) * 100));
-  };
+  // Center coordinates: from selectedAnchor or default to Yelahanka (13.1007, 77.5963)
+  const centerLat = selectedAnchor ? selectedAnchor.latitude : 13.1007;
+  const centerLng = selectedAnchor ? selectedAnchor.longitude : 77.5963;
 
-  const toY = (lat: number) => {
-    return Math.max(10, Math.min(90, (1 - (lat - minLat) / (maxLat - minLat)) * 100));
-  };
+  // Detect dark mode from document class
+  useEffect(() => {
+    const checkDark = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    checkDark();
+    const observer = new MutationObserver(checkDark);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
-  const anchorX = selectedAnchor ? toX(selectedAnchor.longitude) : 50;
-  const anchorY = selectedAnchor ? toY(selectedAnchor.latitude) : 48;
+  // Load API Key from environment or localStorage
+  useEffect(() => {
+    const envKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+    const storedKey = typeof window !== 'undefined' ? localStorage.getItem('vpark_google_maps_api_key') || '' : '';
+    const activeKey = envKey || storedKey;
+    if (activeKey) {
+      setApiKey(activeKey);
+      setKeyInput(activeKey);
+    }
+  }, []);
 
-  const handleCurrentLocation = () => {
-    if (onLocateMe) {
-      onLocateMe();
-      setLocationHint('Centered on your selected Yelahanka zone');
-      setTimeout(() => setLocationHint(null), 2500);
+  // Dynamically load Google Maps JavaScript API script when apiKey is set
+  useEffect(() => {
+    if (!apiKey) {
+      setIsJsApiLoaded(false);
       return;
     }
-    setZoomLevel(1);
-    setLocationHint('Map zoom reset to Yelahanka view');
-    setTimeout(() => setLocationHint(null), 2500);
+
+    if (window.google && window.google.maps) {
+      setIsJsApiLoaded(true);
+      return;
+    }
+
+    const scriptId = 'google-maps-api-script';
+    const existingScript = document.getElementById(scriptId);
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places,geometry`;
+    script.async = true;
+    script.defer = true;
+
+    script.onload = () => {
+      setIsJsApiLoaded(true);
+      setLoadError(null);
+    };
+
+    script.onerror = () => {
+      setLoadError('Failed to load Google Maps SDK with provided API key.');
+      setIsJsApiLoaded(false);
+    };
+
+    document.head.appendChild(script);
+  }, [apiKey]);
+
+  // Initialize or reconfigure Google Map instance
+  useEffect(() => {
+    if (!isJsApiLoaded || !window.google || !window.google.maps || !mapRef.current) return;
+
+    try {
+      if (!googleMapInstance.current) {
+        googleMapInstance.current = new window.google.maps.Map(mapRef.current, {
+          center: { lat: centerLat, lng: centerLng },
+          zoom: 14,
+          mapTypeId: mapType,
+          styles: isDarkMode ? DARK_MAP_STYLES : LIGHT_MAP_STYLES,
+          disableDefaultUI: false,
+          zoomControl: true,
+          mapTypeControl: false,
+          streetViewControl: true,
+          fullscreenControl: false,
+        });
+      } else {
+        googleMapInstance.current.setCenter({ lat: centerLat, lng: centerLng });
+        googleMapInstance.current.setMapTypeId(mapType);
+        googleMapInstance.current.setOptions({
+          styles: isDarkMode ? DARK_MAP_STYLES : LIGHT_MAP_STYLES,
+        });
+      }
+    } catch (err) {
+      console.error('Error initializing Google Map:', err);
+    }
+  }, [isJsApiLoaded, centerLat, centerLng, isDarkMode, mapType]);
+
+  // Update Markers when results or selectedItem changes in Google Maps SDK
+  useEffect(() => {
+    if (!isJsApiLoaded || !googleMapInstance.current || !window.google || !window.google.maps) return;
+
+    // Clear previous markers
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
+
+    if (anchorMarkerRef.current) {
+      anchorMarkerRef.current.setMap(null);
+      anchorMarkerRef.current = null;
+    }
+
+    // Add Anchor Marker (Search Radar Center)
+    if (selectedAnchor) {
+      const anchorMarker = new window.google.maps.Marker({
+        position: { lat: selectedAnchor.latitude, lng: selectedAnchor.longitude },
+        map: googleMapInstance.current,
+        title: selectedAnchor.name,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 9,
+          fillColor: '#0A5CFF',
+          fillOpacity: 1,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 3,
+        },
+      });
+      anchorMarkerRef.current = anchorMarker;
+    }
+
+    // Add Parking Space Markers
+    results.slice(0, 25).forEach((item) => {
+      const { listing } = item;
+      const isSelected = selectedItem?.listing.id === listing.id;
+      const isFree = listing.pricing.hourlyRate === 0;
+      const priceText = isFree ? 'Free' : `₹${listing.pricing.hourlyRate}`;
+
+      const color =
+        listing.category === 'COMMERCIAL'
+          ? '#0A5CFF'
+          : listing.category === 'PRIVATE'
+          ? '#7C3AED'
+          : '#059669';
+
+      const marker = new window.google.maps.Marker({
+        position: { lat: listing.latitude, lng: listing.longitude },
+        map: googleMapInstance.current,
+        title: `${listing.title} (${priceText}/hr)`,
+        label: {
+          text: priceText,
+          color: '#FFFFFF',
+          fontSize: isSelected ? '11px' : '10px',
+          fontWeight: 'bold',
+        },
+        icon: {
+          path: 'M -24,-14 L 24,-14 A 4,4 0 0,1 28,-10 L 28,10 A 4,4 0 0,1 24,14 L 4,14 L 0,22 L -4,14 L -24,14 A 4,4 0 0,1 -28,10 L -28,-10 A 4,4 0 0,1 -24,-14 Z',
+          fillColor: color,
+          fillOpacity: 1,
+          strokeColor: isSelected ? '#FFFFFF' : '#1E293B',
+          strokeWeight: isSelected ? 2.5 : 1,
+          scale: isSelected ? 1.15 : 1,
+          labelOrigin: new window.google.maps.Point(0, 0),
+        },
+        zIndex: isSelected ? 999 : 10,
+      });
+
+      marker.addListener('click', () => {
+        onSelectItem(item);
+      });
+
+      markersRef.current.push(marker);
+    });
+  }, [isJsApiLoaded, results, selectedItem, selectedAnchor, onSelectItem]);
+
+  // Center on current search zone or user
+  const handleCenterLocation = useCallback(() => {
+    if (googleMapInstance.current) {
+      googleMapInstance.current.panTo({ lat: centerLat, lng: centerLng });
+      googleMapInstance.current.setZoom(15);
+    }
+    if (onLocateMe) {
+      onLocateMe();
+    }
+  }, [centerLat, centerLng, onLocateMe]);
+
+  const handleSaveApiKey = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanKey = keyInput.trim();
+    setApiKey(cleanKey);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vpark_google_maps_api_key', cleanKey);
+    }
+    setShowKeyModal(false);
   };
 
+  const handleRemoveApiKey = () => {
+    setApiKey('');
+    setKeyInput('');
+    setIsJsApiLoaded(false);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('vpark_google_maps_api_key');
+    }
+    setShowKeyModal(false);
+  };
+
+  // Google Maps Deep Link for navigation
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${centerLat},${centerLng}`;
+  const embedMapUrl = `https://maps.google.com/maps?q=${centerLat},${centerLng}&z=14&output=embed`;
+
   return (
-    <div className="relative w-full h-[580px] bg-[#f8fafc] dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xs select-none">
-      {/* Zoomable Map Canvas */}
-      <div
-        className="w-full h-full transition-transform duration-200 origin-center"
-        style={{ transform: `scale(${zoomLevel})` }}
-      >
-        {/* Light / Dark Vector Map Background */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="100%" height="100%" className="fill-[#f8fafc] dark:fill-slate-900" />
-
-          <path d="M 20 40 Q 60 20 90 60 Q 70 120 30 100 Z" className="fill-[#eafaf1] dark:fill-emerald-950/30" opacity="0.6" />
-          <path d="M 500 100 Q 560 60 620 120 Q 580 200 480 180 Z" className="fill-[#eafaf1] dark:fill-emerald-950/30" opacity="0.6" />
-          <path d="M 50 350 Q 150 300 200 450 Q 100 520 40 480 Z" className="fill-[#eafaf1] dark:fill-emerald-950/30" opacity="0.6" />
-
-          {/* Major NH44 corridor */}
-          <path d="M 460 -20 L 440 620" className="stroke-[#fef08a] dark:stroke-amber-900/50" strokeWidth="8" />
-          <path d="M 460 -20 L 440 620" className="stroke-[#eab308] dark:stroke-amber-600/40" strokeWidth="2" opacity="0.4" />
-
-          {/* Secondary roads */}
-          <path d="M -20 220 C 180 230, 360 210, 650 240" className="stroke-white dark:stroke-slate-800" strokeWidth="7" />
-          <path d="M -20 220 C 180 230, 360 210, 650 240" className="stroke-[#cbd5e1] dark:stroke-slate-700" strokeWidth="1.2" />
-
-          <path d="M 120 -20 L 140 620" className="stroke-white dark:stroke-slate-800" strokeWidth="6" />
-          <path d="M 120 -20 L 140 620" className="stroke-[#cbd5e1] dark:stroke-slate-700" strokeWidth="1" />
-
-          <path d="M -20 380 L 650 390" className="stroke-white dark:stroke-slate-800" strokeWidth="6" />
-          <path d="M -20 380 L 650 390" className="stroke-[#cbd5e1] dark:stroke-slate-700" strokeWidth="1" />
-
-          {/* Yelahanka Lake */}
-          <path
-            d="M 380 240 C 420 230, 480 250, 490 280 C 500 310, 470 340, 440 345 C 410 350, 370 330, 360 290 C 350 260, 370 245, 380 240 Z"
-            className="fill-[#bae6fd] dark:fill-sky-950/50 stroke-[#7dd3fc] dark:stroke-sky-800/80"
-            strokeWidth="1.5"
+    <div className="relative w-full h-[580px] bg-slate-100 dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200 dark:border-neutral-800 shadow-md select-none">
+      {/* 1. Google Maps Display: SDK Canvas or Live Embed Layer */}
+      {isJsApiLoaded ? (
+        <div ref={mapRef} className="w-full h-full" />
+      ) : (
+        <div className="relative w-full h-full">
+          {/* Real Google Maps Embed Iframe */}
+          <iframe
+            title="Google Maps Location View"
+            src={embedMapUrl}
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            loading="lazy"
+            allowFullScreen
+            referrerPolicy="no-referrer-when-downgrade"
+            className="w-full h-full grayscale-[15%] contrast-[105%]"
           />
-          <text
-            x="425"
-            y="295"
-            className="fill-[#0284c7] dark:fill-sky-400"
-            fontSize="11"
-            fontFamily="system-ui, -apple-system, sans-serif"
-            fontWeight="bold"
-            textAnchor="middle"
-            opacity="0.85"
-          >
-            Yelahanka Lake
-          </text>
 
-          <text x="110" y="265" className="fill-[#64748b] dark:fill-slate-500" fontSize="10" fontFamily="system-ui, sans-serif" fontWeight="bold" letterSpacing="0.05em">
-            YELAHANKA
-          </text>
-          <text x="110" y="280" className="fill-[#64748b] dark:fill-slate-500" fontSize="10" fontFamily="system-ui, sans-serif" fontWeight="bold" letterSpacing="0.05em">
-            NEW TOWN
-          </text>
-
-          <text x="530" y="310" className="fill-[#64748b] dark:fill-slate-500" fontSize="10" fontFamily="system-ui, sans-serif" fontWeight="bold" letterSpacing="0.05em">
-            JUDICIAL
-          </text>
-          <text x="530" y="325" className="fill-[#64748b] dark:fill-slate-500" fontSize="10" fontFamily="system-ui, sans-serif" fontWeight="bold" letterSpacing="0.05em">
-            LAYOUT
-          </text>
-
-          <text x="350" y="410" className="fill-[#64748b] dark:fill-slate-500" fontSize="11" fontFamily="system-ui, sans-serif" fontWeight="bold" letterSpacing="0.08em">
-            YELAHANKA
-          </text>
-        </svg>
-
-        {/* Active Search Center Radar Marker */}
-        <div
-          style={{ left: `${anchorX}%`, top: `${anchorY}%` }}
-          className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-        >
-          <div className="relative flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-blue-500/15 animate-ping" />
-            <div className="absolute w-6 h-6 rounded-full bg-blue-500/25" />
-            <div className="absolute w-3 h-3 rounded-full bg-[#0A5CFF] ring-3 ring-white dark:ring-slate-900 shadow-xs" />
-          </div>
-        </div>
-
-        {/* Parking Price Pins */}
-        {results.slice(0, 15).map((item) => {
-          const { listing } = item;
-          const x = toX(listing.longitude);
-          const y = toY(listing.latitude);
-          const isSelected = selectedItem?.listing.id === listing.id;
-
-          const isFree = listing.pricing.hourlyRate === 0;
-          const priceLabel = isFree ? 'Free' : `₹${listing.pricing.hourlyRate}/hr`;
-
-          const badgeBg =
-            listing.category === 'COMMERCIAL'
-              ? 'bg-[#0A5CFF]'
-              : listing.category === 'PRIVATE'
-              ? 'bg-purple-600'
-              : 'bg-slate-700';
-
-          return (
-            <button
-              key={listing.id}
-              type="button"
-              style={{ left: `${x}%`, top: `${y}%` }}
-              onClick={() => onSelectItem(item)}
-              aria-label={`${listing.title}, ${priceLabel}`}
-              className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 group focus:outline-none"
-            >
-              <div
-                className={`flex items-center gap-1.5 bg-[var(--surface-bg)] px-2 py-1 rounded-xs border font-mono text-xs transition-colors ${
-                  isSelected
-                    ? 'border-[var(--transit-accent)] ring-1 ring-[var(--transit-accent)] bg-[var(--surface-alt)] font-bold'
-                    : 'border-[var(--hairline-strong)] hover:border-[var(--ink)]'
-                }`}
-              >
-                <div
-                  className={`w-3 h-3 rounded-none ${badgeBg} text-white font-mono font-bold text-[8px] flex items-center justify-center flex-shrink-0`}
-                >
-                  P
-                </div>
-                <span className="font-mono text-[11px] text-[var(--ink)] whitespace-nowrap">{priceLabel}</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Location toast */}
-      {locationHint && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-[var(--surface-bg)] border border-[var(--hairline-strong)] text-[var(--ink)] font-mono text-xs px-3 py-1.5 rounded-xs shadow-sm z-30 uppercase tracking-wider">
-          {locationHint}
+          {/* Semi-transparent dark overlay in dark mode */}
+          <div className="absolute inset-0 pointer-events-none bg-black/10 dark:bg-slate-950/30" />
         </div>
       )}
 
-      {/* Floating Bottom Summary Card */}
-      <div className="absolute bottom-4 left-4 bg-[var(--surface-bg)] rounded-xs p-3 border border-[var(--hairline-strong)] flex items-center gap-3 z-30">
-        <div className="w-7 h-7 rounded-none bg-[var(--transit-accent)] text-white font-mono font-bold text-[11px] flex items-center justify-center">
-          P
+      {/* 2. Top Status Badge & Google Maps Header Strip */}
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 pointer-events-none z-30">
+        <div className="pointer-events-auto flex items-center gap-2">
+          {/* Provider / Mode Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border border-slate-200 dark:border-neutral-700 shadow-sm text-xs font-semibold text-slate-800 dark:text-slate-100">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Google Maps {isJsApiLoaded ? 'Live API' : 'Layer'}</span>
+          </div>
+
+          {/* Quick API Key Config Button */}
+          <button
+            type="button"
+            onClick={() => setShowKeyModal(true)}
+            className="pointer-events-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border border-slate-200 dark:border-neutral-700 shadow-sm text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#0A5CFF] hover:border-blue-400 transition-colors"
+            title="Configure Google Maps API Key"
+          >
+            <Key className="w-3.5 h-3.5 text-[#0A5CFF]" />
+            <span className="hidden sm:inline">{apiKey ? 'API Key Set' : 'Configure API Key'}</span>
+          </button>
         </div>
-        <div>
-          <h4 className="font-mono font-bold text-[var(--ink)] text-xs uppercase leading-tight tracking-tight">
-            {selectedAnchor ? selectedAnchor.locality : 'Yelahanka Micro-Market'}
-          </h4>
-          <p className="text-[var(--ink-secondary)] font-mono text-[10px] mt-0.5">
-            {results.length} {results.length === 1 ? 'BAY' : 'BAYS'} INDEXED · &lt;5 KM RADIUS
-          </p>
+
+        {/* Map Type Switcher / Open in Google Maps */}
+        <div className="pointer-events-auto flex items-center gap-1.5">
+          {isJsApiLoaded && (
+            <button
+              type="button"
+              onClick={() => setMapType((t) => (t === 'roadmap' ? 'satellite' : 'roadmap'))}
+              className="p-2 rounded-full bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-200 hover:text-[#0A5CFF] shadow-sm transition-colors text-xs font-semibold flex items-center gap-1 px-3"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span className="capitalize">{mapType}</span>
+            </button>
+          )}
+
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#0A5CFF] text-white text-xs font-semibold hover:bg-blue-600 transition-colors shadow-sm"
+          >
+            <span>Open in Maps</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
         </div>
       </div>
 
-      {/* Zoom & Location Controls */}
-      <div className="absolute bottom-4 right-4 flex flex-col items-center gap-1.5 z-30">
-        <div className="bg-[var(--surface-bg)] rounded-xs border border-[var(--hairline-strong)] flex flex-col divide-y divide-[var(--hairline)] overflow-hidden">
+      {/* 3. Floating Bottom Summary Card: Active Spot or Zone Summary */}
+      <div className="absolute bottom-4 left-4 max-w-sm bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md rounded-2xl p-3.5 border border-slate-200 dark:border-neutral-700 shadow-lg z-30 flex items-center justify-between gap-3">
+        {selectedItem ? (
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-xs ${
+                selectedItem.listing.category === 'COMMERCIAL'
+                  ? 'bg-[#0A5CFF]'
+                  : selectedItem.listing.category === 'PRIVATE'
+                  ? 'bg-purple-600'
+                  : 'bg-emerald-600'
+              }`}
+            >
+              P
+            </div>
+            <div className="min-w-0">
+              <h4 className="font-bold text-slate-900 dark:text-white text-xs truncate max-w-[200px]">
+                {selectedItem.listing.title}
+              </h4>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] truncate">
+                {selectedItem.listing.locality} · ₹{selectedItem.listing.pricing.hourlyRate}/hr
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0A5CFF] text-white flex items-center justify-center font-bold text-xs">
+              <Compass className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white text-xs">
+                {selectedAnchor ? selectedAnchor.locality : 'Yelahanka Pilot Micro-Market'}
+              </h4>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                {results.length} verified parking bays indexed in zone
+              </p>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleCenterLocation}
+          className="p-2 rounded-xl bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-300 hover:text-[#0A5CFF] transition-colors"
+          title="Center on search location"
+        >
+          <Navigation className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* 4. Zoom & Center Navigation Controls (right side) */}
+      <div className="absolute bottom-4 right-4 flex flex-col items-center gap-2 z-30">
+        <div className="bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-md flex flex-col divide-y divide-slate-200 dark:divide-neutral-800 overflow-hidden">
           <button
             type="button"
-            onClick={() => setZoomLevel((z) => Math.min(Number((z + 0.15).toFixed(2)), 1.6))}
+            onClick={() => {
+              if (googleMapInstance.current) {
+                googleMapInstance.current.setZoom(googleMapInstance.current.getZoom() + 1);
+              }
+            }}
             title="Zoom In"
             aria-label="Zoom In"
-            className="w-7 h-7 flex items-center justify-center text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-colors font-mono"
+            className="w-9 h-9 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() => setZoomLevel((z) => Math.max(Number((z - 0.15).toFixed(2)), 0.85))}
+            onClick={() => {
+              if (googleMapInstance.current) {
+                googleMapInstance.current.setZoom(googleMapInstance.current.getZoom() - 1);
+              }
+            }}
             title="Zoom Out"
             aria-label="Zoom Out"
-            className="w-7 h-7 flex items-center justify-center text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-colors font-mono"
+            className="w-9 h-9 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
           >
-            <Minus className="w-3.5 h-3.5" />
+            <Minus className="w-4 h-4" />
           </button>
         </div>
 
         <button
           type="button"
-          onClick={handleCurrentLocation}
-          title="Center on current search zone"
-          aria-label="Center map on current location"
-          className="w-7 h-7 bg-[var(--surface-bg)] rounded-xs border border-[var(--hairline-strong)] flex items-center justify-center text-[var(--ink)] hover:bg-[var(--surface-alt)] hover:text-[var(--transit-accent)] transition-colors"
+          onClick={handleCenterLocation}
+          title="Center Map"
+          className="w-9 h-9 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-md flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-[#0A5CFF] transition-colors"
         >
-          <Navigation className="w-3.5 h-3.5" />
+          <Navigation className="w-4 h-4" />
         </button>
       </div>
+
+      {/* 5. API Key Configuration Modal */}
+      {showKeyModal && (
+        <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200 dark:border-neutral-800 p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#0A5CFF] flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">Google Maps API</h3>
+                  <p className="text-[11px] text-slate-500">Live SDK integration key</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowKeyModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Enter your Google Maps JavaScript API key to enable native satellite/terrain layers and interactive 3D markers.
+            </p>
+
+            <form onSubmit={handleSaveApiKey} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  API Key
+                </label>
+                <input
+                  type="text"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#0A5CFF]"
+                />
+              </div>
+
+              {loadError && (
+                <p className="text-xs text-rose-500 font-medium">{loadError}</p>
+              )}
+
+              <div className="flex items-center justify-between gap-2 pt-1">
+                {apiKey && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveApiKey}
+                    className="text-xs text-rose-500 hover:underline"
+                  >
+                    Remove Key
+                  </button>
+                )}
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyModal(false)}
+                    className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-neutral-800 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 rounded-xl bg-[#0A5CFF] text-white text-xs font-bold hover:bg-blue-600 transition-colors shadow-sm"
+                  >
+                    Save &amp; Load
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
