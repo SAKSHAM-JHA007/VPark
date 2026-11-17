@@ -76,8 +76,20 @@ export default function LoginPage() {
         />
       </main>
 
-      <footer className="border-t border-[var(--hairline)] bg-[var(--surface-bg)] py-3 px-4 text-center font-mono text-xs text-[var(--ink-tertiary)]">
-        © {new Date().getFullYear()} {APP_CONFIG.appName} · DPDP ACT 2023 COMPLIANT // SECTOR 01
+      <footer className="border-t border-[var(--hairline)] bg-[var(--surface-bg)] py-4 px-4 text-center font-mono text-xs text-[var(--ink-tertiary)] flex flex-wrap items-center justify-center gap-3">
+        <Link href="/" className="hover:text-[var(--ink)] transition-colors">
+          Home
+        </Link>
+        <span>·</span>
+        <Link href="/privacy" className="hover:text-[var(--ink)] transition-colors">
+          Privacy Policy
+        </Link>
+        <span>·</span>
+        <Link href="/contact" className="hover:text-[var(--ink)] transition-colors">
+          Contact Support
+        </Link>
+        <span>·</span>
+        <span>© {new Date().getFullYear()} {APP_CONFIG.appName} · DPDP ACT 2023 COMPLIANT // SECTOR 01</span>
       </footer>
     </div>
   );

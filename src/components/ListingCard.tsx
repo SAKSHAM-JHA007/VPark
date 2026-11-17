@@ -62,8 +62,10 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
         <div className="relative w-full sm:w-44 h-32 sm:h-36 rounded-xs overflow-hidden bg-[var(--surface-alt)] border border-[var(--hairline)] flex-shrink-0">
           <img
             src={listing.photos[0] || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800'}
-            alt={listing.title}
+            alt={listing.title ? `Verified parking bay: ${listing.title}` : 'Verified parking space bay in Bengaluru'}
             className="w-full h-full object-cover filter contrast-[1.02]"
+            loading="lazy"
+            decoding="async"
           />
 
           <span

@@ -198,7 +198,13 @@ export function ListingDetailModal({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {listing.photos.map((photo, i) => (
               <div key={i} className="h-36 sm:h-40 rounded-xs overflow-hidden bg-[var(--surface-alt)] border border-[var(--hairline)]">
-                <img src={photo} alt={`${listing.title} view ${i + 1}`} className="w-full h-full object-cover" />
+                <img
+                  src={photo}
+                  alt={`${listing.title} view ${i + 1}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
               </div>
             ))}
           </div>

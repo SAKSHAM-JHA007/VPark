@@ -16,7 +16,7 @@ export function VParkLogo({
   className = 'h-8 w-auto',
   variant = 'horizontal',
   size,
-  alt = 'VPark',
+  alt = 'VPark Smart Parking Platform',
 }: VParkLogoProps) {
   const heightStyle = size ? { height: size } : undefined;
 
@@ -24,23 +24,28 @@ export function VParkLogo({
     <div
       style={heightStyle}
       className={`relative inline-flex items-center justify-start flex-shrink-0 select-none bg-transparent ${className}`}
-      aria-hidden="true"
     >
       {/* Dark mode: luminous electric blue & white typography on transparent background */}
       <img
         src="/logo-horizontal-dark.png"
         alt={alt}
+        width={140}
+        height={32}
         className="h-full w-auto max-h-full object-contain dark:block hidden select-none"
         loading="eager"
         decoding="async"
+        fetchPriority="high"
       />
       {/* Light mode: electric blue & dark ink typography on transparent background */}
       <img
         src="/logo-horizontal-light.png"
         alt={alt}
+        width={140}
+        height={32}
         className="h-full w-auto max-h-full object-contain dark:hidden block select-none"
         loading="eager"
         decoding="async"
+        fetchPriority="high"
       />
     </div>
   );
