@@ -313,6 +313,17 @@ export class SqliteUserDatabase {
     }
   }
 
+  public getUserByEmail(email: string): User | undefined {
+    if (!this.db) return undefined;
+    try {
+      const row = this.db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND deleted_at IS NULL').get(email.trim());
+      return row ? this.mapRowToUser(row) : undefined;
+    } catch (err) {
+      console.error(`[SqliteUserDatabase] Failed to get user by email:`, err);
+      return undefined;
+    }
+  }
+
   private mapRowToUser(row: any): User {
     // Fetch user's vehicles
     let vehicles: Vehicle[] = [];

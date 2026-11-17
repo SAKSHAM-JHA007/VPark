@@ -11,11 +11,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { fullName, email, providerType, acceptTerms } = body;
+    const { fullName, email, phone, providerType, acceptTerms } = body;
 
     const result = db.completeOnboarding({
       userId: session.user.id,
       fullName: String(fullName || ''),
+      phone: typeof phone === 'string' ? phone : undefined,
       email: typeof email === 'string' ? email : undefined,
       providerType,
       acceptTerms: Boolean(acceptTerms),

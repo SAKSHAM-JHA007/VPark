@@ -11,7 +11,6 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/auth/otp - Phone OTP request & verification (PRD Section 6)
 export async function POST(req: NextRequest) {
   const csrfError = verifySameOrigin(req);
   if (csrfError) return csrfError;
@@ -20,21 +19,63 @@ export async function POST(req: NextRequest) {
     const ipAddress = getClientIp(req);
     const userAgent = getUserAgent(req);
     const body = await req.json();
-    const { action, phone, otp, intent, purpose } = body;
+    const { action, email, phone, password, otp, intent, purpose } = body;
 
-    if (!phone) {
-      return NextResponse.json({ success: false, error: 'Phone number is required.' }, { status: 400 });
+    // 1. MASTER ADMIN LOGIN (Direct Hidden Password Authentication)
+    if (action === 'MASTER_LOGIN' || action === 'VERIFY_PASSWORD') {
+      const targetEmail = (email || '').trim().toLowerCase();
+      if (!targetEmail || !password) {
+        return NextResponse.json(
+          { success: false, error: 'Email and master password are required.' },
+          { status: 400 }
+        );
+      }
+
+      const masterResult = db.verifyMasterAdmin(targetEmail, password);
+      if (!masterResult.success || !masterResult.user) {
+        return NextResponse.json(
+          { success: false, error: masterResult.error || 'Invalid credentials.' },
+          { status: 401 }
+        );
+      }
+
+      const response = NextResponse.json({
+        success: true,
+        user: masterResult.user,
+        isMasterAdmin: true,
+        redirectTo: '/driver/home?tab=admin',
+        message: 'Master Administrator authenticated successfully.',
+      });
+
+      setSessionCookie(response, masterResult.user.id);
+      return response;
     }
 
+    // 2. REQUEST OTP (Email Primary with Phone fallback)
     if (action === 'REQUEST_OTP') {
+      const identifier = (email || phone || '').trim();
+
+      if (!identifier) {
+        return NextResponse.json({ success: false, error: 'Email address is required.' }, { status: 400 });
+      }
+
+      // Check if user entered master admin email
+      if (identifier.toLowerCase() === 'jhasaksham.7453k@gmail.com') {
+        return NextResponse.json({
+          success: true,
+          isMasterAdmin: true,
+          message: 'Master Administrator account recognized. Please enter master password.',
+        });
+      }
+
       if (!checkOtpIpRateLimit(ipAddress)) {
         return NextResponse.json(
-          { success: false, error: 'Too many OTP requests from this network. Try again later.' },
+          { success: false, error: 'Too many verification requests from this network. Try again later.' },
           { status: 429 }
         );
       }
 
-      const result = db.requestOtpChallenge(phone, purpose === 'RECOVERY' ? 'RECOVERY' : 'LOGIN');
+      const result = db.requestOtpChallenge(identifier, purpose === 'RECOVERY' ? 'RECOVERY' : 'LOGIN');
       if (!result.success) {
         return NextResponse.json(
           { success: false, error: result.error, retryAfterSeconds: result.retryAfterSeconds },
@@ -42,27 +83,30 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Non-enumerating response: never reveals whether phone is already registered (PRD 6.4)
       return NextResponse.json({
         success: true,
+        identifier: result.identifier,
+        email: result.email,
         phone: result.phone,
         expiresAt: result.expiresAt,
         cooldownSeconds: APP_CONFIG.otpResendCooldownSeconds,
         message:
           process.env.NODE_ENV === 'production'
-            ? `If eligible, a 6-digit verification code has been sent to ${result.phone}.`
-            : `If eligible, a 6-digit OTP has been sent to ${result.phone}. (Demo OTP: ${APP_CONFIG.demoOtp})`,
+            ? `If eligible, a 6-digit verification code has been dispatched to ${result.identifier}.`
+            : `If eligible, a 6-digit OTP has been sent to ${result.identifier}. (Demo OTP: ${APP_CONFIG.demoOtp})`,
         demoOtp: process.env.NODE_ENV !== 'production' ? APP_CONFIG.demoOtp : undefined,
       });
     }
 
+    // 3. VERIFY OTP
     if (action === 'VERIFY_OTP') {
       if (!otp) {
         return NextResponse.json({ success: false, error: '6-digit OTP code is required.' }, { status: 400 });
       }
 
       const result = db.verifyOtpAndSignIn({
-        phone,
+        email: email ? String(email).trim() : undefined,
+        phone: phone ? String(phone).trim() : undefined,
         otp: String(otp),
         intent: intent === 'provider' || intent === 'driver' ? intent : undefined,
         ipAddress,
@@ -71,7 +115,7 @@ export async function POST(req: NextRequest) {
 
       if (!result.success || !result.user) {
         return NextResponse.json(
-          { success: false, error: result.error || 'OTP verification failed.' },
+          { success: false, error: result.error || 'Verification code failed.' },
           { status: result.status || 400 }
         );
       }
@@ -82,12 +126,12 @@ export async function POST(req: NextRequest) {
         onboardingRequired: Boolean(result.onboardingRequired),
         redirectTo:
           result.user.activeRole === 'ADMIN'
-            ? '/admin'
+            ? '/driver/home?tab=admin'
             : result.user.activeRole === 'PROVIDER'
             ? '/owner/dashboard'
             : '/driver/home',
         message: result.onboardingRequired
-          ? 'Phone verified. Complete your name & consent to continue.'
+          ? 'Email verified. Complete your details to continue.'
           : 'Signed in successfully.',
       });
 
@@ -95,7 +139,7 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    return NextResponse.json({ success: false, error: 'Invalid auth action.' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Invalid authentication action.' }, { status: 400 });
   } catch (error) {
     console.error('Auth error:', error);
     return NextResponse.json({ success: false, error: 'Authentication failed.' }, { status: 500 });

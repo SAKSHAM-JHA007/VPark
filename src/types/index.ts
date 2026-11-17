@@ -99,7 +99,8 @@ export interface ConsentRecord {
 
 export interface OtpChallenge {
   id: string;
-  phone: string; // E.164 e.g. +919876543210
+  phone?: string; // E.164 e.g. +919876543210
+  email?: string; // e.g. driver@vpark.in
   codeHash: string;
   purpose: 'SIGNUP' | 'LOGIN' | 'RECOVERY';
   expiresAt: string;

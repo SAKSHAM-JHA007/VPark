@@ -205,6 +205,22 @@ function getSeedData(): DatabaseState {
       createdAt: past40Days,
       vehicles: [],
     },
+    {
+      id: 'usr_master_admin',
+      phone: '+919999999999',
+      name: 'Saksham Jha (Master Admin)',
+      email: 'jhasaksham.7453k@gmail.com',
+      roles: ['ADMIN', 'DRIVER', 'PROVIDER'],
+      activeRole: 'ADMIN',
+      phoneVerifiedAt: past40Days,
+      emailVerifiedAt: past40Days,
+      isPhoneVerified: true,
+      accountStatus: 'ACTIVE',
+      lastLoginAt: recentConfirmed,
+      deletedAt: null,
+      createdAt: past40Days,
+      vehicles: [],
+    },
   ];
 
   const userRoles: UserRoleGrant[] = [
@@ -216,6 +232,9 @@ function getSeedData(): DatabaseState {
     { userId: 'usr_admin_1', roleId: 'role_admin', roleName: 'ADMIN', grantedAt: past40Days, grantedBy: 'SYSTEM_SEED' },
     { userId: 'usr_admin_1', roleId: 'role_driver', roleName: 'DRIVER', grantedAt: past40Days, grantedBy: 'SYSTEM_SEED' },
     { userId: 'usr_admin_1', roleId: 'role_provider', roleName: 'PROVIDER', grantedAt: past40Days, grantedBy: 'SYSTEM_SEED' },
+    { userId: 'usr_master_admin', roleId: 'role_admin', roleName: 'ADMIN', grantedAt: past40Days, grantedBy: 'SYSTEM_MASTER' },
+    { userId: 'usr_master_admin', roleId: 'role_driver', roleName: 'DRIVER', grantedAt: past40Days, grantedBy: 'SYSTEM_MASTER' },
+    { userId: 'usr_master_admin', roleId: 'role_provider', roleName: 'PROVIDER', grantedAt: past40Days, grantedBy: 'SYSTEM_MASTER' },
   ];
 
   const providerProfiles: ProviderProfile[] = [
@@ -435,20 +454,100 @@ class Database {
     });
   }
 
+  public getUserByEmail(rawEmail: string): User | undefined {
+    if (!rawEmail || typeof rawEmail !== 'string') return undefined;
+    const cleanEmail = rawEmail.trim().toLowerCase();
+    return this.state.users.find((u) => {
+      if (u.deletedAt || u.accountStatus === 'DELETION_PENDING') return false;
+      return (u.email || '').trim().toLowerCase() === cleanEmail;
+    });
+  }
+
+  public verifyMasterAdmin(email: string, password: string): { success: boolean; user?: User; error?: string } {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (cleanEmail !== 'jhasaksham.7453k@gmail.com' || password !== 'Aduomi@1428') {
+      return { success: false, error: 'Invalid master administrator credentials.' };
+    }
+
+    let masterUser = this.getUserById('usr_master_admin') || this.getUserByEmail('jhasaksham.7453k@gmail.com');
+    const nowIso = new Date().toISOString();
+
+    if (!masterUser) {
+      masterUser = {
+        id: 'usr_master_admin',
+        phone: '+919999999999',
+        name: 'Saksham Jha (Master Admin)',
+        email: 'jhasaksham.7453k@gmail.com',
+        roles: ['ADMIN', 'DRIVER', 'PROVIDER'],
+        activeRole: 'ADMIN',
+        phoneVerifiedAt: nowIso,
+        emailVerifiedAt: nowIso,
+        isPhoneVerified: true,
+        accountStatus: 'ACTIVE',
+        lastLoginAt: nowIso,
+        deletedAt: null,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        vehicles: [],
+      };
+      this.state.users.push(masterUser);
+      this.state.userRoles.push(
+        { userId: 'usr_master_admin', roleId: 'role_admin', roleName: 'ADMIN', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' },
+        { userId: 'usr_master_admin', roleId: 'role_driver', roleName: 'DRIVER', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' },
+        { userId: 'usr_master_admin', roleId: 'role_provider', roleName: 'PROVIDER', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' }
+      );
+    } else {
+      masterUser.activeRole = 'ADMIN';
+      if (!masterUser.roles.includes('ADMIN')) masterUser.roles.push('ADMIN');
+      if (!masterUser.roles.includes('DRIVER')) masterUser.roles.push('DRIVER');
+      if (!masterUser.roles.includes('PROVIDER')) masterUser.roles.push('PROVIDER');
+      masterUser.lastLoginAt = nowIso;
+      masterUser.updatedAt = nowIso;
+    }
+
+    this.createAuditLog({
+      actorId: masterUser.id,
+      actorName: masterUser.name,
+      actorRole: 'ADMIN',
+      action: 'LOGIN_OTP',
+      targetType: 'USER',
+      targetId: masterUser.id,
+      details: 'Master admin authenticated with secure secret key.',
+    });
+
+    this.persist();
+    return { success: true, user: masterUser };
+  }
+
   public requestOtpChallenge(
-    rawPhone: string,
+    rawIdentifier: string,
     purpose: OtpChallenge['purpose'] = 'LOGIN'
-  ): { success: boolean; phone?: string; challengeId?: string; expiresAt?: string; retryAfterSeconds?: number; error?: string } {
-    const phone = normalizeIndianPhone(rawPhone);
-    if (!phone) {
-      return { success: false, error: 'Enter a valid mobile number (+91 10 digits or E.164 format).' };
+  ): { success: boolean; identifier?: string; phone?: string; email?: string; challengeId?: string; expiresAt?: string; retryAfterSeconds?: number; error?: string } {
+    const isEmail = rawIdentifier.includes('@');
+    let phone: string | undefined = undefined;
+    let email: string | undefined = undefined;
+    let keyForChallenge: string = '';
+
+    if (isEmail) {
+      email = rawIdentifier.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return { success: false, error: 'Enter a valid email address.' };
+      }
+      keyForChallenge = email;
+    } else {
+      const normalized = normalizeIndianPhone(rawIdentifier);
+      phone = normalized || undefined;
+      if (!phone) {
+        return { success: false, error: 'Enter a valid mobile number (+91 10 digits or E.164 format).' };
+      }
+      keyForChallenge = phone;
     }
 
     const nowMs = Date.now();
     // Resend cooldown check
     const recent = [...this.state.otpChallenges]
       .reverse()
-      .find((c) => c.phone === phone && !c.consumedAt);
+      .find((c) => (isEmail ? c.email === email : c.phone === phone) && !c.consumedAt);
     if (recent) {
       const elapsedSec = Math.floor((nowMs - new Date(recent.createdAt).getTime()) / 1000);
       if (elapsedSec < APP_CONFIG.otpResendCooldownSeconds) {
@@ -464,8 +563,9 @@ class Database {
     const expiresAt = new Date(nowMs + APP_CONFIG.otpExpiryMinutes * 60 * 1000).toISOString();
     const challenge: OtpChallenge = {
       id: challengeId,
-      phone,
-      codeHash: hashOtp(phone, APP_CONFIG.demoOtp, challengeId),
+      phone: phone || '',
+      email,
+      codeHash: hashOtp(keyForChallenge, APP_CONFIG.demoOtp, challengeId),
       purpose,
       expiresAt,
       attempts: 0,
@@ -483,14 +583,17 @@ class Database {
 
     return {
       success: true,
+      identifier: keyForChallenge,
       phone,
+      email,
       challengeId,
       expiresAt,
     };
   }
 
   public verifyOtpAndSignIn(params: {
-    phone: string;
+    email?: string;
+    phone?: string;
     otp: string;
     intent?: 'driver' | 'provider';
     ipAddress?: string;
@@ -502,21 +605,25 @@ class Database {
     error?: string;
     status?: number;
   } {
-    const phone = normalizeIndianPhone(params.phone);
-    if (!phone) {
-      return { success: false, error: 'Invalid phone number format.', status: 400 };
+    const isEmail = Boolean(params.email && params.email.includes('@'));
+    const cleanEmail = params.email ? params.email.trim().toLowerCase() : undefined;
+    const phone = params.phone ? (normalizeIndianPhone(params.phone) || params.phone) : undefined;
+
+    if (!isEmail && !phone) {
+      return { success: false, error: 'Email address is required for login.', status: 400 };
     }
 
+    const keyForVerification = isEmail ? cleanEmail! : phone!;
     const nowMs = Date.now();
     const nowIso = new Date(nowMs).toISOString();
 
-    // Find latest challenge for phone
+    // Find latest challenge for email or phone
     const challenge = [...this.state.otpChallenges]
       .reverse()
-      .find((c) => c.phone === phone);
+      .find((c) => (isEmail ? c.email === cleanEmail : c.phone === phone));
 
     if (!challenge) {
-      return { success: false, error: 'No active OTP challenge found. Request a new code.', status: 400 };
+      return { success: false, error: 'No active OTP verification code found. Request a new code.', status: 400 };
     }
 
     if (challenge.consumedAt) {
@@ -532,7 +639,7 @@ class Database {
     }
 
     challenge.attempts += 1;
-    const isMatch = verifyOtpHash(phone, params.otp, challenge.id, challenge.codeHash);
+    const isMatch = verifyOtpHash(keyForVerification, params.otp, challenge.id, challenge.codeHash);
     if (!isMatch) {
       this.persist();
       const remaining = APP_CONFIG.otpMaxAttempts - challenge.attempts;
@@ -549,23 +656,24 @@ class Database {
     // Valid OTP — consume single-use challenge
     challenge.consumedAt = nowIso;
 
-    let user = this.getUserByPhone(phone);
+    let user = isEmail ? this.getUserByEmail(cleanEmail!) : this.getUserByPhone(phone!);
     const requestedRole: UserRole = params.intent === 'provider' ? 'PROVIDER' : 'DRIVER';
     let onboardingRequired = false;
 
     if (!user) {
-      // Create single account with chosen initial capability; onboarding collects name & Terms consent
+      // Create single account with chosen initial capability; onboarding collects name, phone & Terms consent
       const userId = `usr_${nowMs}_${Math.random().toString(36).substring(2, 7)}`;
       user = {
         id: userId,
-        phone,
+        phone: phone || '',
         name: '',
+        email: cleanEmail,
         roles: [requestedRole],
         activeRole: requestedRole,
         providerType: requestedRole === 'PROVIDER' ? 'OWNER' : undefined,
-        phoneVerifiedAt: nowIso,
-        emailVerifiedAt: null,
-        isPhoneVerified: true,
+        phoneVerifiedAt: phone ? nowIso : null,
+        emailVerifiedAt: isEmail ? nowIso : null,
+        isPhoneVerified: Boolean(phone),
         accountStatus: 'ACTIVE',
         lastLoginAt: nowIso,
         deletedAt: null,
@@ -579,7 +687,7 @@ class Database {
         roleId: requestedRole === 'PROVIDER' ? 'role_provider' : 'role_driver',
         roleName: requestedRole,
         grantedAt: nowIso,
-        grantedBy: 'OTP_SIGNUP',
+        grantedBy: isEmail ? 'EMAIL_OTP_SIGNUP' : 'OTP_SIGNUP',
       });
       if (requestedRole === 'DRIVER') {
         this.state.driverProfiles.push({ userId, preferences: {} });
@@ -592,8 +700,12 @@ class Database {
         this.persist();
         return { success: false, error: 'Account is suspended. Contact support@vpark.in.', status: 403 };
       }
-      user.phoneVerifiedAt = user.phoneVerifiedAt || nowIso;
-      user.isPhoneVerified = true;
+      if (isEmail) {
+        user.emailVerifiedAt = user.emailVerifiedAt || nowIso;
+      } else {
+        user.phoneVerifiedAt = user.phoneVerifiedAt || nowIso;
+        user.isPhoneVerified = true;
+      }
       user.lastLoginAt = nowIso;
       user.updatedAt = nowIso;
 
@@ -615,12 +727,12 @@ class Database {
 
     this.createAuditLog({
       actorId: user.id,
-      actorName: user.name || user.phone,
+      actorName: user.name || user.email || user.phone,
       actorRole: user.activeRole,
       action: 'LOGIN_OTP',
       targetType: 'USER',
       targetId: user.id,
-      details: `Phone OTP sign-in completed (onboardingRequired=${onboardingRequired}).`,
+      details: `${isEmail ? 'Email' : 'Phone'} OTP sign-in completed (onboardingRequired=${onboardingRequired}).`,
       metadata: { ipAddress: params.ipAddress, userAgent: params.userAgent },
     });
 
@@ -631,6 +743,7 @@ class Database {
   public completeOnboarding(params: {
     userId: string;
     fullName: string;
+    phone?: string;
     email?: string;
     providerType?: ProviderType;
     acceptTerms: boolean;
@@ -652,6 +765,10 @@ class Database {
     user.name = cleanName;
     if (params.email && params.email.trim()) {
       user.email = params.email.trim().toLowerCase();
+    }
+    if (params.phone && params.phone.trim()) {
+      const norm = normalizeIndianPhone(params.phone.trim()) || params.phone.trim();
+      user.phone = norm;
     }
     if (params.providerType) {
       user.providerType = params.providerType;

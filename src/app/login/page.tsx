@@ -62,10 +62,10 @@ export default function LoginPage() {
             Bengaluru Municipal Pilot · Yelahanka Sector 01
           </span>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight uppercase text-[var(--ink)]">
-            Driver &amp; Host Identity Access
+            Driver &amp; Host Email Access
           </h1>
           <p className="text-xs text-[var(--ink-secondary)]">
-            Single credential handles driver reservations, host listings, and audit-logged payouts.
+            Sign in with your email address. Mobile number is stored in user profile for parking access and booking coordination.
           </p>
         </div>
 

@@ -458,7 +458,7 @@ export default function RootHomePage() {
                 {authIntent === 'provider' ? 'List & Earn with VPark' : 'Access Your Parking Account'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Fast OTP login for drivers and verified hosts in Bengaluru.
+                Email verification login for drivers and verified hosts in Bengaluru.
               </p>
             </div>
             <AuthPanel
