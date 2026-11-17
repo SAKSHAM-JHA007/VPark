@@ -1,21 +1,14 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { GoogleAnalytics } from '@/components/GoogleAnalytics';
-import { OrganizationSchema } from '@/components/StructuredData';
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://vpark.in';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: 'VPark · Find Your Spot. Own Your Time. | Bengaluru Smart Parking',
-    template: '%s | VPark Bengaluru',
-  },
+  title: 'VPark · Find Your Spot. Own Your Time. | Bengaluru Parking',
   description:
     'Discover verified residential and commercial parking spaces near you in Yelahanka, Bengaluru, or rent out your unused space safely with VPark.',
   manifest: '/manifest.json',
-  alternates: {
-    canonical: '/',
+  robots: {
+    index: false,
+    follow: false,
   },
   icons: {
     icon: [
@@ -23,33 +16,6 @@ export const metadata: Metadata = {
       { url: '/logo.jpg', type: 'image/jpeg' },
     ],
     apple: '/logo.jpg',
-  },
-  openGraph: {
-    title: 'VPark · Find Your Spot. Own Your Time.',
-    description:
-      'Verified two-sided parking marketplace in Bengaluru. Rent your unused space or find convenient parking near your destination.',
-    type: 'website',
-    locale: 'en_IN',
-    url: siteUrl,
-    siteName: 'VPark',
-    images: [
-      {
-        url: '/logo.jpg',
-        width: 1024,
-        height: 1024,
-        alt: 'VPark Bengaluru Verified Parking',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'VPark · Find Your Spot. Own Your Time.',
-    description:
-      'Verified two-sided parking marketplace in Bengaluru. Rent your unused space or find convenient parking near your destination.',
-    images: ['/logo.jpg'],
-  },
-  verification: {
-    google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || undefined,
   },
 };
 
@@ -68,6 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="robots" content="noindex, nofollow" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -87,8 +54,6 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-150">
-        <OrganizationSchema url={siteUrl} />
-        <GoogleAnalytics />
         {children}
       </body>
     </html>

@@ -3,37 +3,21 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { VParkLogo } from '@/components/VParkLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { BreadcrumbSchema } from '@/components/StructuredData';
 import { ContactForm } from '@/components/ContactForm';
 import { Mail, Phone, MapPin, Clock, ArrowLeft, ShieldCheck, HelpCircle } from 'lucide-react';
 
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://vpark.in';
-
 export const metadata: Metadata = {
-  title: 'Contact Us · VPark Bengaluru Parking Support & Inquiries',
-  description:
-    'Get in touch with the VPark team for driver assistance, space hosting inquiries, EV charging bays, or business parking integration in Bengaluru.',
-  alternates: {
-    canonical: `${baseUrl}/contact`,
-  },
-  openGraph: {
-    title: 'Contact Us · VPark Bengaluru Parking Support',
-    description: 'Reach our 24/7 parking support team or schedule an onboard inspection for your space in Bengaluru.',
-    url: `${baseUrl}/contact`,
-    type: 'website',
+  title: 'Contact Support | VPark',
+  description: 'Get in touch with the VPark team for assistance.',
+  robots: {
+    index: false,
+    follow: false,
   },
 };
 
 export default function ContactPage() {
-  const breadcrumbItems = [
-    { name: 'Home', url: baseUrl },
-    { name: 'Contact Us', url: `${baseUrl}/contact` },
-  ];
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#07090E] text-slate-900 dark:text-slate-100 flex flex-col justify-between font-sans transition-colors duration-200">
-      <BreadcrumbSchema items={breadcrumbItems} />
-
       {/* Header */}
       <header className="sticky top-0 z-40 bg-[#0B0C10] border-b border-neutral-800 text-white select-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">

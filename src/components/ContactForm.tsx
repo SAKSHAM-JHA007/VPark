@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { trackEvent } from '@/lib/analytics';
 import { Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export function ContactForm() {
@@ -53,10 +52,6 @@ export function ContactForm() {
       if (res.ok && data.success) {
         setSuccessMessage(data.message || 'Thank you for your message! Our team will respond within 24 hours.');
         setFormData({ name: '', email: '', subject: '', message: '', hp: '' });
-        trackEvent({
-          name: 'contact_form_submit',
-          params: { subject: formData.subject },
-        });
       } else {
         setErrorMessage(data.error || 'Failed to send message. Please try again.');
       }

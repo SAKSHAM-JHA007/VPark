@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { VParkLogo } from '@/components/VParkLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { BreadcrumbSchema } from '@/components/StructuredData';
 import { APP_CONFIG } from '@/lib/constants';
 import {
   ShieldCheck,
@@ -18,32 +17,19 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy & DPDP Act Data Disclosures | VPark Bengaluru',
-  description:
-    'Comprehensive privacy policy for VPark. Learn how we collect, process, retain, and protect personal identifiers and vehicle information under the Digital Personal Data Protection Act, 2023.',
-  alternates: {
-    canonical: '/privacy',
-  },
-  openGraph: {
-    title: 'Privacy Policy & Data Protection | VPark',
-    description:
-      'How VPark protects your personal data, phone numbers, vehicle records, and host verification documents.',
-    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://vpark.in'}/privacy`,
+  title: 'Privacy Policy | VPark',
+  description: 'Privacy policy and personal data protection disclosures for VPark.',
+  robots: {
+    index: false,
+    follow: false,
   },
 };
 
 export default function PrivacyPolicyPage() {
   const lastUpdated = 'November 17, 2026';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://vpark.in';
-
-  const breadcrumbs = [
-    { name: 'Home', url: '/' },
-    { name: 'Privacy Policy', url: '/privacy' },
-  ];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#07090E] text-slate-900 dark:text-slate-100 flex flex-col justify-between font-sans transition-colors duration-200">
-      <BreadcrumbSchema items={breadcrumbs} />
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-[#0B0C10] border-b border-neutral-800 text-white select-none">
