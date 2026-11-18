@@ -41,6 +41,7 @@ describe('Master Admin & Email-Based Authentication', () => {
     const firebaseCode = fs.readFileSync('src/lib/firebase.ts', 'utf-8');
     assert.ok(firebaseCode.includes('googleProvider'), 'Firebase client must export googleProvider');
     assert.ok(firebaseCode.includes('signInWithGooglePopup'), 'Firebase client must export signInWithGooglePopup');
+    assert.ok(!firebaseCode.includes('AIzaSy'), 'Firebase client must never contain hardcoded API keys');
 
     const googleRouteCode = fs.readFileSync('src/app/api/auth/google/route.ts', 'utf-8');
     assert.ok(googleRouteCode.includes('upsertGoogleUser'), 'Google route must call upsertGoogleUser');
