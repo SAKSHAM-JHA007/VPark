@@ -109,6 +109,11 @@ export function AuthPanel({
       console.error('Google sign-in error:', err);
       if (err?.code === 'auth/popup-closed-by-user') {
         setError('Google sign-in was closed before completion.');
+      } else if (err?.code === 'auth/unauthorized-domain' || (err?.message && err.message.includes('auth/unauthorized-domain'))) {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'vpark-one.vercel.app';
+        setError(
+          `Domain "${domain}" is not yet in the Firebase Authorized Domains list. Please add "${domain}" in Firebase Console → Authentication → Settings → Authorized domains. In the meantime, you can sign in below using your Email ID or Master Login!`
+        );
       } else {
         setError(err?.message || 'Google authentication encountered an error.');
       }
