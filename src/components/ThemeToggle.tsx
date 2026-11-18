@@ -10,6 +10,8 @@ interface ThemeToggleProps {
 export function ThemeToggle({ className = '' }: ThemeToggleProps) {
   const [isDark, setIsDark] = useState<boolean>(false);
   const [mounted, setMounted] = useState<boolean>(false);
+  // Only animate the icon swap after a user toggle, not on every page load.
+  const [hasToggled, setHasToggled] = useState<boolean>(false);
 
   useEffect(() => {
     setMounted(true);
@@ -27,6 +29,7 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
   const toggleTheme = () => {
     const nextDark = !isDark;
     setIsDark(nextDark);
+    setHasToggled(true);
 
     if (nextDark) {
       document.documentElement.classList.add('dark');
@@ -52,12 +55,12 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
       onClick={toggleTheme}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className={`w-7 h-7 flex items-center justify-center rounded-sm border border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface-bg)] text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-colors ${className}`}
+      className={`w-7 h-7 flex items-center justify-center rounded-sm border border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface-bg)] text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-[background-color,border-color,transform] duration-150 active:scale-90 overflow-hidden ${className}`}
     >
       {isDark ? (
-        <Sun className="w-3.5 h-3.5 text-amber-500" />
+        <Sun key="sun" className={`w-3.5 h-3.5 text-amber-500${hasToggled ? ' animate-spin-in' : ''}`} />
       ) : (
-        <Moon className="w-3.5 h-3.5 text-[var(--ink)]" />
+        <Moon key="moon" className={`w-3.5 h-3.5 text-[var(--ink)]${hasToggled ? ' animate-spin-in' : ''}`} />
       )}
     </button>
   );

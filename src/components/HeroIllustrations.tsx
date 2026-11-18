@@ -56,6 +56,7 @@ export function FindParkingIllustration({ className = 'w-full h-full' }: { class
         fill="none"
         filter="url(#neonGlow)"
         opacity="0.9"
+        className="vp-hero-glow"
       />
       <polygon
         points="45,175 145,115 305,125 210,195"
@@ -82,7 +83,9 @@ export function FindParkingIllustration({ className = 'w-full h-full' }: { class
         />
       </g>
 
-      {/* Sleek Modern White Car (3/4 Perspective) */}
+      {/* Sleek Modern White Car (3/4 Perspective) — outer group carries the CSS settle animation,
+          inner group keeps its SVG transform attribute (a CSS transform would override it). */}
+      <g className="vp-hero-car">
       <g transform="translate(95, 90)">
         {/* Rear Wheel */}
         <ellipse cx="120" cy="62" rx="10" ry="12" fill="#0F172A" stroke="#334155" strokeWidth="2.5" />
@@ -140,6 +143,7 @@ export function FindParkingIllustration({ className = 'w-full h-full' }: { class
         {/* Side Mirror */}
         <ellipse cx="73" cy="38" rx="4.5" ry="3" fill="#FFFFFF" stroke="#94A3B8" strokeWidth="0.6" />
       </g>
+      </g>
     </svg>
   );
 }
@@ -195,7 +199,7 @@ export function RentSpaceIllustration({ className = 'w-full h-full' }: { classNa
 
         {/* Garage Ceiling LED Light Bar */}
         <rect x="62" y="62" width="86" height="5" rx="2" fill="#FFFFFF" opacity="0.95" />
-        <rect x="62" y="62" width="86" height="5" rx="2" fill="#93C5FD" opacity="0.6" />
+        <rect x="62" y="62" width="86" height="5" rx="2" fill="#93C5FD" opacity="0.6" className="vp-hero-glow" />
 
         {/* Left Safety Pillar with Hazard Warning Stripes */}
         <rect x="22" y="115" width="18" height="55" fill="url(#hazardStripes)" stroke="#0F172A" strokeWidth="0.8" />

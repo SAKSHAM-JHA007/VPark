@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import { SearchResultItem, Vehicle, VehicleType } from '@/types';
 import { APP_CONFIG } from '@/lib/constants';
 import { calculatePricingPaise } from '@/lib/engine.mjs';
@@ -154,13 +155,13 @@ export function ListingDetailModal({
   };
 
   return (
-    <div
+    <ModalBackdrop
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label={listing.title}
     >
-      <div className="relative w-full max-w-3xl bg-[var(--surface-bg)] rounded-sm border border-[var(--hairline-strong)] shadow-sm overflow-hidden my-auto max-h-[92vh] flex flex-col text-[var(--ink)]">
+      <ModalPanel className="relative w-full max-w-3xl bg-[var(--surface-bg)] rounded-sm border border-[var(--hairline-strong)] shadow-sm overflow-hidden my-auto max-h-[92vh] flex flex-col text-[var(--ink)]">
         {/* Header bar */}
         <div className="px-5 py-3.5 border-b border-[var(--hairline)] flex items-center justify-between bg-[var(--surface-alt)]">
           <div className="flex items-center gap-2">
@@ -307,7 +308,13 @@ export function ListingDetailModal({
           </div>
 
           {activeHold && (
-            <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-950 flex items-center justify-between gap-4">
+            <div className="relative overflow-hidden p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-950 flex items-center justify-between gap-4 animate-fade-up">
+              {/* Visual mirror of the real hold countdown (600s window); decorative, the timer text is authoritative. */}
+              <span
+                aria-hidden="true"
+                className="absolute left-0 bottom-0 h-1 w-full origin-left bg-amber-500/60 transition-transform duration-1000 ease-linear"
+                style={{ transform: `scaleX(${Math.max(0, Math.min(1, secondsRemaining / 600))})` }}
+              />
               <div className="flex items-center gap-2">
                 <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
                 <div>
@@ -452,12 +459,12 @@ export function ListingDetailModal({
             </div>
           )}
         </div>
-      </div>
+      </ModalPanel>
 
       {/* Simulated Razorpay Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-scale-in">
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-mono text-blue-400 font-bold uppercase tracking-wider block">
@@ -522,6 +529,6 @@ export function ListingDetailModal({
           </div>
         </div>
       )}
-    </div>
+    </ModalBackdrop>
   );
 }

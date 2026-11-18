@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import { X, Download, Trash2, CheckCircle2, Lock } from 'lucide-react';
 
 interface DpdpExportModalProps {
@@ -44,13 +45,13 @@ export function DpdpExportModal({ onClose, onDeleted }: DpdpExportModalProps) {
   };
 
   return (
-    <div
+    <ModalBackdrop
       className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="DPDP Data Privacy"
     >
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+      <ModalPanel className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
         <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-blue-400" />
@@ -126,7 +127,7 @@ export function DpdpExportModal({ onClose, onDeleted }: DpdpExportModalProps) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </ModalPanel>
+    </ModalBackdrop>
   );
 }

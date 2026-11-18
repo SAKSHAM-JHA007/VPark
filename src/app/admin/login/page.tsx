@@ -67,9 +67,9 @@ export default function MasterAdminLoginPage() {
 
       {/* Main Terminal */}
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-md bg-[#0D0F17] rounded-2xl border border-blue-900/40 p-6 sm:p-8 shadow-2xl space-y-6">
+        <div className="w-full max-w-md bg-[#0D0F17] rounded-2xl border border-blue-900/40 p-6 sm:p-8 shadow-2xl space-y-6 animate-scale-in">
           <div className="space-y-2 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-blue-950/60 border border-blue-800/50 text-[#0A5CFF] flex items-center justify-center mx-auto shadow-inner">
+            <div className="w-12 h-12 rounded-2xl bg-blue-950/60 border border-blue-800/50 text-[#0A5CFF] flex items-center justify-center mx-auto shadow-inner animate-pop [animation-delay:150ms]">
               <ShieldCheck className="w-6 h-6 text-blue-400" />
             </div>
             <h1 className="text-lg font-bold uppercase tracking-wider text-white">
@@ -127,7 +127,7 @@ export default function MasterAdminLoginPage() {
             <button
               type="submit"
               disabled={loading || !password}
-              className="w-full py-3 rounded-lg bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 cursor-pointer"
+              className="w-full py-3 rounded-lg bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] shadow-lg shadow-blue-500/20 disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <>

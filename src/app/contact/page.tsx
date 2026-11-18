@@ -58,7 +58,7 @@ export default function ContactPage() {
         </nav>
 
         {/* Page Title & Intro */}
-        <div className="space-y-2 border-b border-slate-200 dark:border-neutral-800 pb-6">
+        <div className="space-y-2 border-b border-slate-200 dark:border-neutral-800 pb-6 animate-fade-up">
           <span className="text-[11px] font-bold tracking-widest uppercase text-[#0A5CFF] block">
             Direct Support &amp; Host Assistance
           </span>
@@ -72,7 +72,7 @@ export default function ContactPage() {
         </div>
 
         {/* Two-Column Grid: Contact Details & Form */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-up [animation-delay:100ms]">
           {/* Left Column: Direct Contact Details */}
           <div className="lg:col-span-5 space-y-6">
             <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200 dark:border-neutral-800 p-6 shadow-xs space-y-6">

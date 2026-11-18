@@ -34,15 +34,15 @@ export default function NotFound() {
       {/* Main 404 Content */}
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-16 sm:py-24 flex flex-col items-center justify-center text-center space-y-8">
         <div className="relative">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-blue-50 dark:bg-blue-950/40 text-[#0A5CFF] flex items-center justify-center border border-blue-200 dark:border-blue-900/60 shadow-inner">
+          <div className="animate-scale-in w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-blue-50 dark:bg-blue-950/40 text-[#0A5CFF] flex items-center justify-center border border-blue-200 dark:border-blue-900/60 shadow-inner">
             <Compass className="w-12 h-12 sm:w-14 sm:h-14 animate-spin-slow" />
           </div>
-          <span className="absolute -top-2 -right-2 px-2.5 py-0.5 rounded-full bg-rose-600 text-white font-mono text-[11px] font-bold shadow-md">
+          <span className="animate-pop [animation-delay:350ms] absolute -top-2 -right-2 px-2.5 py-0.5 rounded-full bg-rose-600 text-white font-mono text-[11px] font-bold shadow-md">
             404
           </span>
         </div>
 
-        <div className="space-y-3 max-w-md">
+        <div className="space-y-3 max-w-md animate-fade-up [animation-delay:120ms]">
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Parking Bay Not Found
           </h1>

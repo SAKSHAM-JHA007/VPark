@@ -12,6 +12,10 @@ import { AdminConsole } from '@/components/AdminConsole';
 import { MonthlyPassesView } from '@/components/MonthlyPassesView';
 import { DpdpExportModal } from '@/components/DpdpExportModal';
 import { AuthModal } from '@/components/AuthModal';
+import { Presence } from '@/components/motion/Presence';
+import { ListingCardSkeleton } from '@/components/motion/Skeleton';
+import { useSlidingIndicator } from '@/components/motion/useSlidingIndicator';
+import { staggerStyle } from '@/components/motion/tokens';
 import { Language, getT } from '@/lib/i18n';
 import {
   UserRole,
@@ -89,6 +93,15 @@ export function VParkApp({
   const howItWorksRef = useRef<HTMLElement>(null);
 
   const t = getT(currentLang);
+
+  // Tab content fades in only after the user (or a URL param) switches tabs,
+  // never on the initial page render.
+  const initialTabRef = useRef<VParkTab>(activeTab);
+  const tabSwitchedRef = useRef(false);
+  if (activeTab !== initialTabRef.current) tabSwitchedRef.current = true;
+  const tabEnterClass = tabSwitchedRef.current ? 'animate-fade-in' : '';
+
+  const viewPill = useSlidingIndicator(viewMode);
 
   // Sync optional query string params client-side without requiring Suspense boundaries
   useEffect(() => {
@@ -329,10 +342,10 @@ export function VParkApp({
 
       <main className="flex-1">
         {activeTab === 'search' && (
-          <div>
+          <div className={tabEnterClass}>
             {/* Signed-in Driver Welcome & Optional Email Banner (PRD 6.2 & 8.1) */}
             {currentUser && (
-              <div className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-700/80 px-4 sm:px-6 lg:px-8 py-2.5 text-xs">
+              <div className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-700/80 px-4 sm:px-6 lg:px-8 py-2.5 text-xs animate-fade-in">
                 <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="text-slate-700 dark:text-slate-300">
                     <span className="font-bold text-slate-900 dark:text-white">
@@ -353,13 +366,17 @@ export function VParkApp({
                       />
                       <button
                         type="submit"
-                        className="px-3 py-1.5 rounded-lg bg-[#0A5CFF] text-white font-bold text-xs"
+                        className="px-3 py-1.5 rounded-lg bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs transition-[background-color,transform] duration-150 active:scale-[0.96]"
                       >
                         Verify Email
                       </button>
                     </form>
                   )}
-                  {emailStatus && <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{emailStatus}</span>}
+                  {emailStatus && (
+                    <span key={emailStatus} role="status" className="text-emerald-700 dark:text-emerald-400 font-semibold animate-fade-in">
+                      {emailStatus}
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -373,7 +390,7 @@ export function VParkApp({
               <div className="max-w-7xl mx-auto space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
                   <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--ink)] leading-none">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--ink)] leading-none animate-fade-up">
                       Plan your parking
                     </h1>
                     <p className="text-xs text-[var(--ink-secondary)] mt-1.5">
@@ -388,7 +405,7 @@ export function VParkApp({
                 </div>
 
                 {/* Unified Rounded Search Card */}
-                <div className="bg-[var(--surface-bg)] rounded-3xl border border-[var(--hairline-strong)] p-4 sm:p-5 shadow-xs space-y-4">
+                <div className="bg-[var(--surface-bg)] rounded-3xl border border-[var(--hairline-strong)] p-4 sm:p-5 shadow-xs space-y-4 animate-fade-up [animation-delay:80ms]">
                   {/* Mode Tabs */}
                   <div className="flex items-center gap-2">
                     <button
@@ -415,7 +432,7 @@ export function VParkApp({
                   {/* Horizontal Inputs Bar */}
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                     {/* Location */}
-                    <div className="md:col-span-4 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3">
+                    <div className="md:col-span-4 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
                       <MapPin className="w-4 h-4 text-[#0A5CFF] flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
@@ -441,7 +458,7 @@ export function VParkApp({
                     </div>
 
                     {/* Date */}
-                    <div className="md:col-span-3 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3">
+                    <div className="md:col-span-3 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
                       <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
@@ -462,7 +479,7 @@ export function VParkApp({
                     </div>
 
                     {/* Time */}
-                    <div className="md:col-span-3 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3">
+                    <div className="md:col-span-3 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
                       <Clock className="w-4 h-4 text-slate-400 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
@@ -488,10 +505,10 @@ export function VParkApp({
                       <button
                         type="button"
                         onClick={fetchListings}
-                        className="w-full py-3.5 px-4 rounded-2xl bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-500/20 active:scale-[0.99]"
+                        className="group/cta w-full py-3.5 px-4 rounded-2xl bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-[background-color,box-shadow,transform] duration-150 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.97]"
                       >
                         <span>Search Parking</span>
-                        <ArrowRight className="w-4 h-4" />
+                        <ArrowRight className="w-4 h-4 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" />
                       </button>
                     </div>
                   </div>
@@ -587,21 +604,36 @@ export function VParkApp({
                 </select>
               </div>
 
-              <div className="flex items-center border border-[var(--hairline-strong)]">
+              <div ref={viewPill.containerRef} className="relative flex items-center border border-[var(--hairline-strong)]">
+                {viewPill.ready && (
+                  <span
+                    aria-hidden="true"
+                    style={viewPill.indicatorStyle}
+                    className={`${viewPill.indicatorClassName} bg-[var(--ink)]`}
+                  />
+                )}
                 <button
+                  ref={viewPill.register('map')}
                   type="button"
                   onClick={() => setViewMode('map')}
-                  className={`px-3 py-1 text-[11px] uppercase tracking-wider font-mono transition-colors ${
-                    viewMode === 'map' ? 'bg-[var(--ink)] text-[var(--surface-bg)] font-bold' : 'text-[var(--ink-secondary)] hover:bg-[var(--surface-alt)]'
+                  aria-pressed={viewMode === 'map'}
+                  className={`relative px-3 py-1 text-[11px] uppercase tracking-wider font-mono transition-colors ${
+                    viewMode === 'map'
+                      ? `${viewPill.ready ? '' : 'bg-[var(--ink)]'} text-[var(--surface-bg)] font-bold`
+                      : 'text-[var(--ink-secondary)] hover:bg-[var(--surface-alt)]'
                   }`}
                 >
                   Map View
                 </button>
                 <button
+                  ref={viewPill.register('list')}
                   type="button"
                   onClick={() => setViewMode('list')}
-                  className={`px-3 py-1 text-[11px] uppercase tracking-wider font-mono transition-colors border-l border-[var(--hairline-strong)] ${
-                    viewMode === 'list' ? 'bg-[var(--ink)] text-[var(--surface-bg)] font-bold' : 'text-[var(--ink-secondary)] hover:bg-[var(--surface-alt)]'
+                  aria-pressed={viewMode === 'list'}
+                  className={`relative px-3 py-1 text-[11px] uppercase tracking-wider font-mono transition-colors border-l border-[var(--hairline-strong)] ${
+                    viewMode === 'list'
+                      ? `${viewPill.ready ? '' : 'bg-[var(--ink)]'} text-[var(--surface-bg)] font-bold`
+                      : 'text-[var(--ink-secondary)] hover:bg-[var(--surface-alt)]'
                   }`}
                 >
                   List View
@@ -635,11 +667,16 @@ export function VParkApp({
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                 <div className={`${viewMode === 'list' ? 'lg:col-span-12' : 'lg:col-span-6'} space-y-2.5`}>
                   {loading ? (
-                    <div className="p-12 text-center font-mono text-xs text-[var(--ink-secondary)] uppercase tracking-wider">
-                      Querying Yelahanka Sector 01 Registry...
-                    </div>
+                    <>
+                      <div role="status" className="py-2 font-mono text-xs text-[var(--ink-secondary)] uppercase tracking-wider animate-fade-in">
+                        Querying Yelahanka Sector 01 Registry...
+                      </div>
+                      {[0, 1, 2].map((i) => (
+                        <ListingCardSkeleton key={i} style={staggerStyle(i, 70)} />
+                      ))}
+                    </>
                   ) : results.length === 0 ? (
-                    <div className="p-8 text-center bg-[var(--surface-bg)] border border-[var(--hairline-strong)] text-[var(--ink-secondary)] font-mono text-xs space-y-2">
+                    <div className="p-8 text-center bg-[var(--surface-bg)] border border-[var(--hairline-strong)] text-[var(--ink-secondary)] font-mono text-xs space-y-2 animate-fade-in">
                       <p className="font-bold uppercase text-[var(--ink)]">No verified bays match filter parameters.</p>
                       <button
                         type="button"
@@ -650,20 +687,21 @@ export function VParkApp({
                       </button>
                     </div>
                   ) : (
-                    results.slice(0, viewMode === 'list' ? 24 : 6).map((item) => (
-                      <ListingCard
-                        key={item.listing.id}
-                        item={item}
-                        isSelected={selectedResult?.listing.id === item.listing.id}
-                        onSelect={() => setSelectedResult(item)}
-                        onBook={() => setBookingModalItem(item)}
-                      />
+                    results.slice(0, viewMode === 'list' ? 24 : 6).map((item, index) => (
+                      <div key={item.listing.id} className="animate-fade-up" style={staggerStyle(index)}>
+                        <ListingCard
+                          item={item}
+                          isSelected={selectedResult?.listing.id === item.listing.id}
+                          onSelect={() => setSelectedResult(item)}
+                          onBook={() => setBookingModalItem(item)}
+                        />
+                      </div>
                     ))
                   )}
                 </div>
 
                 {viewMode === 'map' && (
-                  <div className="lg:col-span-6 sticky top-20">
+                  <div className="lg:col-span-6 sticky top-20 animate-fade-in">
                     <InteractiveMap
                       results={results}
                       selectedItem={selectedResult}
@@ -688,7 +726,7 @@ export function VParkApp({
                 </div>
 
                 {/* Two-Column Asymmetric Protocol Matrix */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--hairline)] border border-[var(--hairline)]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--hairline)] border border-[var(--hairline)] vp-reveal">
                   {/* Protocol A: Driver */}
                   <div className="bg-[var(--surface-bg)] p-6 space-y-5 flex flex-col justify-between">
                     <div className="space-y-4">
@@ -757,7 +795,7 @@ export function VParkApp({
                         else if (!currentUser.roles.includes('PROVIDER')) handleAddCapability('PROVIDER').then(() => setActiveTab('provider'));
                         else setActiveTab('provider');
                       }}
-                      className="w-full py-2.5 bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] text-white font-mono text-xs uppercase tracking-wider transition-colors"
+                      className="w-full py-2.5 bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 active:scale-[0.99]"
                     >
                       Register Driveway / Commercial Space →
                     </button>
@@ -780,7 +818,7 @@ export function VParkApp({
 
         {/* TAB 2: Driver Bookings */}
         {activeTab === 'bookings' && (
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 font-mono">
+          <div className={`max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 font-mono ${tabEnterClass}`}>
             <div className="border-b border-[var(--hairline)] pb-2 flex items-baseline justify-between">
               <h1 className="text-base font-bold uppercase tracking-tight text-[var(--ink)]">
                 Active Parking Sessions &amp; Digital Passes
@@ -806,9 +844,10 @@ export function VParkApp({
                 <p className="text-[var(--ink-tertiary)]">Search verified bays in Yelahanka to hold a slot and receive your digital pass.</p>
               </div>
             ) : (
-              bookings.map((booking) => (
+              bookings.map((booking, index) => (
                 <div
                   key={booking.id}
+                  style={staggerStyle(index)}
                   onClick={() => setActivePassBooking(booking)}
                   role="button"
                   tabIndex={0}
@@ -818,7 +857,7 @@ export function VParkApp({
                       setActivePassBooking(booking);
                     }
                   }}
-                  className="p-4 bg-[var(--surface-bg)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] cursor-pointer flex justify-between items-center text-xs transition-colors"
+                  className="group p-4 bg-[var(--surface-bg)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] hover:shadow-md cursor-pointer flex justify-between items-center text-xs transition-[border-color,box-shadow,transform] duration-200 ease-out-quart motion-safe:hover:-translate-y-0.5 animate-fade-up"
                 >
                   <div className="space-y-0.5">
                     <span className="font-mono font-bold text-[var(--transit-accent)] text-[11px] uppercase tracking-wider">
@@ -829,7 +868,7 @@ export function VParkApp({
                   </div>
                   <div className="text-right font-mono">
                     <span className="text-sm font-bold text-[var(--ink)]">₹{booking.pricingSnapshot.totalAmount}</span>
-                    <span className="block text-[var(--transit-accent)] font-semibold text-[11px] uppercase tracking-wider mt-0.5">
+                    <span className="block text-[var(--transit-accent)] font-semibold text-[11px] uppercase tracking-wider mt-0.5 transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
                       Open Pass →
                     </span>
                   </div>
@@ -840,18 +879,26 @@ export function VParkApp({
         )}
 
         {activeTab === 'monthly' && (
-          <MonthlyPassesView onRequireAuth={() => openLoginModal('driver')} />
+          <div className={tabEnterClass}>
+            <MonthlyPassesView onRequireAuth={() => openLoginModal('driver')} />
+          </div>
         )}
 
         {activeTab === 'provider' && (
-          <ProviderHub
-            currentUser={currentUser}
-            onRequireAuth={() => openLoginModal('provider')}
-            onEnableProvider={() => handleAddCapability('PROVIDER')}
-          />
+          <div className={tabEnterClass}>
+            <ProviderHub
+              currentUser={currentUser}
+              onRequireAuth={() => openLoginModal('provider')}
+              onEnableProvider={() => handleAddCapability('PROVIDER')}
+            />
+          </div>
         )}
 
-        {activeTab === 'admin' && <AdminConsole />}
+        {activeTab === 'admin' && (
+          <div className={tabEnterClass}>
+            <AdminConsole />
+          </div>
+        )}
       </main>
 
       {/* Clean Footer */}
@@ -877,16 +924,21 @@ export function VParkApp({
       </footer>
 
       {/* Modals */}
+      <Presence>
       {authModalOpen && (
         <AuthModal
+          key="auth-modal"
           initialIntent={authIntent}
           onAuthenticated={handleAuthenticated}
           onClose={() => setAuthModalOpen(false)}
         />
       )}
+      </Presence>
 
+      <Presence>
       {bookingModalItem && (
         <ListingDetailModal
+          key={`listing-${bookingModalItem.listing.id}`}
           item={bookingModalItem}
           userVehicles={currentUser?.vehicles || []}
           isAuthenticated={Boolean(currentUser)}
@@ -902,9 +954,12 @@ export function VParkApp({
           }}
         />
       )}
+      </Presence>
 
+      <Presence>
       {activePassBooking && (
         <DigitalPassModal
+          key={`pass-${activePassBooking.id}`}
           booking={activePassBooking}
           onClose={() => setActivePassBooking(null)}
           onRefresh={() => {
@@ -918,9 +973,12 @@ export function VParkApp({
           onOpenDispute={(b) => setDisputeBooking(b)}
         />
       )}
+      </Presence>
 
+      <Presence>
       {disputeBooking && (
         <DisputeModal
+          key={`dispute-${disputeBooking.id}`}
           booking={disputeBooking}
           onClose={() => setDisputeBooking(null)}
           onDisputeCreated={() => {
@@ -929,9 +987,12 @@ export function VParkApp({
           }}
         />
       )}
+      </Presence>
 
+      <Presence>
       {showDpdpModal && (
         <DpdpExportModal
+          key="dpdp-modal"
           onClose={() => setShowDpdpModal(false)}
           onDeleted={() => {
             setShowDpdpModal(false);
@@ -939,6 +1000,7 @@ export function VParkApp({
           }}
         />
       )}
+      </Presence>
     </div>
   );
 }
