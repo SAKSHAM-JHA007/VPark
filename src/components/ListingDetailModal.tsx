@@ -6,6 +6,7 @@ import { SearchResultItem, Vehicle, VehicleType } from '@/types';
 import { APP_CONFIG } from '@/lib/constants';
 import { calculatePricingPaise } from '@/lib/engine.mjs';
 import { toPaise } from '@/lib/constants';
+import { validatePlateNumber, formatPlateNumber } from '@/lib/validation';
 import {
   X,
   ShieldCheck,
@@ -87,6 +88,11 @@ export function ListingDetailModal({
       return;
     }
 
+    if (!validatePlateNumber(plateNumber)) {
+      setErrorMessage('Please enter a valid Indian vehicle registration plate (e.g. KA-04-MB-1234 or 22-BH-1234-AA).');
+      return;
+    }
+
     setIsHolding(true);
     setErrorMessage(null);
 
@@ -123,6 +129,11 @@ export function ListingDetailModal({
   };
 
   const handleConfirmPayment = async () => {
+    if (!validatePlateNumber(plateNumber)) {
+      setErrorMessage('Please enter a valid Indian vehicle registration plate (e.g. KA-04-MB-1234).');
+      return;
+    }
+
     setIsBooking(true);
     setErrorMessage(null);
 
@@ -374,8 +385,22 @@ export function ListingDetailModal({
                     value={plateNumber}
                     onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
                     placeholder="e.g. KA-04-MB-1234"
-                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold"
+                    className={`w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold ${
+                      plateNumber.trim() && !validatePlateNumber(plateNumber)
+                        ? 'border-red-400 focus:border-red-500'
+                        : 'border-slate-300'
+                    }`}
                   />
+                  {plateNumber.trim() && !validatePlateNumber(plateNumber) && (
+                    <span className="text-[10px] text-red-600 block mt-1 font-mono">
+                      Invalid plate. Format: KA-04-MB-1234 or 22-BH-1234-AA
+                    </span>
+                  )}
+                  {plateNumber.trim() && validatePlateNumber(plateNumber) && (
+                    <span className="text-[10px] text-emerald-600 block mt-1 font-mono">
+                      ✓ Valid Indian registration plate
+                    </span>
+                  )}
                 </div>
               </div>
 

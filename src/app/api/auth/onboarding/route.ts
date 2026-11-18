@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getClientIp, getUserAgent, requireSession } from '@/lib/auth';
+import { normalizeIndianPhone } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,10 +14,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { fullName, email, phone, providerType, acceptTerms } = body;
 
+    let normalizedPhone: string | undefined = undefined;
+    if (phone && typeof phone === 'string' && phone.trim()) {
+      const norm = normalizeIndianPhone(phone.trim());
+      if (!norm) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid mobile number. Please enter a valid 10-digit Indian mobile number starting with 6-9.' },
+          { status: 400 }
+        );
+      }
+      normalizedPhone = norm;
+    }
+
     const result = db.completeOnboarding({
       userId: session.user.id,
       fullName: String(fullName || ''),
-      phone: typeof phone === 'string' ? phone : undefined,
+      phone: normalizedPhone,
       email: typeof email === 'string' ? email : undefined,
       providerType,
       acceptTerms: Boolean(acceptTerms),

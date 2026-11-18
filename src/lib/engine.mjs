@@ -31,6 +31,67 @@ export function normalizeIndianPhone(input) {
   return null;
 }
 
+/**
+ * Validates whether a phone number can be normalized into strict E.164 format.
+ * Accepts 10-digit Indian numbers starting with 6-9, optionally prefixed by +91, 91, or 0,
+ * as well as valid international E.164 numbers.
+ */
+export function validatePhoneNumber(phone) {
+  return normalizeIndianPhone(phone) !== null;
+}
+
+/**
+ * Strips all non-alphanumeric characters and converts to uppercase.
+ */
+export function normalizePlateNumber(raw) {
+  if (typeof raw !== 'string') return '';
+  return raw
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .trim();
+}
+
+/**
+ * Validates Indian vehicle registration plate numbers.
+ * Supported formats:
+ *  1. Standard State RTO Series:
+ *     State code (2 letters) + RTO (1-2 digits) + Series (1-3 letters) + Number (1-4 digits)
+ *     e.g., KA-04-MB-1234, DL-01-A-1234, MH-12-AB-9021, KA-51-EV-9021
+ *  2. Bharat (BH) Series (MoRTH 2021+):
+ *     Year (2 digits) + "BH" + Number (4 digits) + Series (1-2 letters)
+ *     e.g., 22-BH-1234-AA
+ */
+export function validatePlateNumber(plate) {
+  if (typeof plate !== 'string') return false;
+  const clean = normalizePlateNumber(plate);
+  if (!clean || clean.length < 6 || clean.length > 12) return false;
+
+  // 1. Standard Indian State plate: [A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}
+  const standardPattern = /^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$/;
+
+  // 2. Bharat (BH) Series: [0-9]{2}BH[0-9]{4}[A-Z]{1,2}
+  const bhPattern = /^[0-9]{2}BH[0-9]{4}[A-Z]{1,2}$/;
+
+  return standardPattern.test(clean) || bhPattern.test(clean);
+}
+
+/**
+ * Formats a clean alphanumeric plate into standard hyphenated representation (e.g. KA-04-MB-1234).
+ */
+export function formatPlateNumber(plate) {
+  const clean = normalizePlateNumber(plate);
+  if (!clean) return '';
+  const bhMatch = clean.match(/^([0-9]{2})(BH)([0-9]{4})([A-Z]{1,2})$/);
+  if (bhMatch) {
+    return `${bhMatch[1]}-${bhMatch[2]}-${bhMatch[3]}-${bhMatch[4]}`;
+  }
+  const stdMatch = clean.match(/^([A-Z]{2})([0-9]{1,2})([A-Z]{1,3})([0-9]{1,4})$/);
+  if (stdMatch) {
+    return `${stdMatch[1]}-${stdMatch[2]}-${stdMatch[3]}-${stdMatch[4]}`;
+  }
+  return clean;
+}
+
 export function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // km
   const dLat = ((lat2 - lat1) * Math.PI) / 180;

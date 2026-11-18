@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser, requireCapability } from '@/lib/auth';
+import { validatePlateNumber } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,13 @@ export async function POST(req: NextRequest) {
 
     if (!listingId || !vehicleType || !vehiclePlateNumber || !startTime || !endTime) {
       return NextResponse.json({ success: false, error: 'All booking fields are required' }, { status: 400 });
+    }
+
+    if (!validatePlateNumber(String(vehiclePlateNumber))) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid vehicle registration plate. Must match Indian format (e.g. KA-04-MB-1234 or 22-BH-1234-AA).' },
+        { status: 400 }
+      );
     }
 
     const result = db.createBooking({

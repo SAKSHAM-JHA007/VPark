@@ -30,6 +30,7 @@ import {
   ProviderSituation,
 } from '@/types';
 import { APP_CONFIG, toPaise, fromPaise } from './constants';
+import { validatePlateNumber, formatPlateNumber } from './validation';
 import {
   normalizeIndianPhone,
   calculateDistance as engineCalculateDistance,
@@ -891,8 +892,13 @@ class Database {
       user.email = params.email.trim().toLowerCase();
     }
     if (params.phone && params.phone.trim()) {
-      const norm = normalizeIndianPhone(params.phone.trim()) || params.phone.trim();
+      const norm = normalizeIndianPhone(params.phone.trim());
+      if (!norm) {
+        return { success: false, error: 'Please enter a valid 10-digit mobile number starting with 6-9.' };
+      }
       user.phone = norm;
+      user.isPhoneVerified = true;
+      user.phoneVerifiedAt = nowIso;
     }
     if (params.providerType) {
       user.providerType = params.providerType;
@@ -1083,8 +1089,15 @@ class Database {
     const user = this.getUserById(userId);
     if (!user) return undefined;
 
+    if (!validatePlateNumber(vehicle.plateNumber)) {
+      return undefined;
+    }
+
+    const formattedPlate = formatPlateNumber(vehicle.plateNumber) || vehicle.plateNumber.toUpperCase().trim();
+
     const newVehicle = {
       ...vehicle,
+      plateNumber: formattedPlate,
       id: `veh_${Date.now()}`,
       userId,
       deletedAt: null,
@@ -1332,6 +1345,12 @@ class Database {
     const driver = this.getUserById(data.driverId);
     if (!driver) return { success: false, error: 'Authenticated driver record not found.' };
 
+    if (!validatePlateNumber(data.vehiclePlateNumber)) {
+      return { success: false, error: 'Invalid vehicle registration plate. Must match Indian format (e.g. KA-04-MB-1234 or 22-BH-1234-AA).' };
+    }
+
+    const formattedPlate = formatPlateNumber(data.vehiclePlateNumber) || data.vehiclePlateNumber.toUpperCase().trim();
+
     const hourlyPaise = listing.pricing.hourlyRatePaise ?? toPaise(listing.pricing.hourlyRate);
     const pricing = calculatePricingPaise(hourlyPaise, data.startTime, data.endTime);
     const refNum = `VPK-BLR-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -1355,7 +1374,7 @@ class Database {
       providerName: listing.providerName,
       providerPhoneMasked: `+91 80 4XXX ${refNum.slice(-4)}`,
       vehicleType: data.vehicleType,
-      vehiclePlateNumber: data.vehiclePlateNumber,
+      vehiclePlateNumber: formattedPlate,
       startTime: data.startTime,
       endTime: data.endTime,
       status: 'CONFIRMED',

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ProviderType, User, UserRole, VehicleType } from '@/types';
 import { APP_CONFIG } from '@/lib/constants';
 import { signInWithGooglePopup } from '@/lib/firebase';
+import { validatePlateNumber, normalizeIndianPhone } from '@/lib/validation';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import {
   X,
@@ -219,6 +220,22 @@ export function AuthPanel({
   const handleCompleteOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (phone.trim()) {
+      const normalized = normalizeIndianPhone(phone.trim());
+      if (!normalized) {
+        setError('Please enter a valid 10-digit mobile number starting with 6-9 (e.g. 9876543210).');
+        return;
+      }
+    }
+
+    if (plateNumber.trim()) {
+      if (!validatePlateNumber(plateNumber.trim())) {
+        setError('Please enter a valid Indian vehicle registration plate (e.g. KA-04-MB-1234 or 22-BH-1234-AA).');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/auth/onboarding', {
