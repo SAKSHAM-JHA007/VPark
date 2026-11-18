@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ProviderType, User, UserRole } from '@/types';
+import { ProviderType, User, UserRole, VehicleType } from '@/types';
 import { APP_CONFIG } from '@/lib/constants';
+import { signInWithGooglePopup } from '@/lib/firebase';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import {
   X,
@@ -46,6 +47,10 @@ export function AuthPanel({
   const [acceptTerms, setAcceptTerms] = useState<boolean>(true);
   const [cooldown, setCooldown] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
+  const [googleSigningIn, setGoogleSigningIn] = useState<boolean>(false);
+  const [plateNumber, setPlateNumber] = useState<string>('');
+  const [makeModel, setMakeModel] = useState<string>('');
+  const [vehicleType, setVehicleType] = useState<VehicleType>('SEDAN');
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
 
@@ -60,6 +65,57 @@ export function AuthPanel({
     }, 1000);
     return () => clearInterval(t);
   }, [cooldown]);
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setHint(null);
+    if (!acceptTerms) {
+      setError('Please accept the Terms of Service & DPDP Act 2023 Privacy Notice.');
+      return;
+    }
+
+    setGoogleSigningIn(true);
+    try {
+      const cred = await signInWithGooglePopup();
+      const fbUser = cred.user;
+
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: fbUser.uid,
+          email: fbUser.email,
+          name: fbUser.displayName,
+          photoUrl: fbUser.photoURL,
+          intent,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Failed to authenticate with Google.');
+        return;
+      }
+
+      const user: User = data.user;
+      if (user.roles.includes('ADMIN') || (user.phone && user.vehicles.length > 0)) {
+        onAuthenticated(user);
+      } else {
+        setFullName(user.name || '');
+        setEmail(user.email || '');
+        setStep('onboarding');
+      }
+    } catch (err: any) {
+      console.error('Google sign-in error:', err);
+      if (err?.code === 'auth/popup-closed-by-user') {
+        setError('Google sign-in was closed before completion.');
+      } else {
+        setError(err?.message || 'Google authentication encountered an error.');
+      }
+    } finally {
+      setGoogleSigningIn(false);
+    }
+  };
 
   const handleEmailSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -174,9 +230,33 @@ export function AuthPanel({
       const data = await res.json();
       if (!res.ok || !data.success) {
         setError(data.error || 'Failed to save profile details.');
-      } else {
-        onAuthenticated(data.user);
+        return;
       }
+
+      let finalUser = data.user;
+
+      if (plateNumber.trim()) {
+        try {
+          const vRes = await fetch('/api/user/vehicles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: vehicleType,
+              makeModel: makeModel.trim() || 'Primary Vehicle',
+              plateNumber: plateNumber.trim().toUpperCase(),
+              isEv: vehicleType === 'EV',
+            }),
+          });
+          const vData = await vRes.json();
+          if (vData.success && vData.user) {
+            finalUser = vData.user;
+          }
+        } catch {
+          // non-fatal
+        }
+      }
+
+      onAuthenticated(finalUser);
     } catch {
       setError('Failed to save profile details.');
     } finally {
@@ -293,40 +373,90 @@ export function AuthPanel({
           </div>
         )}
 
-        {/* Step 1: Email Address (Replaces Phone Login) */}
+        {/* Step 1: Authentication (Google Sign-In + Email/Master Key) */}
         {step === 'email' && (
-          <form key="step-email" onSubmit={handleEmailSubmit} className={`space-y-4${stepEnterClass}`}>
-            <div>
-              <label htmlFor="vpark-email-input" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5">
-                Primary Email ID
-              </label>
-              <div className="relative flex items-center">
-                <Mail className="w-4 h-4 text-[var(--ink-tertiary)] absolute left-3" />
-                <input
-                  id="vpark-email-input"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. driver@vpark.in or your.name@example.com"
-                  className="w-full pl-9 pr-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
-                />
+          <div className={`space-y-4${stepEnterClass}`}>
+            {/* Google Authentication 1-Click Button */}
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={googleSigningIn || loading}
+                className="w-full py-2.5 px-4 rounded-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-[var(--hairline-strong)] text-[var(--ink)] font-semibold text-xs flex items-center justify-center gap-2.5 transition-colors cursor-pointer shadow-xs disabled:opacity-60"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.1.74-2.51 1.18-4.22 1.18-3.24 0-5.99-2.19-6.97-5.13H1.05v3.14C3.07 21.2 7.24 24 12 24Z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.03 14.04c-.25-.74-.39-1.53-.39-2.34s.14-1.6.39-2.34V6.22H1.05C.38 7.56 0 9.09 0 11.7s.38 4.14 1.05 5.48l3.98-3.14Z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.65c1.8 0 3.41.62 4.68 1.83l3.51-3.51C18.07 1.09 15.3 0 12 0 7.24 0 3.07 2.8 1.05 6.22l3.98 3.14c.98-2.94 3.73-5.13 6.97-5.13Z"
+                  />
+                </svg>
+                <span>{googleSigningIn ? 'Connecting to Google...' : 'Continue with Google'}</span>
+              </button>
+
+              <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wider">
+                <div className="flex-1 h-px bg-[var(--hairline)]" />
+                <span>Or continue with Email</span>
+                <div className="flex-1 h-px bg-[var(--hairline)]" />
               </div>
-              <span className="text-[10px] font-mono text-[var(--ink-tertiary)] mt-1 block">
-                Single email handles driver reservations, host listings, and audit payouts.
-              </span>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
-            >
-              {loading ? 'Processing...' : 'Continue with Email'}
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </form>
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="vpark-email-input" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5">
+                  Primary Email ID
+                </label>
+                <div className="relative flex items-center">
+                  <Mail className="w-4 h-4 text-[var(--ink-tertiary)] absolute left-3" />
+                  <input
+                    id="vpark-email-input"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. driver@vpark.in or your.name@example.com"
+                    className="w-full pl-9 pr-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
+                  />
+                </div>
+                <span className="text-[10px] font-mono text-[var(--ink-tertiary)] mt-1 block">
+                  Single email handles driver reservations, host listings, and audit payouts.
+                </span>
+              </div>
+
+              <label className="flex items-start gap-2 p-2 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="mt-0.5 w-3.5 h-3.5 accent-[var(--transit-accent)]"
+                />
+                <span className="text-[10px] font-mono text-[var(--ink-secondary)] leading-relaxed">
+                  I agree to VPark Terms of Service &amp; DPDP Act 2023 Privacy Notice.
+                </span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
+              >
+                {loading ? 'Processing...' : 'Continue with Email'}
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </form>
+          </div>
         )}
 
         {/* Master Admin Hidden Password Prompt */}
@@ -474,6 +604,41 @@ export function AuthPanel({
                 Saved in your user profile for parking gate access and driver-host coordination. Not used for login.
               </span>
             </div>
+
+            {intent === 'driver' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label htmlFor="vpark-onboard-plate" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1">
+                    Vehicle Plate (Optional)
+                  </label>
+                  <input
+                    id="vpark-onboard-plate"
+                    type="text"
+                    value={plateNumber}
+                    onChange={(e) => setPlateNumber(e.target.value)}
+                    placeholder="e.g. KA-04-MB-1234"
+                    className="w-full px-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] font-mono text-xs uppercase text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="vpark-onboard-vtype" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1">
+                    Vehicle Class
+                  </label>
+                  <select
+                    id="vpark-onboard-vtype"
+                    value={vehicleType}
+                    onChange={(e) => setVehicleType(e.target.value as VehicleType)}
+                    className="w-full px-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] text-xs text-[var(--ink)]"
+                  >
+                    <option value="TWO_WHEELER">2-Wheeler</option>
+                    <option value="HATCHBACK">Hatchback</option>
+                    <option value="SEDAN">Sedan</option>
+                    <option value="SUV">SUV</option>
+                    <option value="EV">Electric Vehicle (EV)</option>
+                  </select>
+                </div>
+              </div>
+            )}
 
             {intent === 'provider' && (
               <div>

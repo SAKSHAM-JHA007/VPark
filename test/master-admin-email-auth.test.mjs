@@ -34,5 +34,16 @@ describe('Master Admin & Email-Based Authentication', () => {
     assert.ok(authModalCode.includes('jhasaksham.7453k@gmail.com'), 'Must recognize master admin email');
     assert.ok(authModalCode.includes('master_password'), 'Must have master password state');
     assert.ok(authModalCode.includes('Mobile Number (User Contact Details)'), 'Phone number must be collected strictly in onboarding user details');
+    assert.ok(authModalCode.includes('Continue with Google'), 'Login UI must include Google Sign-In');
+  });
+
+  it('firebase client and google auth endpoint support Google identity & master admin', () => {
+    const firebaseCode = fs.readFileSync('src/lib/firebase.ts', 'utf-8');
+    assert.ok(firebaseCode.includes('googleProvider'), 'Firebase client must export googleProvider');
+    assert.ok(firebaseCode.includes('signInWithGooglePopup'), 'Firebase client must export signInWithGooglePopup');
+
+    const googleRouteCode = fs.readFileSync('src/app/api/auth/google/route.ts', 'utf-8');
+    assert.ok(googleRouteCode.includes('upsertGoogleUser'), 'Google route must call upsertGoogleUser');
+    assert.ok(googleRouteCode.includes('jhasaksham.7453k@gmail.com'), 'Google route must check for master admin email');
   });
 });

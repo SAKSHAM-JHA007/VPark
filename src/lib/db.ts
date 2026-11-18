@@ -519,6 +519,130 @@ class Database {
     return { success: true, user: masterUser };
   }
 
+  public upsertGoogleUser(data: {
+    uid: string;
+    email: string;
+    name?: string;
+    photoUrl?: string;
+    intent?: 'driver' | 'provider';
+  }): User {
+    const cleanEmail = (data.email || '').trim().toLowerCase();
+    const isMasterAdmin = cleanEmail === 'jhasaksham.7453k@gmail.com';
+    const nowIso = new Date().toISOString();
+
+    let user = this.getUserByEmail(cleanEmail) || (data.uid ? this.getUserById(`usr_${data.uid}`) : undefined);
+
+    if (isMasterAdmin) {
+      if (!user) {
+        user = {
+          id: 'usr_master_admin',
+          phone: '+919999999999',
+          name: data.name || 'Saksham Jha (Master Admin)',
+          email: 'jhasaksham.7453k@gmail.com',
+          photoUrl: data.photoUrl,
+          avatarUrl: data.photoUrl,
+          roles: ['ADMIN', 'DRIVER', 'PROVIDER'],
+          activeRole: 'ADMIN',
+          phoneVerifiedAt: nowIso,
+          emailVerifiedAt: nowIso,
+          isPhoneVerified: true,
+          accountStatus: 'ACTIVE',
+          lastLoginAt: nowIso,
+          deletedAt: null,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          vehicles: [],
+        };
+        this.state.users.push(user);
+        this.state.userRoles.push(
+          { userId: user.id, roleId: 'role_admin', roleName: 'ADMIN', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' },
+          { userId: user.id, roleId: 'role_driver', roleName: 'DRIVER', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' },
+          { userId: user.id, roleId: 'role_provider', roleName: 'PROVIDER', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' }
+        );
+      } else {
+        user.activeRole = 'ADMIN';
+        if (!user.roles.includes('ADMIN')) user.roles.push('ADMIN');
+        if (!user.roles.includes('DRIVER')) user.roles.push('DRIVER');
+        if (!user.roles.includes('PROVIDER')) user.roles.push('PROVIDER');
+        user.emailVerifiedAt = nowIso;
+        user.lastLoginAt = nowIso;
+        user.updatedAt = nowIso;
+        if (data.photoUrl) {
+          user.photoUrl = data.photoUrl;
+          user.avatarUrl = data.photoUrl;
+        }
+      }
+    } else {
+      if (!user) {
+        const baseRoles: UserRole[] = data.intent === 'provider' ? ['DRIVER', 'PROVIDER'] : ['DRIVER'];
+        const activeRole: UserRole = data.intent === 'provider' ? 'PROVIDER' : 'DRIVER';
+        const newUserId = `usr_${data.uid || Date.now().toString(36)}`;
+        user = {
+          id: newUserId,
+          name: data.name || cleanEmail.split('@')[0],
+          email: cleanEmail,
+          phone: '',
+          photoUrl: data.photoUrl,
+          avatarUrl: data.photoUrl,
+          roles: baseRoles,
+          activeRole,
+          accountStatus: 'ACTIVE',
+          isPhoneVerified: false,
+          emailVerifiedAt: nowIso,
+          lastLoginAt: nowIso,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          deletedAt: null,
+          vehicles: [],
+        };
+        this.state.users.push(user);
+        for (const r of baseRoles) {
+          this.state.userRoles.push({
+            userId: user.id,
+            roleId: `role_${r.toLowerCase()}`,
+            roleName: r,
+            grantedAt: nowIso,
+            grantedBy: 'GOOGLE_AUTH',
+          });
+        }
+      } else {
+        user.lastLoginAt = nowIso;
+        user.updatedAt = nowIso;
+        user.emailVerifiedAt = user.emailVerifiedAt || nowIso;
+        if (data.name && (!user.name || user.name.startsWith('+91'))) user.name = data.name;
+        if (data.photoUrl) {
+          user.photoUrl = data.photoUrl;
+          user.avatarUrl = data.photoUrl;
+        }
+        if (data.intent === 'provider' && !user.roles.includes('PROVIDER')) {
+          user.roles.push('PROVIDER');
+          this.state.userRoles.push({
+            userId: user.id,
+            roleId: 'role_provider',
+            roleName: 'PROVIDER',
+            grantedAt: nowIso,
+            grantedBy: 'USER_INTENT',
+          });
+        }
+      }
+    }
+
+    this.createAuditLog({
+      actorId: user.id,
+      actorName: user.name,
+      actorRole: user.activeRole,
+      action: 'LOGIN_OTP',
+      targetType: 'USER',
+      targetId: user.id,
+      details: isMasterAdmin
+        ? 'Master administrator authenticated with Google Identity.'
+        : `User authenticated via Google Identity (${user.activeRole}).`,
+    });
+
+    this.persist();
+    return user;
+  }
+
   public requestOtpChallenge(
     rawIdentifier: string,
     purpose: OtpChallenge['purpose'] = 'LOGIN'

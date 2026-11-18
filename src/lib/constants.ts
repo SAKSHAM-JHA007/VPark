@@ -1,3 +1,5 @@
+export const MASTER_ADMIN_EMAIL = 'jhasaksham.7453k@gmail.com';
+
 export interface DemandAnchor {
   id: string;
   name: string;

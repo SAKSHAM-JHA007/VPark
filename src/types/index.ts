@@ -125,6 +125,7 @@ export interface User {
   lastLoginAt?: string | null;
   deletedAt?: string | null;
   avatarUrl?: string;
+  photoUrl?: string;
   vehicles: Vehicle[];
   createdAt: string;
   updatedAt?: string;
