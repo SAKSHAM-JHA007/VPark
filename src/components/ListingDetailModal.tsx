@@ -214,9 +214,14 @@ export function ListingDetailModal({
             <div>
               <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-[var(--ink)] leading-tight">{listing.title}</h2>
               <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-secondary)] mt-1">
-                <span>{listing.address}</span>
+                <span className="font-semibold text-[var(--ink)]">{listing.locality || 'Yelahanka'}</span>
                 <span className="text-[var(--hairline-strong)]">·</span>
-                <span className="font-mono text-[11px]">Landmark: {listing.landmark}</span>
+                <span className="font-mono text-[11px]">Near {listing.landmark}</span>
+                <span className="text-[var(--hairline-strong)]">·</span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-mono">
+                  <Lock className="w-3 h-3" />
+                  Exact street address &amp; precise map pin unlocked after payment
+                </span>
               </div>
               {listing.dimensionsNotes && (
                 <p className="text-xs font-mono text-[var(--ink-tertiary)] mt-1">{listing.dimensionsNotes}</p>
@@ -428,7 +433,7 @@ export function ListingDetailModal({
                   >
                     <Lock className="w-4 h-4" />
                     {!isAuthenticated
-                      ? `Log in with Phone OTP to Reserve (₹${pricing.totalAmount.toFixed(2)})`
+                      ? `Log in to Reserve (₹${pricing.totalAmount.toFixed(2)})`
                       : isHolding
                       ? 'Locking Hold...'
                       : `Lock Slot for 10 Mins & Pay (₹${pricing.totalAmount.toFixed(2)})`}

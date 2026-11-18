@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SearchResultItem } from '@/types';
-import { MapPin, Star, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { MapPin, Star, ShieldCheck, AlertTriangle, Lock } from 'lucide-react';
 
 interface ListingCardProps {
   item: SearchResultItem;
@@ -96,11 +96,18 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
               </div>
             </div>
 
-            {/* Row 2: Location & Distance */}
+            {/* Row 2: Location & Distance (Precise location unlocked after payment) */}
             <div className="flex items-center gap-1.5 text-xs text-[var(--ink-secondary)]">
-              <span className="truncate">{listing.address}</span>
+              <span className="truncate font-medium text-[var(--ink)]">
+                {listing.locality || 'Yelahanka'}{listing.landmark ? ` (Near ${listing.landmark})` : ''}
+              </span>
               <span className="text-[var(--hairline-strong)]">·</span>
               <span className="font-mono text-[11px] text-[var(--ink)] flex-shrink-0">{distanceKm} KM</span>
+              <span className="text-[var(--hairline-strong)]">·</span>
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-[var(--ink-tertiary)] font-mono flex-shrink-0">
+                <Lock className="w-2.5 h-2.5 text-[var(--transit-accent)]" />
+                Exact pin unlocked on pass
+              </span>
             </div>
 
             {/* Row 3: Verification, Rating & Attributes */}

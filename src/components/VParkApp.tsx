@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/Header';
-import { InteractiveMap } from '@/components/InteractiveMap';
 import { ListingCard } from '@/components/ListingCard';
 import { ListingDetailModal } from '@/components/ListingDetailModal';
 import { DigitalPassModal } from '@/components/DigitalPassModal';
@@ -14,7 +13,6 @@ import { DpdpExportModal } from '@/components/DpdpExportModal';
 import { AuthModal } from '@/components/AuthModal';
 import { Presence } from '@/components/motion/Presence';
 import { ListingCardSkeleton } from '@/components/motion/Skeleton';
-import { useSlidingIndicator } from '@/components/motion/useSlidingIndicator';
 import { staggerStyle } from '@/components/motion/tokens';
 import { Language, getT } from '@/lib/i18n';
 import {
@@ -41,6 +39,8 @@ import {
   Phone,
   ArrowRight,
   LocateFixed,
+  Lock,
+  Navigation,
 } from 'lucide-react';
 
 export type VParkTab = 'search' | 'bookings' | 'monthly' | 'provider' | 'admin';
@@ -62,7 +62,6 @@ export function VParkApp({
   const [showDpdpModal, setShowDpdpModal] = useState<boolean>(false);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [authIntent, setAuthIntent] = useState<'driver' | 'provider'>(initialIntent);
-  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
 
   // Search & Filters
   const [selectedAnchor, setSelectedAnchor] = useState<DemandAnchor>(YELAHANKA_ANCHORS[0]);
@@ -100,8 +99,6 @@ export function VParkApp({
   const tabSwitchedRef = useRef(false);
   if (activeTab !== initialTabRef.current) tabSwitchedRef.current = true;
   const tabEnterClass = tabSwitchedRef.current ? 'animate-fade-in' : '';
-
-  const viewPill = useSlidingIndicator(viewMode);
 
   // Sync optional query string params client-side without requiring Suspense boundaries
   useEffect(() => {
@@ -604,44 +601,13 @@ export function VParkApp({
                 </select>
               </div>
 
-              <div ref={viewPill.containerRef} className="relative flex items-center border border-[var(--hairline-strong)]">
-                {viewPill.ready && (
-                  <span
-                    aria-hidden="true"
-                    style={viewPill.indicatorStyle}
-                    className={`${viewPill.indicatorClassName} bg-[var(--ink)]`}
-                  />
-                )}
-                <button
-                  ref={viewPill.register('map')}
-                  type="button"
-                  onClick={() => setViewMode('map')}
-                  aria-pressed={viewMode === 'map'}
-                  className={`relative px-3 py-1 text-[11px] uppercase tracking-wider font-mono transition-colors ${
-                    viewMode === 'map'
-                      ? `${viewPill.ready ? '' : 'bg-[var(--ink)]'} text-[var(--surface-bg)] font-bold`
-                      : 'text-[var(--ink-secondary)] hover:bg-[var(--surface-alt)]'
-                  }`}
-                >
-                  Map View
-                </button>
-                <button
-                  ref={viewPill.register('list')}
-                  type="button"
-                  onClick={() => setViewMode('list')}
-                  aria-pressed={viewMode === 'list'}
-                  className={`relative px-3 py-1 text-[11px] uppercase tracking-wider font-mono transition-colors border-l border-[var(--hairline-strong)] ${
-                    viewMode === 'list'
-                      ? `${viewPill.ready ? '' : 'bg-[var(--ink)]'} text-[var(--surface-bg)] font-bold`
-                      : 'text-[var(--ink-secondary)] hover:bg-[var(--surface-alt)]'
-                  }`}
-                >
-                  List View
-                </button>
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[11px] font-mono text-[var(--ink-secondary)]">
+                <Lock className="w-3 h-3 text-[var(--transit-accent)]" />
+                <span>Exact Map &amp; Navigation Pin Unlocked After Payment</span>
               </div>
             </div>
 
-            {/* MAIN CONTENT SPLIT: Cards + Interactive Map */}
+            {/* MAIN CONTENT: Verified Listings Grid (Map preview removed prior to payment) */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
               <div className="flex items-baseline justify-between pb-3 border-b border-[var(--hairline)] mb-4">
                 <h2 className="text-xs font-mono font-bold text-[var(--ink)] tracking-wider uppercase">
@@ -664,51 +630,38 @@ export function VParkApp({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                <div className={`${viewMode === 'list' ? 'lg:col-span-12' : 'lg:col-span-6'} space-y-2.5`}>
-                  {loading ? (
-                    <>
-                      <div role="status" className="py-2 font-mono text-xs text-[var(--ink-secondary)] uppercase tracking-wider animate-fade-in">
-                        Querying Yelahanka Sector 01 Registry...
-                      </div>
-                      {[0, 1, 2].map((i) => (
-                        <ListingCardSkeleton key={i} style={staggerStyle(i, 70)} />
-                      ))}
-                    </>
-                  ) : results.length === 0 ? (
-                    <div className="p-8 text-center bg-[var(--surface-bg)] border border-[var(--hairline-strong)] text-[var(--ink-secondary)] font-mono text-xs space-y-2 animate-fade-in">
-                      <p className="font-bold uppercase text-[var(--ink)]">No verified bays match filter parameters.</p>
-                      <button
-                        type="button"
-                        onClick={resetFilters}
-                        className="px-3.5 py-1.5 bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[var(--ink)] uppercase font-semibold text-[11px]"
-                      >
-                        Reset All Filters
-                      </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                {loading ? (
+                  <>
+                    <div role="status" className="md:col-span-2 py-2 font-mono text-xs text-[var(--ink-secondary)] uppercase tracking-wider animate-fade-in">
+                      Querying Yelahanka Sector 01 Registry...
                     </div>
-                  ) : (
-                    results.slice(0, viewMode === 'list' ? 24 : 6).map((item, index) => (
-                      <div key={item.listing.id} className="animate-fade-up" style={staggerStyle(index)}>
-                        <ListingCard
-                          item={item}
-                          isSelected={selectedResult?.listing.id === item.listing.id}
-                          onSelect={() => setSelectedResult(item)}
-                          onBook={() => setBookingModalItem(item)}
-                        />
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {viewMode === 'map' && (
-                  <div className="lg:col-span-6 sticky top-20 animate-fade-in">
-                    <InteractiveMap
-                      results={results}
-                      selectedItem={selectedResult}
-                      onSelectItem={(item) => setSelectedResult(item)}
-                      selectedAnchor={selectedAnchor}
-                    />
+                    {[0, 1, 2, 3].map((i) => (
+                      <ListingCardSkeleton key={i} style={staggerStyle(i, 70)} />
+                    ))}
+                  </>
+                ) : results.length === 0 ? (
+                  <div className="md:col-span-2 p-8 text-center bg-[var(--surface-bg)] border border-[var(--hairline-strong)] text-[var(--ink-secondary)] font-mono text-xs space-y-2 animate-fade-in">
+                    <p className="font-bold uppercase text-[var(--ink)]">No verified bays match filter parameters.</p>
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="px-3.5 py-1.5 bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[var(--ink)] uppercase font-semibold text-[11px]"
+                    >
+                      Reset All Filters
+                    </button>
                   </div>
+                ) : (
+                  results.map((item, index) => (
+                    <div key={item.listing.id} className="animate-fade-up" style={staggerStyle(index)}>
+                      <ListingCard
+                        item={item}
+                        isSelected={selectedResult?.listing.id === item.listing.id}
+                        onSelect={() => setSelectedResult(item)}
+                        onBook={() => setBookingModalItem(item)}
+                      />
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -859,17 +812,22 @@ export function VParkApp({
                   }}
                   className="group p-4 bg-[var(--surface-bg)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] hover:shadow-md cursor-pointer flex justify-between items-center text-xs transition-[border-color,box-shadow,transform] duration-200 ease-out-quart motion-safe:hover:-translate-y-0.5 animate-fade-up"
                 >
-                  <div className="space-y-0.5">
-                    <span className="font-mono font-bold text-[var(--transit-accent)] text-[11px] uppercase tracking-wider">
-                      PASS // {booking.referenceNumber}
-                    </span>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-[var(--transit-accent)] text-[11px] uppercase tracking-wider">
+                        PASS // {booking.referenceNumber}
+                      </span>
+                      <span className="px-2 py-0.2 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/30">
+                        📍 Exact Map &amp; Navigation Unlocked
+                      </span>
+                    </div>
                     <h3 className="font-bold text-sm text-[var(--ink)] uppercase">{booking.listingTitle}</h3>
                     <p className="text-[var(--ink-secondary)] text-xs">{booking.listingAddress}</p>
                   </div>
                   <div className="text-right font-mono">
                     <span className="text-sm font-bold text-[var(--ink)]">₹{booking.pricingSnapshot.totalAmount}</span>
                     <span className="block text-[var(--transit-accent)] font-semibold text-[11px] uppercase tracking-wider mt-0.5 transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
-                      Open Pass →
+                      Open Exact Map &amp; Pass →
                     </span>
                   </div>
                 </div>

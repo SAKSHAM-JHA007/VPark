@@ -18,6 +18,9 @@ import {
   PlusCircle,
   HelpCircle,
   Camera,
+  ExternalLink,
+  Navigation,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface DigitalPassModalProps {
@@ -214,11 +217,65 @@ export function DigitalPassModal({
 
           {/* Booking Summary */}
           <div className="space-y-3 text-xs">
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-              <span className="text-slate-400 block font-medium">Location</span>
-              <span className="font-bold text-slate-900 block text-sm">{booking.listingTitle}</span>
-              <span className="text-slate-600 block">{booking.listingAddress}</span>
-            </div>
+            {/* Precise Exact Location Map (Unlocked After Payment) */}
+            {(() => {
+              const exactLat = booking.listingLatitude || 13.1007;
+              const exactLng = booking.listingLongitude || 77.5963;
+              const googleMapsNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${exactLat},${exactLng}`;
+              const embedMapUrl = `https://maps.google.com/maps?q=${exactLat},${exactLng}&z=17&output=embed`;
+
+              return (
+                <div className="p-4 bg-emerald-50/80 border-2 border-emerald-500/40 rounded-2xl space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                        Precise Exact Location Unlocked
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold">
+                      Payment Verified · Live
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 uppercase">{booking.listingTitle}</h4>
+                    <p className="text-xs text-slate-700 font-medium mt-0.5">{booking.listingAddress}</p>
+                    <p className="text-[11px] font-mono text-emerald-800 mt-1 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      <span>Exact GPS: {exactLat.toFixed(6)}, {exactLng.toFixed(6)}</span>
+                    </p>
+                  </div>
+
+                  {/* Exact Google Maps Interactive Embed */}
+                  <div className="relative w-full h-48 rounded-xl overflow-hidden border border-emerald-300 shadow-sm bg-slate-100">
+                    <iframe
+                      title="Exact Parking Bay Location"
+                      src={embedMapUrl}
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="w-full h-full"
+                    />
+                  </div>
+
+                  {/* Turn-by-Turn Navigation Action */}
+                  <a
+                    href={googleMapsNavUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  >
+                    <Navigation className="w-4 h-4 fill-white" />
+                    <span>Navigate to Exact Bay via Google Maps</span>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                  </a>
+                </div>
+              );
+            })()}
 
             {booking.listingAccessInstructions && (
               <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-1">

@@ -1222,6 +1222,8 @@ class Database {
       listingTitle: listing.title,
       listingAddress: listing.address,
       listingAccessInstructions: listing.accessInstructions,
+      listingLatitude: listing.latitude,
+      listingLongitude: listing.longitude,
       driverId: driver.id,
       driverName: driver.name || driver.phone,
       driverPhone: driver.phone,
@@ -1745,7 +1747,19 @@ class Database {
   }
 
   public getBookings(): Booking[] {
-    return this.state.bookings;
+    return this.state.bookings.map((b) => {
+      if ((b.listingLatitude === undefined || b.listingLongitude === undefined) && b.listingId) {
+        const listing = this.getListingById(b.listingId);
+        if (listing) {
+          return {
+            ...b,
+            listingLatitude: listing.latitude,
+            listingLongitude: listing.longitude,
+          };
+        }
+      }
+      return b;
+    });
   }
 
   public getPayments(): Payment[] {

@@ -276,6 +276,8 @@ export interface Booking {
   listingTitle: string;
   listingAddress: string;
   listingAccessInstructions?: string;
+  listingLatitude?: number;
+  listingLongitude?: number;
   driverId: string;
   driverName: string;
   driverPhone: string;
