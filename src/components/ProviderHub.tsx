@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Presence } from '@/components/motion/Presence';
+import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
+import { CountUp } from '@/components/motion/CountUp';
+import { staggerStyle } from '@/components/motion/tokens';
 import {
   Listing,
   ProviderType,
@@ -140,6 +144,11 @@ export function ProviderHub({
   const [showAddWizard, setShowAddWizard] = useState<boolean>(false);
   const [editingListingId, setEditingListingId] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState<number>(1);
+  // Presentation only: slide wizard steps in after the first step change.
+  const initialWizardStepRef = useRef(wizardStep);
+  const wizardStepChangedRef = useRef(false);
+  if (wizardStep !== initialWizardStepRef.current) wizardStepChangedRef.current = true;
+  const wizardStepEnter = wizardStepChangedRef.current ? 'animate-slide-in' : '';
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -612,7 +621,7 @@ export function ProviderHub({
         <button
           type="button"
           onClick={openNewWizard}
-          className="px-5 py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-sm shadow-md flex items-center gap-2 self-start sm:self-auto transition-all"
+          className="px-5 py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-sm shadow-md flex items-center gap-2 self-start sm:self-auto transition-[background-color,box-shadow,transform] duration-150 hover:shadow-lg active:scale-[0.97]"
         >
           <PlusCircle className="w-4 h-4" />
           Add your parking space
@@ -620,7 +629,7 @@ export function ProviderHub({
       </div>
 
       {statusMessage && (
-        <div className="p-3.5 bg-blue-50 text-blue-900 text-xs font-semibold rounded-2xl border border-blue-200 flex items-center justify-between">
+        <div role="status" className="p-3.5 bg-blue-50 text-blue-900 text-xs font-semibold rounded-2xl border border-blue-200 flex items-center justify-between animate-fade-in">
           <span>{statusMessage}</span>
           <button type="button" onClick={() => setStatusMessage(null)} className="text-blue-700 font-bold ml-3">
             ✕
@@ -631,25 +640,25 @@ export function ProviderHub({
       {/* Honest Summary Cards (PRD 7.1 — never invent fake bookings/earnings) */}
       {metrics && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-up [animation-delay:0ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
             <span className="text-slate-500 block font-semibold">Total listings</span>
-            <span className="text-2xl font-black text-slate-900 mt-1 block">{metrics.totalListings}</span>
+            <span className="text-2xl font-black text-slate-900 mt-1 block tabular-nums"><CountUp value={metrics.totalListings} /></span>
             <span className="text-[11px] text-slate-500 mt-0.5 block">
               {metrics.draftListings} draft · {metrics.pendingListings} in review
             </span>
           </div>
 
-          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-up [animation-delay:60ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
             <span className="text-slate-500 block font-semibold">Active listings</span>
-            <span className="text-2xl font-black text-emerald-700 mt-1 block">{metrics.verifiedListings}</span>
+            <span className="text-2xl font-black text-emerald-700 mt-1 block tabular-nums"><CountUp value={metrics.verifiedListings} /></span>
             <span className="text-[11px] text-slate-500 mt-0.5 block">Approved &amp; visible to drivers</span>
           </div>
 
-          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-up [animation-delay:120ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
             <span className="text-slate-500 block font-semibold">Bookings</span>
             {metrics.totalBookingsCount > 0 ? (
               <>
-                <span className="text-2xl font-black text-slate-900 mt-1 block">{metrics.totalBookingsCount}</span>
+                <span className="text-2xl font-black text-slate-900 mt-1 block tabular-nums"><CountUp value={metrics.totalBookingsCount} /></span>
                 <span className="text-[11px] text-slate-500 mt-0.5 block">
                   {metrics.activeBookingsCount} active now
                 </span>
@@ -661,12 +670,12 @@ export function ProviderHub({
             )}
           </div>
 
-          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-up [animation-delay:180ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
             <span className="text-slate-500 block font-semibold">Earnings</span>
             {metrics.totalEarnings > 0 ? (
               <>
-                <span className="text-2xl font-black text-[#0A5CFF] mt-1 block">
-                  ₹{metrics.totalEarnings.toFixed(2)}
+                <span className="text-2xl font-black text-[#0A5CFF] mt-1 block tabular-nums">
+                  <CountUp value={metrics.totalEarnings} format={(n) => `₹${n.toFixed(2)}`} />
                 </span>
                 <span className="text-[11px] text-slate-500 mt-0.5 block">Host gross parking fees</span>
               </>
@@ -685,11 +694,11 @@ export function ProviderHub({
           <h2 className="font-black text-slate-900 text-base">Your Parking Spaces</h2>
 
           {loading ? (
-            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs">
+            <div role="status" className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs animate-fade-in">
               Loading your listings...
             </div>
           ) : listings.length === 0 ? (
-            <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-3">
+            <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-3 animate-fade-in">
               <p className="font-semibold text-slate-700 text-sm">You haven&apos;t added a parking space yet.</p>
               <p>Start with a draft and upload 3 photos + ownership/society proof when ready.</p>
               <button
@@ -702,13 +711,14 @@ export function ProviderHub({
             </div>
           ) : (
             <div className="space-y-3">
-              {listings.map((l) => {
+              {listings.map((l, index) => {
                 const chip = STATUS_CHIP[l.status];
                 const canEdit = l.status === 'DRAFT' || l.status === 'NEEDS_INFO' || l.status === 'REJECTED';
                 return (
                   <div
                     key={l.id}
-                    className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3 text-xs"
+                    style={staggerStyle(index)}
+                    className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3 text-xs animate-fade-up transition-shadow duration-200 hover:shadow-md"
                   >
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div className="space-y-1 min-w-0">
@@ -812,14 +822,16 @@ export function ProviderHub({
       </div>
 
       {/* 4-Step Listing Creation / Edit Wizard Modal (PRD 7.2 & 7.3) */}
+      <Presence>
       {showAddWizard && (
-        <div
+        <ModalBackdrop
+          key="listing-wizard"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-label="Add or edit parking space"
         >
-          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+          <ModalPanel className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-mono uppercase text-blue-400 font-bold block">
@@ -837,16 +849,24 @@ export function ProviderHub({
               </button>
             </div>
 
+            {/* Step progress (mirrors the existing "Step N of 4" label) */}
+            <div aria-hidden="true" className="h-1 bg-slate-800">
+              <div
+                className="h-full w-full origin-left bg-[#0A5CFF] transition-transform duration-500 ease-out-quart"
+                style={{ transform: `scaleX(${wizardStep / 4})` }}
+              />
+            </div>
+
             <div className="p-6 space-y-4 text-xs overflow-y-auto">
               {formError && (
-                <div role="alert" className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 font-semibold">
+                <div role="alert" className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 font-semibold animate-fade-in">
                   {formError}
                 </div>
               )}
 
               {/* STEP 1 */}
               {wizardStep === 1 && (
-                <div className="space-y-3.5">
+                <div key="wizard-step-1" className={`${wizardStepEnter} space-y-3.5`}>
                   <h3 className="font-black text-slate-900 text-sm">1. Provider Situation, Type &amp; Map Pin</h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -978,7 +998,7 @@ export function ProviderHub({
 
               {/* STEP 2 */}
               {wizardStep === 2 && (
-                <div className="space-y-4">
+                <div key="wizard-step-2" className={`${wizardStepEnter} space-y-4`}>
                   <h3 className="font-black text-slate-900 text-sm">2. Capacity, Vehicles &amp; Dimensions</h3>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1087,7 +1107,7 @@ export function ProviderHub({
 
               {/* STEP 3 */}
               {wizardStep === 3 && (
-                <div className="space-y-4">
+                <div key="wizard-step-3" className={`${wizardStepEnter} space-y-4`}>
                   <h3 className="font-black text-slate-900 text-sm">3. Pricing (₹) &amp; Access Instructions</h3>
 
                   <div className="grid grid-cols-3 gap-2 font-mono">
@@ -1182,7 +1202,7 @@ export function ProviderHub({
 
               {/* STEP 4: Photos (Min 3, EXIF stripped) & Right-to-Rent Proof */}
               {wizardStep === 4 && (
-                <div className="space-y-4">
+                <div key="wizard-step-4" className={`${wizardStepEnter} space-y-4`}>
                   <div>
                     <h3 className="font-black text-slate-900 text-sm">
                       4. Space Photos (Min 3, EXIF Stripped) &amp; Verification Proof
@@ -1341,10 +1361,10 @@ export function ProviderHub({
                   <button
                     type="button"
                     onClick={() => setWizardStep(wizardStep + 1)}
-                    className="px-5 py-2 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold flex items-center gap-1 shadow-md"
+                    className="group/cta px-5 py-2 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold flex items-center gap-1 shadow-md transition-[background-color,transform] duration-150 active:scale-[0.97]"
                   >
                     Next Step
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" />
                   </button>
                 ) : (
                   <button
@@ -1359,9 +1379,10 @@ export function ProviderHub({
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </ModalPanel>
+        </ModalBackdrop>
       )}
+      </Presence>
     </div>
   );
 }

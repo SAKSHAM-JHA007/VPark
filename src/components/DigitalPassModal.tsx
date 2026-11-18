@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import { Booking } from '@/types';
 import { CANCELLATION_POLICY_RULES } from '@/lib/constants';
 import {
@@ -162,8 +163,8 @@ export function DigitalPassModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
+    <ModalBackdrop className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
+      <ModalPanel className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Pass Header */}
         <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-5 flex items-center justify-between">
           <div>
@@ -172,7 +173,7 @@ export function DigitalPassModal({
             </span>
             <span className="text-xl font-black font-mono tracking-wider">{booking.referenceNumber}</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full text-emerald-200 hover:text-white">
+          <button onClick={onClose} className="p-1 rounded-full text-emerald-200 hover:text-white transition-[color,transform] duration-150 active:scale-90">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -184,7 +185,7 @@ export function DigitalPassModal({
             <div className="flex justify-center">{getStatusBadge()}</div>
 
             {/* Simulated QR Code */}
-            <div className="inline-block p-4 bg-white rounded-2xl shadow-sm border border-slate-200">
+            <div className="inline-block p-4 bg-white rounded-2xl shadow-sm border border-slate-200 animate-scale-in [animation-delay:160ms]">
               <div className="w-36 h-36 border-4 border-slate-900 p-2 flex flex-col justify-between">
                 <div className="flex justify-between">
                   <div className="w-8 h-8 bg-slate-900"></div>
@@ -338,7 +339,7 @@ export function DigitalPassModal({
 
           {/* Cancellation Confirmation Dialog (PRD 8.9) */}
           {showCancelConfirm && (
-            <div className="p-4 bg-red-50 rounded-2xl border border-red-200 space-y-3 text-xs animate-in fade-in">
+            <div className="p-4 bg-red-50 rounded-2xl border border-red-200 space-y-3 text-xs animate-fade-in">
               <div className="font-bold text-red-900 flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4 text-red-600" />
                 Cancel Reservation & Process Refund
@@ -412,8 +413,8 @@ export function DigitalPassModal({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </ModalPanel>
+    </ModalBackdrop>
   );
 }
 

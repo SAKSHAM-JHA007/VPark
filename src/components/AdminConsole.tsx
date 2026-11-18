@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { staggerStyle } from '@/components/motion/tokens';
 import { Listing, Dispute, AuditLog, Payment } from '@/types';
 import { APP_CONFIG } from '@/lib/constants';
 import {
@@ -170,13 +171,13 @@ export function AdminConsole() {
       </div>
 
       {statusMessage && (
-        <div className="p-3 bg-emerald-50 text-emerald-900 text-xs font-semibold rounded-xl border border-emerald-200">
+        <div role="status" className="p-3 bg-emerald-50 text-emerald-900 text-xs font-semibold rounded-xl border border-emerald-200 animate-fade-in">
           {statusMessage}
         </div>
       )}
 
       {errorBanner && (
-        <div role="alert" className="p-3 bg-red-50 text-red-900 text-xs font-semibold rounded-xl border border-red-200">
+        <div role="alert" className="p-3 bg-red-50 text-red-900 text-xs font-semibold rounded-xl border border-red-200 animate-fade-in">
           {errorBanner}
         </div>
       )}
@@ -251,7 +252,7 @@ export function AdminConsole() {
 
       {/* Tab 1: Verification Queue */}
       {activeTab === 'verification' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
             <span>
               Pending &amp; Needs Info queue ({queueListings.length}) · Approved live ({verifiedListings.length}) · Drafts ({draftListings.length})
@@ -269,10 +270,11 @@ export function AdminConsole() {
             </div>
           ) : (
             <div className="space-y-4">
-              {queueListings.map((listing) => (
+              {queueListings.map((listing, index) => (
                 <div
                   key={listing.id}
-                  className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4 text-xs"
+                  style={staggerStyle(index)}
+                  className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4 text-xs animate-fade-up"
                 >
                   <div className="flex flex-col lg:flex-row justify-between gap-4">
                     <div className="space-y-1">
@@ -464,7 +466,7 @@ export function AdminConsole() {
 
       {/* Tab 2: Disputes */}
       {activeTab === 'disputes' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <div className="text-xs text-slate-500">
             Complaints queue with {APP_CONFIG.disputeSlaHours}-hour target first response SLA.
           </div>
@@ -476,8 +478,12 @@ export function AdminConsole() {
             </div>
           ) : (
             <div className="space-y-4">
-              {disputes.map((dispute) => (
-                <div key={dispute.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4 text-xs">
+              {disputes.map((dispute, index) => (
+                <div
+                  key={dispute.id}
+                  style={staggerStyle(index)}
+                  className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4 text-xs animate-fade-up"
+                >
                   <div className="flex flex-col sm:flex-row justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-2">
@@ -526,7 +532,7 @@ export function AdminConsole() {
 
       {/* Tab 3: Payments & Reconciliation */}
       {activeTab === 'reconciliation' && (
-        <div className="space-y-6 text-xs">
+        <div className="space-y-6 text-xs animate-fade-in">
           {!reconciliation ? (
             <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500">
               No payment ledger entries loaded yet.
@@ -585,13 +591,17 @@ export function AdminConsole() {
 
       {/* Tab 4: Audit Trail */}
       {activeTab === 'audit' && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm text-xs">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm text-xs animate-fade-in">
           <div className="p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-800">
             Security, Consent, Verification &amp; Admin Audit Log
           </div>
           <div className="divide-y divide-slate-100">
-            {auditLogs.map((log) => (
-              <div key={log.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            {auditLogs.map((log, index) => (
+              <div
+                key={log.id}
+                style={staggerStyle(index, 30)}
+                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-fade-in transition-colors hover:bg-slate-50"
+              >
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-900 font-mono">{log.action}</span>
@@ -611,7 +621,7 @@ export function AdminConsole() {
 
       {/* Tab 5: Honest Live Release Gates (PRD Section 4 & 11 — real counts only, zero fabricated numbers) */}
       {activeTab === 'hypotheses' && (
-        <div className="space-y-4 text-xs">
+        <div className="space-y-4 text-xs animate-fade-in">
           <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200 text-slate-900 flex items-center justify-between">
             <div>
               <span className="font-black text-sm block">Yelahanka Foundation Release Gates (Live Database Metrics)</span>

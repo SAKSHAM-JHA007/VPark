@@ -8,6 +8,9 @@ import { VParkLogo } from '@/components/VParkLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { FindParkingIllustration, RentSpaceIllustration } from '@/components/HeroIllustrations';
 import { User } from '@/types';
+import { Presence } from '@/components/motion/Presence';
+import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
+import { useSlidingIndicator } from '@/components/motion/useSlidingIndicator';
 import { APP_CONFIG, YELAHANKA_ANCHORS } from '@/lib/constants';
 import {
   MapPin,
@@ -37,6 +40,7 @@ export default function RootHomePage() {
   const [selectedDate, setSelectedDate] = useState('Today');
   const [selectedTimeRange, setSelectedTimeRange] = useState('14:00 - 18:00 (4 hrs)');
   const [searchMode, setSearchMode] = useState<'find' | 'rent'>('find');
+  const modePill = useSlidingIndicator(searchMode);
 
   // Check if session exists
   useEffect(() => {
@@ -194,10 +198,10 @@ export default function RootHomePage() {
         {/* Section: Explore what you can do with VPark */}
         <section className="space-y-6">
           <div className="space-y-1.5">
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white animate-fade-up">
               Explore what you can do with VPark
             </h1>
-            <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+            <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 animate-fade-up [animation-delay:70ms]">
               A unified platform to find parking or list your space and earn, for individuals and businesses.
             </p>
           </div>
@@ -205,7 +209,7 @@ export default function RootHomePage() {
           {/* Two Hero Action Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {/* Card 1: Find Parking */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#060D1E] via-[#09152F] to-[#0A1A3A] border border-blue-900/40 p-7 sm:p-9 text-white flex flex-col justify-between shadow-lg min-h-[260px] sm:min-h-[290px]">
+            <div className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#060D1E] via-[#09152F] to-[#0A1A3A] border border-blue-900/40 p-7 sm:p-9 text-white flex flex-col justify-between shadow-lg min-h-[260px] sm:min-h-[290px] animate-fade-up [animation-delay:130ms] transition-[transform,box-shadow,border-color] duration-300 ease-out-quart hover:border-blue-700/60 hover:shadow-2xl hover:shadow-blue-950/40 motion-safe:hover:-translate-y-1">
               <div className="z-10 max-w-[240px] sm:max-w-[270px] space-y-2.5">
                 <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                   Find Parking
@@ -216,22 +220,22 @@ export default function RootHomePage() {
                 <div className="pt-3">
                   <Link
                     href="/driver/home"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-slate-950 font-bold text-xs sm:text-sm hover:bg-slate-100 transition-colors shadow-md"
+                    className="group/cta inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-slate-950 font-bold text-xs sm:text-sm hover:bg-slate-100 transition-[background-color,transform] duration-150 active:scale-[0.97] shadow-md"
                   >
                     <span>Find Parking</span>
-                    <ArrowRight className="w-4 h-4 text-slate-900" />
+                    <ArrowRight className="w-4 h-4 text-slate-900 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" />
                   </Link>
                 </div>
               </div>
 
               {/* Right Illustration: White Car in Blue Stall with [P] */}
-              <div className="absolute right-[-10px] bottom-[-15px] sm:right-2 sm:bottom-0 w-[240px] sm:w-[320px] pointer-events-none select-none opacity-95">
+              <div className="absolute right-[-10px] bottom-[-15px] sm:right-2 sm:bottom-0 w-[240px] sm:w-[320px] pointer-events-none select-none opacity-95 transition-transform duration-500 ease-out-quart motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:translate-x-1">
                 <FindParkingIllustration />
               </div>
             </div>
 
             {/* Card 2: Rent Your Space */}
-            <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-neutral-900/90 border border-slate-200 dark:border-neutral-800 p-7 sm:p-9 text-slate-900 dark:text-white flex flex-col justify-between shadow-sm min-h-[260px] sm:min-h-[290px]">
+            <div className="group relative overflow-hidden rounded-3xl bg-white dark:bg-neutral-900/90 border border-slate-200 dark:border-neutral-800 p-7 sm:p-9 text-slate-900 dark:text-white flex flex-col justify-between shadow-sm min-h-[260px] sm:min-h-[290px] animate-fade-up [animation-delay:190ms] transition-[transform,box-shadow,border-color] duration-300 ease-out-quart hover:border-slate-300 dark:hover:border-neutral-700 hover:shadow-xl motion-safe:hover:-translate-y-1">
               <div className="z-10 max-w-[240px] sm:max-w-[270px] space-y-2.5">
                 <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                   Rent Your Space
@@ -243,16 +247,16 @@ export default function RootHomePage() {
                   <button
                     type="button"
                     onClick={() => handleOpenAuth('provider')}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-950 dark:bg-white text-white dark:text-slate-950 font-bold text-xs sm:text-sm hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors shadow-sm"
+                    className="group/cta inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-950 dark:bg-white text-white dark:text-slate-950 font-bold text-xs sm:text-sm hover:bg-slate-800 dark:hover:bg-slate-100 transition-[background-color,transform] duration-150 active:scale-[0.97] shadow-sm"
                   >
                     <span>List Your Space</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" />
                   </button>
                 </div>
               </div>
 
               {/* Right Illustration: 3D Garage Bay with Hazard Stripes & [P] */}
-              <div className="absolute right-[-10px] bottom-[-10px] sm:right-2 sm:bottom-0 w-[240px] sm:w-[320px] pointer-events-none select-none opacity-95">
+              <div className="absolute right-[-10px] bottom-[-10px] sm:right-2 sm:bottom-0 w-[240px] sm:w-[320px] pointer-events-none select-none opacity-95 transition-transform duration-500 ease-out-quart motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:-translate-x-1">
                 <RentSpaceIllustration />
               </div>
             </div>
@@ -261,7 +265,7 @@ export default function RootHomePage() {
           {/* Three Feature Badges */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             {/* Feature 1: EV Parking */}
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200/80 dark:border-neutral-800 p-4 sm:p-5 flex items-start gap-3.5 shadow-xs">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200/80 dark:border-neutral-800 p-4 sm:p-5 flex items-start gap-3.5 shadow-xs animate-fade-up [animation-delay:260ms]">
               <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/60 text-[#0A5CFF] flex items-center justify-center flex-shrink-0">
                 <Zap className="w-5 h-5" />
               </div>
@@ -274,7 +278,7 @@ export default function RootHomePage() {
             </div>
 
             {/* Feature 2: Verified & Secure */}
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200/80 dark:border-neutral-800 p-4 sm:p-5 flex items-start gap-3.5 shadow-xs">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200/80 dark:border-neutral-800 p-4 sm:p-5 flex items-start gap-3.5 shadow-xs animate-fade-up [animation-delay:310ms]">
               <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/60 text-[#0A5CFF] flex items-center justify-center flex-shrink-0">
                 <ShieldCheck className="w-5 h-5" />
               </div>
@@ -289,10 +293,10 @@ export default function RootHomePage() {
             {/* Feature 3: For Businesses */}
             <Link
               href="/driver/home?tab=monthly"
-              className="bg-white dark:bg-neutral-900 hover:bg-slate-50 dark:hover:bg-neutral-800/70 transition-colors rounded-2xl border border-slate-200/80 dark:border-neutral-800 p-4 sm:p-5 flex items-start justify-between gap-3.5 shadow-xs group"
+              className="bg-white dark:bg-neutral-900 hover:bg-slate-50 dark:hover:bg-neutral-800/70 transition-[background-color,transform,box-shadow] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5 rounded-2xl border border-slate-200/80 dark:border-neutral-800 p-4 sm:p-5 flex items-start justify-between gap-3.5 shadow-xs group animate-fade-up [animation-delay:360ms]"
             >
               <div className="flex items-start gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/60 text-[#0A5CFF] flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/60 text-[#0A5CFF] flex items-center justify-center flex-shrink-0 transition-transform duration-200 ease-out-quart motion-safe:group-hover:scale-110">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div className="space-y-0.5">
@@ -302,26 +306,34 @@ export default function RootHomePage() {
                   </p>
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#0A5CFF] group-hover:translate-x-0.5 transition-all mt-1" />
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#0A5CFF] group-hover:translate-x-0.5 transition-[color,transform] duration-200 ease-out-quart mt-1" />
             </Link>
           </div>
         </section>
 
         {/* Section: Plan your parking (Unified Dispatch Card) */}
-        <section className="space-y-4 pt-4">
+        <section className="space-y-4 pt-4 vp-reveal">
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Plan your parking
           </h2>
 
           <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200 dark:border-neutral-800 p-4 sm:p-6 shadow-sm space-y-4">
             {/* Mode selection pill tabs */}
-            <div className="flex items-center gap-2">
+            <div ref={modePill.containerRef} className="relative flex items-center gap-2">
+              {modePill.ready && (
+                <span
+                  aria-hidden="true"
+                  style={modePill.indicatorStyle}
+                  className={`${modePill.indicatorClassName} rounded-full bg-blue-50 dark:bg-blue-950/60`}
+                />
+              )}
               <button
+                ref={modePill.register('find')}
                 type="button"
                 onClick={() => setSearchMode('find')}
-                className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${
+                className={`relative px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${
                   searchMode === 'find'
-                    ? 'bg-blue-50 text-[#0A5CFF] dark:bg-blue-950/60 dark:text-blue-400'
+                    ? `${modePill.ready ? '' : 'bg-blue-50 dark:bg-blue-950/60'} text-[#0A5CFF] dark:text-blue-400`
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -330,11 +342,12 @@ export default function RootHomePage() {
               </button>
 
               <button
+                ref={modePill.register('rent')}
                 type="button"
                 onClick={() => setSearchMode('rent')}
-                className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${
+                className={`relative px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-colors ${
                   searchMode === 'rent'
-                    ? 'bg-blue-50 text-[#0A5CFF] dark:bg-blue-950/60 dark:text-blue-400'
+                    ? `${modePill.ready ? '' : 'bg-blue-50 dark:bg-blue-950/60'} text-[#0A5CFF] dark:text-blue-400`
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -346,7 +359,7 @@ export default function RootHomePage() {
             {/* Horizontal Input Search Grid */}
             <form onSubmit={handleExecuteSearch} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
               {/* Field 1: Location Anchor */}
-              <div className="md:col-span-4 p-3 rounded-2xl bg-slate-50 dark:bg-neutral-800/60 border border-slate-200/80 dark:border-neutral-700/80 flex items-center gap-3">
+              <div className="md:col-span-4 p-3 rounded-2xl bg-slate-50 dark:bg-neutral-800/60 border border-slate-200/80 dark:border-neutral-700/80 flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-slate-300 dark:hover:border-neutral-600 focus-within:border-[#0A5CFF]/60 focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
                 <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -368,7 +381,7 @@ export default function RootHomePage() {
               </div>
 
               {/* Field 2: Date */}
-              <div className="md:col-span-3 p-3 rounded-2xl bg-slate-50 dark:bg-neutral-800/60 border border-slate-200/80 dark:border-neutral-700/80 flex items-center gap-3">
+              <div className="md:col-span-3 p-3 rounded-2xl bg-slate-50 dark:bg-neutral-800/60 border border-slate-200/80 dark:border-neutral-700/80 flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-slate-300 dark:hover:border-neutral-600 focus-within:border-[#0A5CFF]/60 focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
                 <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -388,7 +401,7 @@ export default function RootHomePage() {
               </div>
 
               {/* Field 3: Time Range */}
-              <div className="md:col-span-3 p-3 rounded-2xl bg-slate-50 dark:bg-neutral-800/60 border border-slate-200/80 dark:border-neutral-700/80 flex items-center gap-3">
+              <div className="md:col-span-3 p-3 rounded-2xl bg-slate-50 dark:bg-neutral-800/60 border border-slate-200/80 dark:border-neutral-700/80 flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-slate-300 dark:hover:border-neutral-600 focus-within:border-[#0A5CFF]/60 focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
                 <Clock className="w-4 h-4 text-slate-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -412,10 +425,10 @@ export default function RootHomePage() {
               <div className="md:col-span-2">
                 <button
                   type="submit"
-                  className="w-full h-full py-3.5 px-4 rounded-2xl bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-500/20 active:scale-[0.99]"
+                  className="group/cta w-full h-full py-3.5 px-4 rounded-2xl bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-[background-color,box-shadow,transform] duration-150 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.97]"
                 >
-                  <span>{searchMode === 'rent' ? 'List Space' : 'Search Parking'}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span key={searchMode} className="animate-fade-in">{searchMode === 'rent' ? 'List Space' : 'Search Parking'}</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" />
                 </button>
               </div>
             </form>
@@ -442,9 +455,10 @@ export default function RootHomePage() {
       </footer>
 
       {/* 4. Auth Modal Overlay when user clicks Log In or Sign Up */}
+      <Presence>
       {authModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200 dark:border-neutral-800 p-6 shadow-2xl">
+        <ModalBackdrop key="auth-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <ModalPanel className="relative w-full max-w-md bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200 dark:border-neutral-800 p-6 shadow-2xl">
             <button
               type="button"
               onClick={() => setAuthModalOpen(false)}
@@ -467,9 +481,10 @@ export default function RootHomePage() {
               onAuthenticated={handleAuthenticated}
               onClose={() => setAuthModalOpen(false)}
             />
-          </div>
-        </div>
+          </ModalPanel>
+        </ModalBackdrop>
       )}
+      </Presence>
     </div>
   );
 }

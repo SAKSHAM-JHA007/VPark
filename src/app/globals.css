@@ -69,6 +69,169 @@ body {
   outline-offset: 2px;
 }
 
+/* ---------------------------------------------------------------------------
+ * Motion system
+ * Every effect here is decorative: the un-animated element is always the
+ * complete, visible state, so content survives if CSS animation is skipped.
+ * ------------------------------------------------------------------------- */
+
+/* Loading skeleton shimmer (only rendered during genuine loading states) */
+.vp-skeleton {
+  background-color: var(--surface-alt);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--hairline-strong) 55%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: vp-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes vp-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* Modal + dropdown enter/exit (paired with <Presence> / AnimatedModal.tsx).
+ * Enter uses `backwards` fill (ends on natural, untransformed styles);
+ * exit uses `forwards` fill so the surface stays hidden until <Presence> unmounts it. */
+.vp-modal-backdrop {
+  animation: vp-backdrop-in 220ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.vp-modal-backdrop[data-state='closed'] {
+  animation: vp-backdrop-out 150ms ease-in forwards;
+  pointer-events: none;
+}
+.vp-modal-panel {
+  animation: vp-panel-in 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.vp-modal-backdrop[data-state='closed'] .vp-modal-panel {
+  animation: vp-panel-out 150ms ease-in forwards;
+}
+.vp-dropdown {
+  transform-origin: top right;
+  animation: vp-dropdown-in 220ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.vp-dropdown[data-state='closed'] {
+  animation: vp-dropdown-out 150ms ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes vp-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vp-backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vp-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+}
+@keyframes vp-panel-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+@keyframes vp-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+@keyframes vp-dropdown-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+/* Hero illustration: car settles into its bay once, neon stall breathes a few times */
+.vp-hero-car {
+  animation: vp-car-settle 900ms cubic-bezier(0.22, 1, 0.36, 1) 250ms backwards;
+}
+.vp-hero-glow {
+  animation: vp-glow 3.6s ease-in-out 600ms 3;
+}
+
+@keyframes vp-car-settle {
+  from {
+    opacity: 0;
+    transform: translate(-18px, 10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Only the midpoint is defined, so each element starts and ends on its own
+ * opacity attribute (no jump when the animation finishes). */
+@keyframes vp-glow {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Scroll-linked reveal: progressive enhancement, CSS-only, no JS required.
+ * Browsers without scroll-driven animations simply show the content. */
+@keyframes vp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .vp-reveal {
+      animation: vp-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
+}
+
+/* Respect the OS "reduce motion" preference for every CSS animation and transition. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Loading spinners still communicate progress, so keep them turning. */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  .vp-skeleton {
+    animation: none !important;
+  }
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 5px;

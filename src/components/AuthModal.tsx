@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ProviderType, User, UserRole } from '@/types';
 import { APP_CONFIG } from '@/lib/constants';
+import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import {
   X,
   Mail,
@@ -31,6 +32,11 @@ export function AuthPanel({
 }: AuthPanelProps) {
   const [intent, setIntent] = useState<'driver' | 'provider'>(initialIntent);
   const [step, setStep] = useState<'email' | 'otp' | 'master_password' | 'onboarding'>('email');
+  // Presentation only: slide a step in after the first step change (not on initial open).
+  const initialStepRef = useRef(step);
+  const stepChangedRef = useRef(false);
+  if (step !== initialStepRef.current) stepChangedRef.current = true;
+  const stepEnterClass = stepChangedRef.current ? ' animate-slide-in' : '';
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
@@ -276,20 +282,20 @@ export function AuthPanel({
         )}
 
         {error && (
-          <div role="alert" className="p-2.5 rounded-sm bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 font-mono text-xs">
+          <div role="alert" className="p-2.5 rounded-sm bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 font-mono text-xs animate-fade-in">
             {error}
           </div>
         )}
 
         {hint && (
-          <div className="p-2.5 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[var(--ink)] font-mono text-xs">
+          <div className="p-2.5 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[var(--ink)] font-mono text-xs animate-fade-in">
             {hint}
           </div>
         )}
 
         {/* Step 1: Email Address (Replaces Phone Login) */}
         {step === 'email' && (
-          <form onSubmit={handleEmailSubmit} className="space-y-4">
+          <form key="step-email" onSubmit={handleEmailSubmit} className={`space-y-4${stepEnterClass}`}>
             <div>
               <label htmlFor="vpark-email-input" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5">
                 Primary Email ID
@@ -315,7 +321,7 @@ export function AuthPanel({
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
             >
               {loading ? 'Processing...' : 'Continue with Email'}
               <ArrowRight className="w-3.5 h-3.5" />
@@ -325,7 +331,7 @@ export function AuthPanel({
 
         {/* Master Admin Hidden Password Prompt */}
         {step === 'master_password' && (
-          <form onSubmit={handleMasterLogin} className="space-y-4">
+          <form key="step-master" onSubmit={handleMasterLogin} className={`space-y-4${stepEnterClass}`}>
             <div className="p-3 rounded-sm bg-blue-500/10 border border-blue-500/30 flex items-center gap-2.5">
               <KeyRound className="w-5 h-5 text-[var(--transit-accent)] flex-shrink-0" />
               <div>
@@ -358,7 +364,7 @@ export function AuthPanel({
             <button
               type="submit"
               disabled={loading || !password}
-              className="w-full py-2.5 rounded-sm bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 rounded-sm bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Authenticating...' : 'Access Master Console'}
               <ShieldCheck className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
@@ -380,7 +386,7 @@ export function AuthPanel({
 
         {/* Step 2: Verify Email OTP */}
         {step === 'otp' && (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
+          <form key="step-otp" onSubmit={handleVerifyOtp} className={`space-y-4${stepEnterClass}`}>
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label htmlFor="vpark-otp-input" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)]">
@@ -413,7 +419,7 @@ export function AuthPanel({
             <button
               type="submit"
               disabled={loading || otp.length < 4}
-              className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer"
+              className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
             >
               {loading ? 'Verifying...' : 'Authenticate & Proceed'}
             </button>
@@ -433,7 +439,7 @@ export function AuthPanel({
 
         {/* Step 3: Complete User Details (Mobile Number Stored Here Exclusively as User Detail) */}
         {step === 'onboarding' && (
-          <form onSubmit={handleCompleteOnboarding} className="space-y-3">
+          <form key="step-onboarding" onSubmit={handleCompleteOnboarding} className={`space-y-3${stepEnterClass}`}>
             <div>
               <label htmlFor="vpark-fullname" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1">
                 Full Legal Name *
@@ -502,7 +508,7 @@ export function AuthPanel({
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer"
+              className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
             >
               {loading ? 'Saving Details...' : 'Confirm Registration'}
             </button>
@@ -571,13 +577,15 @@ interface AuthModalProps {
 
 export function AuthModal({ initialIntent = 'driver', onAuthenticated, onClose }: AuthModalProps) {
   return (
-    <div
+    <ModalBackdrop
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label="Sign in to VPark"
     >
-      <AuthPanel initialIntent={initialIntent} onAuthenticated={onAuthenticated} onClose={onClose} />
-    </div>
+      <ModalPanel className="w-full max-w-md">
+        <AuthPanel initialIntent={initialIntent} onAuthenticated={onAuthenticated} onClose={onClose} />
+      </ModalPanel>
+    </ModalBackdrop>
   );
 }

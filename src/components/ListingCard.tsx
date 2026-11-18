@@ -51,7 +51,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
           onSelect();
         }
       }}
-      className={`bg-[var(--surface-bg)] rounded-sm p-4 border transition-colors cursor-pointer ${
+      className={`group bg-[var(--surface-bg)] rounded-sm p-4 border cursor-pointer transition-[border-color,box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5 ${
         isSelected
           ? 'border-[var(--transit-accent)] ring-1 ring-[var(--transit-accent)]'
           : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]'
@@ -63,7 +63,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
           <img
             src={listing.photos[0] || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800'}
             alt={listing.title ? `Verified parking bay: ${listing.title}` : 'Verified parking space bay in Bengaluru'}
-            className="w-full h-full object-cover filter contrast-[1.02]"
+            className="w-full h-full object-cover filter contrast-[1.02] transition-transform duration-500 ease-out-quart motion-safe:group-hover:scale-[1.04]"
             loading="lazy"
             decoding="async"
           />
@@ -161,7 +161,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
                   e.stopPropagation();
                   onBook();
                 }}
-                className="px-3.5 py-1.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] text-white font-mono text-xs uppercase tracking-wider transition-colors"
+                className="px-3.5 py-1.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 active:scale-[0.96]"
               >
                 RESERVE BAY
               </button>
@@ -172,7 +172,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
                   e.stopPropagation();
                   onBook();
                 }}
-                className="px-3 py-1.5 rounded-sm bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider border border-[var(--hairline-strong)] transition-colors"
+                className="px-3 py-1.5 rounded-sm bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider border border-[var(--hairline-strong)] transition-[background-color,transform] duration-150 active:scale-[0.96]"
               >
                 INSPECT DETAILS
               </button>

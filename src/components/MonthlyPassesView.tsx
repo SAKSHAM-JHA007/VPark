@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MonthlyPass, Listing } from '@/types';
+import { staggerStyle } from '@/components/motion/tokens';
 import { Calendar, CheckCircle2, ShieldCheck, Car, ArrowRight } from 'lucide-react';
 
 interface MonthlyPassesViewProps {
@@ -86,7 +87,7 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Banner */}
-      <div className="bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-fade-up">
         <div>
           <div className="flex items-center gap-2">
             <Calendar className="w-6 h-6 text-indigo-400" />
@@ -99,7 +100,7 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
       </div>
 
       {statusMessage && (
-        <div className="p-3 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-2xl border border-emerald-200">
+        <div role="status" className="p-3 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-2xl border border-emerald-200 animate-fade-in">
           {statusMessage}
         </div>
       )}
@@ -114,10 +115,11 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {passes.map((pass) => (
+            {passes.map((pass, index) => (
               <div
                 key={pass.id}
-                className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3 text-xs"
+                style={staggerStyle(index)}
+                className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3 text-xs animate-fade-up transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5"
               >
                 <div className="flex justify-between items-start">
                   <div>
@@ -146,7 +148,7 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
       </div>
 
       {/* Subscribe to Monthly Pass Form */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 text-xs">
+      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 text-xs animate-fade-up [animation-delay:120ms]">
         <h3 className="font-bold text-slate-900 text-base">Reserve a Dedicated Monthly Bay</h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -177,7 +179,7 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
         </div>
 
         {selectedListing && (
-          <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div key={selectedListing.id} className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-fade-in">
             <div>
               <span className="font-bold text-indigo-950 text-sm block">
                 {selectedListing.title} · Dedicated Reserved Bay
@@ -190,10 +192,10 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
             <button
               onClick={handleBuyPass}
               disabled={isBuying}
-              className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md flex items-center gap-2 transition-all self-end sm:self-auto"
+              className="group/cta px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md flex items-center gap-2 transition-[background-color,box-shadow,transform] duration-150 hover:shadow-lg enabled:active:scale-[0.97] self-end sm:self-auto"
             >
               {isBuying ? 'Issuing Pass...' : `Subscribe for ₹${selectedListing.pricing.monthlyRate}/mo`}
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" />
             </button>
           </div>
         )}

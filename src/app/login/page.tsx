@@ -57,7 +57,7 @@ export default function LoginPage() {
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 space-y-6">
-        <div className="text-center space-y-1.5 max-w-md">
+        <div className="text-center space-y-1.5 max-w-md animate-fade-up">
           <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--transit-accent)] block">
             Bengaluru Municipal Pilot · Yelahanka Sector 01
           </span>
@@ -69,11 +69,13 @@ export default function LoginPage() {
           </p>
         </div>
 
+        <div className="w-full max-w-md animate-fade-up [animation-delay:90ms]">
         <AuthPanel
           embedded
           initialIntent={intent}
           onAuthenticated={handleAuthenticated}
         />
+        </div>
       </main>
 
       <footer className="border-t border-[var(--hairline)] bg-[var(--surface-bg)] py-4 px-4 text-center font-mono text-xs text-[var(--ink-tertiary)] flex flex-wrap items-center justify-center gap-3">

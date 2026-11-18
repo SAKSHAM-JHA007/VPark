@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import { Booking, Dispute } from '@/types';
 import { APP_CONFIG } from '@/lib/constants';
 import { X, AlertCircle, Clock, ShieldAlert, CheckCircle2 } from 'lucide-react';
@@ -54,8 +55,8 @@ export function DisputeModal({ booking, onClose, onDisputeCreated }: DisputeModa
   };
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95">
+    <ModalBackdrop className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+      <ModalPanel className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
         <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-amber-400" />
@@ -136,8 +137,8 @@ export function DisputeModal({ booking, onClose, onDisputeCreated }: DisputeModa
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </ModalPanel>
+    </ModalBackdrop>
   );
 }
 

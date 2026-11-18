@@ -297,9 +297,10 @@ export function InteractiveMap({
       </div>
 
       {/* 3. Floating Bottom Summary Card: Active Spot or Zone Summary */}
-      <div className="absolute bottom-4 left-4 max-w-sm bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md rounded-2xl p-3.5 border border-slate-200 dark:border-neutral-700 shadow-lg z-30 flex items-center justify-between gap-3">
+      <div className="absolute bottom-4 left-4 max-w-sm bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md rounded-2xl p-3.5 border border-slate-200 dark:border-neutral-700 shadow-lg z-30 flex items-center justify-between gap-3 animate-fade-up [animation-delay:150ms]">
+        {/* Overlay content re-keys on selection so the summary slides in; map/marker logic is untouched. */}
         {selectedItem ? (
-          <div className="flex items-center gap-3">
+          <div key={selectedItem.listing.id} className="flex items-center gap-3 animate-slide-in">
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-xs ${
                 selectedItem.listing.category === 'COMMERCIAL'
@@ -321,7 +322,7 @@ export function InteractiveMap({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 animate-fade-in">
             <div className="w-9 h-9 rounded-xl bg-[#0A5CFF] text-white flex items-center justify-center font-bold text-xs">
               <Compass className="w-4 h-4" />
             </div>
@@ -339,7 +340,7 @@ export function InteractiveMap({
         <button
           type="button"
           onClick={handleCenterLocation}
-          className="p-2 rounded-xl bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-300 hover:text-[#0A5CFF] transition-colors"
+          className="p-2 rounded-xl bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-300 hover:text-[#0A5CFF] transition-[color,transform] duration-150 active:scale-90"
           title="Center on search location"
         >
           <Navigation className="w-4 h-4" />

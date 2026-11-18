@@ -80,7 +80,7 @@ export function ContactForm() {
       {successMessage && (
         <div
           role="status"
-          className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 flex items-start gap-3 text-sm animate-in fade-in"
+          className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 flex items-start gap-3 text-sm animate-fade-in"
         >
           <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
           <div className="space-y-1">
@@ -93,7 +93,7 @@ export function ContactForm() {
       {errorMessage && (
         <div
           role="alert"
-          className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 flex items-start gap-3 text-sm animate-in fade-in"
+          className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 flex items-start gap-3 text-sm animate-fade-in"
         >
           <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
           <p className="text-xs font-semibold">{errorMessage}</p>
@@ -170,7 +170,7 @@ export function ContactForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-sm inline-flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-sm inline-flex items-center justify-center gap-2 transition-[background-color,box-shadow,transform] duration-150 hover:shadow-lg enabled:active:scale-[0.97] shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         {submitting ? (
           <>

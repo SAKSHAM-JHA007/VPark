@@ -72,7 +72,7 @@ export default function PrivacyPolicyPage() {
       {/* Main Content */}
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-10">
         {/* Title & Metadata */}
-        <div className="space-y-3 pb-6 border-b border-slate-200 dark:border-neutral-800">
+        <div className="space-y-3 pb-6 border-b border-slate-200 dark:border-neutral-800 animate-fade-up">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#0A5CFF] border border-blue-200 dark:border-blue-900/60 text-xs font-bold">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Digital Personal Data Protection Act, 2023 (India)</span>
@@ -86,7 +86,7 @@ export default function PrivacyPolicyPage() {
         </div>
 
         {/* Notice Banner */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-200 text-xs sm:text-sm leading-relaxed flex items-start gap-3">
+        <div className="animate-fade-up [animation-delay:90ms] p-4 sm:p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-200 text-xs sm:text-sm leading-relaxed flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
             <span className="font-bold">Legal Notice &amp; Scope:</span> This Privacy Policy describes how
@@ -98,7 +98,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Sections */}
         <article className="prose dark:prose-invert max-w-none space-y-8 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-          <section className="space-y-3">
+          <section className="space-y-3 vp-reveal">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0A5CFF] inline-flex items-center justify-center text-xs font-bold">
                 1
@@ -132,7 +132,7 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-3 vp-reveal">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0A5CFF] inline-flex items-center justify-center text-xs font-bold">
                 2
@@ -151,7 +151,7 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-3 vp-reveal">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0A5CFF] inline-flex items-center justify-center text-xs font-bold">
                 3
@@ -181,7 +181,7 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-3 vp-reveal">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0A5CFF] inline-flex items-center justify-center text-xs font-bold">
                 4
@@ -212,7 +212,7 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-3 vp-reveal">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0A5CFF] inline-flex items-center justify-center text-xs font-bold">
                 5
@@ -235,7 +235,7 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-3 vp-reveal">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0A5CFF] inline-flex items-center justify-center text-xs font-bold">
                 6
