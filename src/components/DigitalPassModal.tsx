@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import { Booking } from '@/types';
 import { CANCELLATION_POLICY_RULES } from '@/lib/constants';
+import { PassLocationMap } from '@/components/maps/PassLocationMap';
 import {
   X,
   QrCode,
@@ -222,7 +223,6 @@ export function DigitalPassModal({
               const exactLat = booking.listingLatitude || 13.1007;
               const exactLng = booking.listingLongitude || 77.5963;
               const googleMapsNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${exactLat},${exactLng}`;
-              const embedMapUrl = `https://maps.google.com/maps?q=${exactLat},${exactLng}&z=17&output=embed`;
 
               return (
                 <div className="p-4 bg-emerald-50/80 border-2 border-emerald-500/40 rounded-2xl space-y-3 shadow-xs">
@@ -247,20 +247,9 @@ export function DigitalPassModal({
                     </p>
                   </div>
 
-                  {/* Exact Google Maps Interactive Embed */}
-                  <div className="relative w-full h-48 rounded-xl overflow-hidden border border-emerald-300 shadow-sm bg-slate-100">
-                    <iframe
-                      title="Exact Parking Bay Location"
-                      src={embedMapUrl}
-                      width="100%"
-                      height="100%"
-                      style={{ border: 0 }}
-                      loading="lazy"
-                      allowFullScreen
-                      referrerPolicy="no-referrer-when-downgrade"
-                      className="w-full h-full"
-                    />
-                  </div>
+                  {/* Exact location map: themed Google Maps JS API when a key is configured, iframe otherwise */}
+                  <PassLocationMap latitude={exactLat} longitude={exactLng} title={booking.listingTitle} />
+
 
                   {/* Turn-by-Turn Navigation Action */}
                   <a
