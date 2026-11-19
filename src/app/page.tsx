@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { AuthPanel } from '@/components/AuthModal';
 import { VParkLogo } from '@/components/VParkLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { MobileNav } from '@/components/MobileNav';
 import { FindParkingIllustration, RentSpaceIllustration } from '@/components/HeroIllustrations';
 import { User } from '@/types';
 import { Presence } from '@/components/motion/Presence';
@@ -94,88 +95,57 @@ export default function RootHomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#07090E] text-slate-900 dark:text-slate-100 flex flex-col justify-between font-sans transition-colors duration-200">
-      {/* 1. Header / Navbar - Sleek Dark Palette matching reference UI */}
-      <header className="sticky top-0 z-40 bg-[#0B0C10] border-b border-neutral-800 text-white select-none">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Left: Brand Logo (Kept unchanged) */}
-          <div className="flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="flex items-center gap-2.5 focus-visible:outline-none">
-              <VParkLogo className="h-8 w-auto" />
+    <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between font-sans transition-colors duration-200">
+      {/* 1. Header / Navbar: theme-aware ribbon shared with the app header (.vp-nav) */}
+      <header className="vp-nav sticky top-0 z-40 select-none">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-5 lg:gap-8 min-w-0">
+            <Link href="/" aria-label="VPark home" className="flex items-center flex-shrink-0 rounded-sm">
+              <VParkLogo className="h-7 sm:h-8 w-auto" />
             </Link>
 
-            {/* Navigation Pills */}
-            <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-1.5 text-xs">
-              <Link
-                href="/driver/home"
-                className="px-3.5 py-1.5 rounded-full bg-neutral-800 text-white font-medium hover:bg-neutral-700 transition-colors"
-              >
+            <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1">
+              <Link href="/driver/home" className="vp-nav-link">
                 Find Parking
               </Link>
-              <button
-                type="button"
-                onClick={() => handleOpenAuth('provider')}
-                className="px-3.5 py-1.5 rounded-full text-neutral-300 hover:text-white hover:bg-neutral-800/60 font-medium transition-colors"
-              >
+              <button type="button" onClick={() => handleOpenAuth('provider')} className="vp-nav-link">
                 Rent Your Space
               </button>
-              <Link
-                href="/driver/home?tab=monthly"
-                className="px-3.5 py-1.5 rounded-full text-neutral-300 hover:text-white hover:bg-neutral-800/60 font-medium transition-colors"
-              >
+              <Link href="/driver/home?tab=monthly" className="vp-nav-link">
                 For Businesses
               </Link>
-              <div className="relative group">
-                <button
-                  type="button"
-                  className="px-3 py-1.5 rounded-full text-neutral-300 hover:text-white hover:bg-neutral-800/60 font-medium transition-colors inline-flex items-center gap-1"
-                >
-                  <span>About</span>
-                  <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                </button>
-              </div>
+              <a href="#how-it-works" className="vp-nav-link">
+                How it works
+              </a>
             </nav>
           </div>
 
-          {/* Right Controls: Location, Language, Theme, and Auth */}
-          <div className="flex items-center gap-2 sm:gap-4 text-xs">
-            {/* Location Selector */}
-            <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-200">
-              <MapPin className="w-3.5 h-3.5 text-[#0A5CFF]" />
-              <span className="font-medium text-[11px]">Bengaluru</span>
-              <ChevronDown className="w-3 h-3 text-neutral-400" />
-            </div>
-
-            {/* Language Selector */}
-            <div className="hidden sm:flex items-center gap-1 px-2 py-1 text-neutral-300 hover:text-white transition-colors cursor-pointer">
-              <Globe className="w-3.5 h-3.5" />
-              <span className="font-medium text-[11px]">EN</span>
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* Pilot city (informational only) */}
+            <div className="vp-nav-control hidden xl:flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap">
+              <MapPin className="w-3.5 h-3.5 text-[var(--transit-accent)]" aria-hidden="true" />
+              <span>Bengaluru</span>
             </div>
 
             <ThemeToggle />
 
-            {/* Help Link */}
-            <Link
-              href="/driver/home?help=true"
-              className="hidden sm:inline-flex items-center gap-1 text-neutral-300 hover:text-white px-2 py-1 transition-colors"
-            >
-              <span>Help</span>
+            <Link href="/contact" className="vp-nav-ghost hidden lg:inline-flex px-2 py-1 text-xs font-semibold">
+              Help
             </Link>
 
-            {/* Auth Buttons */}
             {!currentUser ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => handleOpenAuth('driver')}
-                  className="px-3 py-1.5 text-neutral-200 hover:text-white font-medium transition-colors"
+                  className="vp-nav-ghost px-2 sm:px-3 py-1.5 text-xs font-semibold whitespace-nowrap"
                 >
                   Log in
                 </button>
                 <button
                   type="button"
                   onClick={() => handleOpenAuth('driver')}
-                  className="px-4 py-1.5 rounded-full bg-white hover:bg-neutral-100 text-neutral-950 font-semibold transition-all shadow-sm"
+                  className="vp-nav-cta hidden sm:inline-flex px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap active:scale-[0.96]"
                 >
                   Sign up
                 </button>
@@ -183,12 +153,38 @@ export default function RootHomePage() {
             ) : (
               <Link
                 href="/driver/home"
-                className="px-4 py-1.5 rounded-full bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-semibold transition-colors flex items-center gap-1.5"
+                className="px-4 py-1.5 rounded-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap"
               >
                 <span>Dashboard</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             )}
+
+            <MobileNav
+              items={[
+                { key: 'find', label: 'Find Parking', href: '/driver/home' },
+                { key: 'rent', label: 'Rent Your Space', onClick: () => handleOpenAuth('provider') },
+                { key: 'business', label: 'For Businesses', href: '/driver/home?tab=monthly' },
+                {
+                  key: 'how',
+                  label: 'How it works',
+                  onClick: () =>
+                    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                },
+                { key: 'help', label: 'Help & contact', href: '/contact' },
+              ]}
+              footer={
+                !currentUser ? (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAuth('driver')}
+                    className="vp-nav-cta w-full rounded-control px-3 py-2.5 text-sm font-bold sm:hidden"
+                  >
+                    Sign up
+                  </button>
+                ) : undefined
+              }
+            />
           </div>
         </div>
       </header>

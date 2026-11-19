@@ -17,8 +17,33 @@ module.exports = {
           blue: '#0B45B8',
           'blue-hover': '#083491',
         },
+        // Semantic theme tokens (values live in globals.css and switch with `.dark`).
+        canvas: 'var(--canvas-bg)',
+        surface: {
+          DEFAULT: 'var(--surface-bg)',
+          alt: 'var(--surface-alt)',
+        },
+        hairline: {
+          DEFAULT: 'var(--hairline)',
+          strong: 'var(--hairline-strong)',
+        },
+        ink: {
+          DEFAULT: 'var(--ink)',
+          2: 'var(--ink-secondary)',
+          3: 'var(--ink-tertiary)',
+        },
+        accent: {
+          DEFAULT: 'var(--transit-accent)',
+          hover: 'var(--transit-accent-hover)',
+        },
+        brand: {
+          DEFAULT: '#0A5CFF',
+          hover: '#0047D4',
+        },
       },
       borderRadius: {
+        card: 'var(--radius-card)',
+        control: 'var(--radius-control)',
         none: '0px',
         xs: '2px',
         sm: '3px',
@@ -36,6 +61,8 @@ module.exports = {
         xs: '0 1px 2px rgba(0, 0, 0, 0.04)',
         sm: '0 1px 3px rgba(0, 0, 0, 0.06)',
         md: '0 4px 6px -1px rgba(0, 0, 0, 0.08)',
+        card: 'var(--shadow-card)',
+        raised: 'var(--shadow-raised)',
       },
       // Previously referenced in markup but undefined in Tailwind 3 (no-op classes).
       backdropBlur: {
