@@ -45,7 +45,7 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
   // Avoid layout shift during hydration
   if (!mounted) {
     return (
-      <div className={`w-7 h-7 rounded-sm border border-[var(--hairline)] ${className}`} />
+      <div className={`w-8 h-8 rounded-full border border-[var(--hairline)] ${className}`} />
     );
   }
 
@@ -55,7 +55,7 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
       onClick={toggleTheme}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className={`w-7 h-7 flex items-center justify-center rounded-sm border border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface-bg)] text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-[background-color,border-color,transform] duration-150 active:scale-90 overflow-hidden ${className}`}
+      className={`w-8 h-8 flex items-center justify-center rounded-full border border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface-bg)] text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-[background-color,border-color,transform] duration-150 active:scale-90 overflow-hidden ${className}`}
     >
       {isDark ? (
         <Sun key="sun" className={`w-3.5 h-3.5 text-amber-500${hasToggled ? ' animate-spin-in' : ''}`} />

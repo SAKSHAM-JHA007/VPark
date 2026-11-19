@@ -56,24 +56,24 @@ export function DisputeModal({ booking, onClose, onDisputeCreated }: DisputeModa
 
   return (
     <ModalBackdrop className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-      <ModalPanel className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-        <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+      <ModalPanel className="w-full max-w-lg bg-white dark:bg-surface rounded-3xl shadow-2xl border border-slate-200 dark:border-hairline overflow-hidden">
+        <div className="bg-slate-900 dark:bg-surface-alt dark:border-b dark:border-hairline text-white dark:text-ink p-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-amber-400" />
             <div>
               <span className="font-bold text-base block">Report Issue & File Dispute</span>
-              <span className="text-xs text-slate-400 font-mono">Booking Ref: {booking.referenceNumber}</span>
+              <span className="text-xs text-slate-400 dark:text-ink-3 font-mono">Booking Ref: {booking.referenceNumber}</span>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:text-white">
+          <button onClick={onClose} className="p-1 rounded-full text-slate-400 dark:text-ink-3 hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
           {/* SLA Notice (PRD 8.14: under 4 working hours) */}
-          <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-blue-900 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
+          <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-300 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
             <span>
               <strong>Target SLA:</strong> VPark Trust & Safety team reviews and responds to disputes within 4 working
               hours.
@@ -81,11 +81,11 @@ export function DisputeModal({ booking, onClose, onDisputeCreated }: DisputeModa
           </div>
 
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Issue Category (PRD 8.14)</label>
+            <label className="font-bold text-slate-700 dark:text-ink-2 block mb-1">Issue Category (PRD 8.14)</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as Dispute['category'])}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
             >
               <option value="SPACE_OCCUPIED">Space is Occupied / Blocked by Another Car</option>
               <option value="SPACE_UNUSABLE">Space is Unusable / Debris / Hazard</option>
@@ -97,34 +97,34 @@ export function DisputeModal({ booking, onClose, onDisputeCreated }: DisputeModa
           </div>
 
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Description of Issue</label>
+            <label className="font-bold text-slate-700 dark:text-ink-2 block mb-1">Description of Issue</label>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what happened when you arrived at the location..."
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-3 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Evidence Photo URL (Optional)</label>
+            <label className="font-bold text-slate-700 dark:text-ink-2 block mb-1">Evidence Photo URL (Optional)</label>
             <input
               type="text"
               value={photoUrl}
               onChange={(e) => setPhotoUrl(e.target.value)}
               placeholder="https://example.com/photo.jpg"
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
             />
           </div>
 
-          {error && <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200">{error}</div>}
+          {error && <div className="p-3 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 rounded-xl border border-red-200 dark:border-red-500/30">{error}</div>}
 
           <div className="flex gap-2 justify-end pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold"
+              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-surface-alt hover:bg-slate-200 dark:hover:bg-hairline-strong text-slate-700 dark:text-ink-2 font-semibold"
             >
               Cancel
             </button>

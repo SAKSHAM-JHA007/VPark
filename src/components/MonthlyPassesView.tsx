@@ -64,7 +64,7 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
         }),
       });
       if (res.status === 401) {
-        setStatusMessage('Please sign in with Phone OTP to subscribe to a monthly pass.');
+        setStatusMessage('Please sign in to get a monthly pass.');
         if (onRequireAuth) onRequireAuth();
         return;
       }
@@ -94,23 +94,23 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
             <h1 className="text-2xl font-black">Monthly Commuter Passes</h1>
           </div>
           <p className="text-xs text-indigo-200 mt-1">
-            Guaranteed 24/7 dedicated bay for daily commuters at Rail Wheel Factory, Aster CMI, and Yelahanka Station (PRD Section 13)
+            A reserved bay for regular commuters near Rail Wheel Factory, Aster CMI and Yelahanka Station. Passes run in test mode during the pilot.
           </p>
         </div>
       </div>
 
       {statusMessage && (
-        <div role="status" className="p-3 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-2xl border border-emerald-200 animate-fade-in">
+        <div role="status" className="p-3 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs font-semibold rounded-2xl border border-emerald-200 dark:border-emerald-500/30 animate-fade-in">
           {statusMessage}
         </div>
       )}
 
       {/* Active Passes */}
       <div className="space-y-4">
-        <h2 className="font-bold text-slate-900 text-base">Your Active Monthly Passes</h2>
+        <h2 className="font-bold text-slate-900 dark:text-ink text-base">Your Active Monthly Passes</h2>
 
         {passes.length === 0 ? (
-          <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 text-slate-500 text-xs">
+          <div className="p-8 text-center bg-white dark:bg-surface rounded-3xl border border-slate-200 dark:border-hairline text-slate-500 dark:text-ink-3 text-xs">
             No active monthly passes. Reserve a monthly commuter bay below.
           </div>
         ) : (
@@ -119,26 +119,26 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
               <div
                 key={pass.id}
                 style={staggerStyle(index)}
-                className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3 text-xs animate-fade-up transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5"
+                className="bg-white dark:bg-surface rounded-3xl p-5 border border-slate-200 dark:border-hairline shadow-sm space-y-3 text-xs animate-fade-up transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5"
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">
                       ACTIVE PASS · {pass.month}
                     </span>
-                    <h3 className="font-bold text-base text-slate-900 mt-1">{pass.listingTitle}</h3>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-ink mt-1">{pass.listingTitle}</h3>
                   </div>
-                  <span className="text-lg font-black text-indigo-600 font-mono">₹{pass.price}/mo</span>
+                  <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">₹{pass.price}/mo</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-slate-600 font-mono text-[11px]">
-                  <div className="p-2 bg-slate-50 rounded-xl">
-                    <span className="text-slate-400 block text-[10px]">Vehicle Plate</span>
-                    <span className="font-bold text-slate-900">{pass.vehiclePlateNumber}</span>
+                <div className="grid grid-cols-2 gap-2 text-slate-600 dark:text-ink-2 font-mono text-[11px]">
+                  <div className="p-2 bg-slate-50 dark:bg-surface-alt rounded-xl">
+                    <span className="text-slate-400 dark:text-ink-3 block text-[10px]">Vehicle Plate</span>
+                    <span className="font-bold text-slate-900 dark:text-ink">{pass.vehiclePlateNumber}</span>
                   </div>
-                  <div className="p-2 bg-slate-50 rounded-xl">
-                    <span className="text-slate-400 block text-[10px]">Valid Until</span>
-                    <span className="font-bold text-slate-900">{pass.endDate}</span>
+                  <div className="p-2 bg-slate-50 dark:bg-surface-alt rounded-xl">
+                    <span className="text-slate-400 dark:text-ink-3 block text-[10px]">Valid Until</span>
+                    <span className="font-bold text-slate-900 dark:text-ink">{pass.endDate}</span>
                   </div>
                 </div>
               </div>
@@ -148,16 +148,16 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
       </div>
 
       {/* Subscribe to Monthly Pass Form */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4 text-xs animate-fade-up [animation-delay:120ms]">
-        <h3 className="font-bold text-slate-900 text-base">Reserve a Dedicated Monthly Bay</h3>
+      <div className="bg-white dark:bg-surface rounded-3xl p-6 border border-slate-200 dark:border-hairline shadow-sm space-y-4 text-xs animate-fade-up [animation-delay:120ms]">
+        <h3 className="font-bold text-slate-900 dark:text-ink text-base">Reserve a Dedicated Monthly Bay</h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Select Verified Parking Location</label>
+            <label className="font-bold text-slate-700 dark:text-ink-2 block mb-1">Select Verified Parking Location</label>
             <select
               value={selectedListingId}
               onChange={(e) => setSelectedListingId(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-xs"
+              className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold text-xs"
             >
               {listings.map((l) => (
                 <option key={l.id} value={l.id}>
@@ -168,24 +168,24 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
           </div>
 
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Vehicle Plate Number</label>
+            <label className="font-bold text-slate-700 dark:text-ink-2 block mb-1">Vehicle Plate Number</label>
             <input
               type="text"
               value={vehiclePlate}
               onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-bold font-mono text-xs"
+              className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold font-mono text-xs"
             />
           </div>
         </div>
 
         {selectedListing && (
-          <div key={selectedListing.id} className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-fade-in">
+          <div key={selectedListing.id} className="p-4 bg-indigo-50/60 dark:bg-indigo-500/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-fade-in">
             <div>
-              <span className="font-bold text-indigo-950 text-sm block">
+              <span className="font-bold text-indigo-950 dark:text-indigo-300 text-sm block">
                 {selectedListing.title} · Dedicated Reserved Bay
               </span>
-              <span className="text-indigo-800 text-xs">
-                Includes RFID / QR Access, 24/7 in-and-out privileges, and dedicated parking spot.
+              <span className="text-indigo-800 dark:text-indigo-300 text-xs">
+                A dedicated bay for the month. The host shares access details once your pass is issued.
               </span>
             </div>
 

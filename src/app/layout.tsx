@@ -53,7 +53,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-150">
+      <body className="min-h-screen flex flex-col bg-canvas text-ink antialiased transition-colors duration-150">
         {children}
       </body>
     </html>

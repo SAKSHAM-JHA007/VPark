@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import { Booking } from '@/types';
 import { CANCELLATION_POLICY_RULES } from '@/lib/constants';
+import { PassLocationMap } from '@/components/maps/PassLocationMap';
 import {
   X,
   QrCode,
@@ -150,29 +151,29 @@ export function DigitalPassModal({
   const getStatusBadge = () => {
     switch (booking.status) {
       case 'CONFIRMED':
-        return <span className="bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full text-xs">Confirmed · Ready</span>;
+        return <span className="bg-blue-100 dark:bg-blue-500/15 text-blue-800 dark:text-blue-300 font-bold px-2.5 py-0.5 rounded-full text-xs">Confirmed · Ready</span>;
       case 'CHECKED_IN':
-        return <span className="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full text-xs animate-pulse">Parked · In Session</span>;
+        return <span className="bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 font-bold px-2.5 py-0.5 rounded-full text-xs animate-pulse">Parked · In Session</span>;
       case 'COMPLETED':
-        return <span className="bg-slate-100 text-slate-800 font-bold px-2.5 py-0.5 rounded-full text-xs">Completed</span>;
+        return <span className="bg-slate-100 dark:bg-surface-alt text-slate-800 dark:text-ink font-bold px-2.5 py-0.5 rounded-full text-xs">Completed</span>;
       case 'CANCELLED_BY_DRIVER':
       case 'CANCELLED_BY_PROVIDER':
-        return <span className="bg-red-100 text-red-800 font-bold px-2.5 py-0.5 rounded-full text-xs">Cancelled</span>;
+        return <span className="bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300 font-bold px-2.5 py-0.5 rounded-full text-xs">Cancelled</span>;
       case 'DISPUTED':
-        return <span className="bg-amber-100 text-amber-800 font-bold px-2.5 py-0.5 rounded-full text-xs">Disputed · Under Review</span>;
+        return <span className="bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 font-bold px-2.5 py-0.5 rounded-full text-xs">Disputed · Under Review</span>;
       default:
-        return <span className="bg-slate-100 text-slate-800 font-bold px-2.5 py-0.5 rounded-full text-xs">{booking.status}</span>;
+        return <span className="bg-slate-100 dark:bg-surface-alt text-slate-800 dark:text-ink font-bold px-2.5 py-0.5 rounded-full text-xs">{booking.status}</span>;
     }
   };
 
   return (
     <ModalBackdrop className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
-      <ModalPanel className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+      <ModalPanel className="relative w-full max-w-lg bg-white dark:bg-surface rounded-3xl shadow-2xl border border-slate-200 dark:border-hairline overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Pass Header */}
         <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-5 flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-mono tracking-widest text-emerald-300 font-bold block">
-              Official VPark Access Pass
+              VPark booking pass
             </span>
             <span className="text-xl font-black font-mono tracking-wider">{booking.referenceNumber}</span>
           </div>
@@ -184,11 +185,11 @@ export function DigitalPassModal({
         {/* Content */}
         <div className="overflow-y-auto p-6 space-y-5">
           {/* Status & QR Container */}
-          <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-3">
+          <div className="p-5 bg-slate-50 dark:bg-surface-alt rounded-2xl border border-slate-200 dark:border-hairline text-center space-y-3">
             <div className="flex justify-center">{getStatusBadge()}</div>
 
-            {/* Simulated QR Code */}
-            <div className="inline-block p-4 bg-white rounded-2xl shadow-sm border border-slate-200 animate-scale-in [animation-delay:160ms]">
+            {/* Simulated QR code (QR check-in is not live yet) */}
+            <div className="inline-block p-4 bg-white rounded-2xl shadow-sm border border-slate-200 dark:border-transparent animate-scale-in [animation-delay:160ms]">
               <div className="w-36 h-36 border-4 border-slate-900 p-2 flex flex-col justify-between">
                 <div className="flex justify-between">
                   <div className="w-8 h-8 bg-slate-900"></div>
@@ -204,13 +205,13 @@ export function DigitalPassModal({
               </div>
             </div>
 
-            <p className="text-xs text-slate-500 font-medium">
-              Scan at gate scanner or present to on-duty security guard
+            <p className="text-xs text-slate-500 dark:text-ink-3 font-medium">
+              Sample pass code. QR check-in isn&apos;t live yet, so show your booking reference to the host or guard.
             </p>
           </div>
 
           {statusMessage && (
-            <div className="p-3 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-xl border border-emerald-200">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs font-semibold rounded-xl border border-emerald-200 dark:border-emerald-500/30">
               {statusMessage}
             </div>
           )}
@@ -222,45 +223,33 @@ export function DigitalPassModal({
               const exactLat = booking.listingLatitude || 13.1007;
               const exactLng = booking.listingLongitude || 77.5963;
               const googleMapsNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${exactLat},${exactLng}`;
-              const embedMapUrl = `https://maps.google.com/maps?q=${exactLat},${exactLng}&z=17&output=embed`;
 
               return (
-                <div className="p-4 bg-emerald-50/80 border-2 border-emerald-500/40 rounded-2xl space-y-3 shadow-xs">
+                <div className="p-4 bg-emerald-50/80 dark:bg-emerald-500/10 border-2 border-emerald-500/40 rounded-2xl space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
-                        Precise Exact Location Unlocked
+                      <span className="text-xs font-bold text-emerald-950 dark:text-emerald-300 uppercase tracking-wide">
+                        Exact location
                       </span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold">
-                      Payment Verified · Live
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 font-mono text-[10px] font-bold">
+                      Booking confirmed
                     </span>
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-sm text-slate-900 uppercase">{booking.listingTitle}</h4>
-                    <p className="text-xs text-slate-700 font-medium mt-0.5">{booking.listingAddress}</p>
-                    <p className="text-[11px] font-mono text-emerald-800 mt-1 flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                      <span>Exact GPS: {exactLat.toFixed(6)}, {exactLng.toFixed(6)}</span>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-ink uppercase">{booking.listingTitle}</h4>
+                    <p className="text-xs text-slate-700 dark:text-ink-2 font-medium mt-0.5">{booking.listingAddress}</p>
+                    <p className="text-[11px] font-mono text-emerald-800 dark:text-emerald-300 mt-1 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                      <span>GPS: {exactLat.toFixed(6)}, {exactLng.toFixed(6)}</span>
                     </p>
                   </div>
 
-                  {/* Exact Google Maps Interactive Embed */}
-                  <div className="relative w-full h-48 rounded-xl overflow-hidden border border-emerald-300 shadow-sm bg-slate-100">
-                    <iframe
-                      title="Exact Parking Bay Location"
-                      src={embedMapUrl}
-                      width="100%"
-                      height="100%"
-                      style={{ border: 0 }}
-                      loading="lazy"
-                      allowFullScreen
-                      referrerPolicy="no-referrer-when-downgrade"
-                      className="w-full h-full"
-                    />
-                  </div>
+                  {/* Exact location map: themed Google Maps JS API when a key is configured, iframe otherwise */}
+                  <PassLocationMap latitude={exactLat} longitude={exactLng} title={booking.listingTitle} />
+
 
                   {/* Turn-by-Turn Navigation Action */}
                   <a
@@ -270,7 +259,7 @@ export function DigitalPassModal({
                     className="w-full py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                   >
                     <Navigation className="w-4 h-4 fill-white" />
-                    <span>Navigate to Exact Bay via Google Maps</span>
+                    <span>Get directions in Google Maps</span>
                     <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                   </a>
                 </div>
@@ -278,36 +267,36 @@ export function DigitalPassModal({
             })()}
 
             {booking.listingAccessInstructions && (
-              <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-1">
-                <span className="text-[#0A5CFF] font-bold block">Unlocked Gate &amp; Entry Instructions</span>
-                <p className="text-slate-800 font-medium">{booking.listingAccessInstructions}</p>
+              <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/30 space-y-1">
+                <span className="text-[#0A5CFF] dark:text-[var(--transit-accent)] font-bold block">Gate &amp; entry instructions</span>
+                <p className="text-slate-800 dark:text-ink font-medium">{booking.listingAccessInstructions}</p>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-400 block font-medium">Reserved Vehicle</span>
-                <span className="font-bold text-slate-900 text-sm font-mono">{booking.vehiclePlateNumber}</span>
-                <span className="text-slate-500 text-[11px] block">{booking.vehicleType}</span>
+              <div className="p-3 bg-slate-50 dark:bg-surface-alt rounded-xl border border-slate-200 dark:border-hairline">
+                <span className="text-slate-400 dark:text-ink-3 block font-medium">Reserved Vehicle</span>
+                <span className="font-bold text-slate-900 dark:text-ink text-sm font-mono">{booking.vehiclePlateNumber}</span>
+                <span className="text-slate-500 dark:text-ink-3 text-[11px] block">{booking.vehicleType}</span>
               </div>
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-400 block font-medium">Time Window</span>
-                <span className="font-bold text-slate-900 text-xs">
+              <div className="p-3 bg-slate-50 dark:bg-surface-alt rounded-xl border border-slate-200 dark:border-hairline">
+                <span className="text-slate-400 dark:text-ink-3 block font-medium">Time Window</span>
+                <span className="font-bold text-slate-900 dark:text-ink text-xs">
                   {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} →{' '}
                   {new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
-                <span className="text-slate-500 text-[11px] block">
+                <span className="text-slate-500 dark:text-ink-3 text-[11px] block">
                   {new Date(booking.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                 </span>
               </div>
             </div>
 
             {/* Provider Privacy Masked Relay (PRD 8.8 BOOK-7) */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div className="p-3 bg-slate-50 dark:bg-surface-alt rounded-xl border border-slate-200 dark:border-hairline flex items-center justify-between">
               <div>
-                <span className="text-slate-400 block font-medium">Host Contact (Privacy Relay)</span>
-                <span className="font-bold text-slate-900">{booking.providerName}</span>
-                <span className="text-[11px] text-slate-500 block font-mono">{booking.providerPhoneMasked}</span>
+                <span className="text-slate-400 dark:text-ink-3 block font-medium">Host Contact (Privacy Relay)</span>
+                <span className="font-bold text-slate-900 dark:text-ink">{booking.providerName}</span>
+                <span className="text-[11px] text-slate-500 dark:text-ink-3 block font-mono">{booking.providerPhoneMasked}</span>
               </div>
               <a
                 href={`tel:${booking.providerPhoneMasked.replace(/\s+/g, '')}`}
@@ -348,7 +337,7 @@ export function DigitalPassModal({
                   <button
                     onClick={() => handleExtend(1)}
                     disabled={isUpdating}
-                    className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 flex items-center justify-center gap-1"
+                    className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-surface-alt hover:bg-slate-200 dark:hover:bg-hairline-strong text-slate-800 dark:text-ink font-bold text-xs border border-slate-200 dark:border-hairline flex items-center justify-center gap-1"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
                     Extend +1 Hour
@@ -356,7 +345,7 @@ export function DigitalPassModal({
                   <button
                     onClick={() => handleExtend(2)}
                     disabled={isUpdating}
-                    className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 flex items-center justify-center gap-1"
+                    className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-surface-alt hover:bg-slate-200 dark:hover:bg-hairline-strong text-slate-800 dark:text-ink font-bold text-xs border border-slate-200 dark:border-hairline flex items-center justify-center gap-1"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
                     Extend +2 Hours
@@ -369,15 +358,15 @@ export function DigitalPassModal({
             <div className="flex items-center justify-between text-xs pt-2">
               <button
                 onClick={() => setShowInvoice(!showInvoice)}
-                className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1"
+                className="text-slate-600 dark:text-ink-2 hover:text-slate-900 dark:hover:text-ink font-medium flex items-center gap-1"
               >
                 <FileText className="w-3.5 h-3.5" />
-                {showInvoice ? 'Hide Tax Invoice' : 'View GST Tax Invoice'}
+                {showInvoice ? 'Hide receipt' : 'View receipt (test mode)'}
               </button>
 
               <button
                 onClick={() => onOpenDispute(booking)}
-                className="text-amber-700 hover:text-amber-900 font-medium flex items-center gap-1"
+                className="text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-300 font-medium flex items-center gap-1"
               >
                 <HelpCircle className="w-3.5 h-3.5" />
                 Report Issue / Dispute
@@ -386,7 +375,7 @@ export function DigitalPassModal({
               {booking.status === 'CONFIRMED' && (
                 <button
                   onClick={() => setShowCancelConfirm(true)}
-                  className="text-red-600 hover:text-red-800 font-medium"
+                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"
                 >
                   Cancel Booking
                 </button>
@@ -396,12 +385,12 @@ export function DigitalPassModal({
 
           {/* Cancellation Confirmation Dialog (PRD 8.9) */}
           {showCancelConfirm && (
-            <div className="p-4 bg-red-50 rounded-2xl border border-red-200 space-y-3 text-xs animate-fade-in">
-              <div className="font-bold text-red-900 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-red-600" />
+            <div className="p-4 bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-200 dark:border-red-500/30 space-y-3 text-xs animate-fade-in">
+              <div className="font-bold text-red-900 dark:text-red-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
                 Cancel Reservation & Process Refund
               </div>
-              <p className="text-red-700">
+              <p className="text-red-700 dark:text-red-300">
                 Per Section 8.9: Cancelling 2+ hours before start qualifies for 100% refund of parking fee. Cancelling
                 under 2 hours receives 50% refund.
               </p>
@@ -411,13 +400,13 @@ export function DigitalPassModal({
                 placeholder="Reason for cancellation (optional)"
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                className="w-full bg-white border border-red-200 rounded-xl px-3 py-2 text-xs focus:outline-none"
+                className="w-full bg-white dark:bg-surface border border-red-200 dark:border-red-500/30 rounded-xl px-3 py-2 text-xs focus:outline-none"
               />
 
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => setShowCancelConfirm(false)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-medium"
+                  className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-hairline text-slate-700 dark:text-ink-2 font-medium"
                 >
                   Keep Booking
                 </button>
@@ -432,9 +421,12 @@ export function DigitalPassModal({
             </div>
           )}
 
-          {/* Compliant GST Tax Invoice View (PRD 8.11) */}
+          {/* Receipt view (PRD 8.11). Payments are simulated in the pilot, so this is labelled as a sample. */}
           {showInvoice && (
             <div className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-xs space-y-2 font-mono">
+              <p className="rounded-md bg-amber-400/15 px-2 py-1 text-[11px] font-semibold text-amber-300">
+                Sample receipt from a test-mode booking. Not a tax invoice.
+              </p>
               <div className="flex justify-between border-b border-slate-700 pb-2">
                 <span className="font-bold text-emerald-400">VPARK TECHNOLOGIES INDIA PVT LTD</span>
                 <span>GSTIN: 29AABCU9603R1ZM</span>
@@ -450,15 +442,15 @@ export function DigitalPassModal({
                   <span>Parking Fee ({booking.pricingSnapshot.durationHours} hrs)</span>
                   <span>₹{booking.pricingSnapshot.parkingFee.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-slate-400">
+                <div className="flex justify-between text-slate-400 dark:text-ink-3">
                   <span>VPark Commission (12%)</span>
                   <span>₹{booking.pricingSnapshot.platformFee.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-slate-400">
+                <div className="flex justify-between text-slate-400 dark:text-ink-3">
                   <span>CGST @ 9%</span>
                   <span>₹{booking.pricingSnapshot.cgst.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-slate-400">
+                <div className="flex justify-between text-slate-400 dark:text-ink-3">
                   <span>SGST @ 9%</span>
                   <span>₹{booking.pricingSnapshot.sgst.toFixed(2)}</span>
                 </div>

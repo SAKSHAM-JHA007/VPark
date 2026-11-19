@@ -5,6 +5,7 @@ import { Presence } from '@/components/motion/Presence';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import { CountUp } from '@/components/motion/CountUp';
 import { staggerStyle } from '@/components/motion/tokens';
+import { ListingSubmissionNotice } from '@/components/HowItWorks';
 import {
   Listing,
   ProviderType,
@@ -54,12 +55,12 @@ const STATUS_CHIP: Record<
   Listing['status'],
   { label: string; classes: string }
 > = {
-  DRAFT: { label: 'Draft', classes: 'bg-slate-100 text-slate-700 border-slate-200' },
-  PENDING_REVIEW: { label: 'Submitted', classes: 'bg-amber-100 text-amber-800 border-amber-200' },
-  NEEDS_INFO: { label: 'Needs info', classes: 'bg-orange-100 text-orange-800 border-orange-200' },
-  VERIFIED: { label: 'Approved', classes: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  REJECTED: { label: 'Rejected', classes: 'bg-red-100 text-red-800 border-red-200' },
-  SUSPENDED: { label: 'Suspended', classes: 'bg-red-100 text-red-900 border-red-300' },
+  DRAFT: { label: 'Draft', classes: 'bg-slate-100 dark:bg-surface-alt text-slate-700 dark:text-ink-2 border-slate-200 dark:border-hairline' },
+  PENDING_REVIEW: { label: 'Submitted', classes: 'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' },
+  NEEDS_INFO: { label: 'Needs info', classes: 'bg-orange-100 dark:bg-orange-500/15 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-500/30' },
+  VERIFIED: { label: 'Approved', classes: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' },
+  REJECTED: { label: 'Rejected', classes: 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300 border-red-200 dark:border-red-500/30' },
+  SUSPENDED: { label: 'Suspended', classes: 'bg-red-100 dark:bg-red-500/15 text-red-900 dark:text-red-300 border-red-300 dark:border-red-500/30' },
 };
 
 function situationToProviderType(sit: ProviderSituation): ProviderType {
@@ -550,12 +551,12 @@ export function ProviderHub({
   if (!loading && authStateError === 'UNAUTH') {
     return (
       <div className="max-w-3xl mx-auto px-4 py-14 text-center space-y-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0A5CFF] flex items-center justify-center mx-auto">
+        <div className="bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline p-8 shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-[#0A5CFF] dark:text-[var(--transit-accent)] flex items-center justify-center mx-auto">
             <Lock className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-black text-slate-900">Sign in to manage your parking spaces</h1>
-          <p className="text-sm text-slate-600 max-w-md mx-auto">
+          <h1 className="text-2xl font-black text-slate-900 dark:text-ink">Sign in to manage your parking spaces</h1>
+          <p className="text-sm text-slate-600 dark:text-ink-2 max-w-md mx-auto">
             Use one VPark phone OTP account to list spaces, upload verification documents, and track reservations.
           </p>
           {onRequireAuth && (
@@ -575,12 +576,12 @@ export function ProviderHub({
   if (!loading && authStateError === 'NO_CAPABILITY') {
     return (
       <div className="max-w-3xl mx-auto px-4 py-14 text-center space-y-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0A5CFF] flex items-center justify-center mx-auto">
+        <div className="bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline p-8 shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-[#0A5CFF] dark:text-[var(--transit-accent)] flex items-center justify-center mx-auto">
             <Building2 className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-black text-slate-900">Turn on Host mode in one click</h1>
-          <p className="text-sm text-slate-600 max-w-md mx-auto">
+          <h1 className="text-2xl font-black text-slate-900 dark:text-ink">Turn on Host mode in one click</h1>
+          <p className="text-sm text-slate-600 dark:text-ink-2 max-w-md mx-auto">
             Your VPark account is currently active for Driver parking only. Add the Host capability without re-entering your personal information.
           </p>
           {onEnableProvider && (
@@ -604,16 +605,16 @@ export function ProviderHub({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Top Welcome Banner (PRD 7.1) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-surface border border-slate-200 dark:border-hairline p-6 rounded-2xl shadow-sm">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-[#0A5CFF] uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#0A5CFF] dark:text-[var(--transit-accent)] uppercase tracking-wider">
             <Building2 className="w-4 h-4" />
             <span>Host Dashboard · /owner/dashboard</span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 mt-1">
+          <h1 className="text-2xl font-black text-slate-900 dark:text-ink mt-1">
             Welcome, {displayName}
           </h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="text-sm text-slate-600 dark:text-ink-2 mt-1">
             Add unused driveways, gated bays, or commercial slots and keep availability confirmed.
           </p>
         </div>
@@ -628,10 +629,12 @@ export function ProviderHub({
         </button>
       </div>
 
+      <ListingSubmissionNotice />
+
       {statusMessage && (
-        <div role="status" className="p-3.5 bg-blue-50 text-blue-900 text-xs font-semibold rounded-2xl border border-blue-200 flex items-center justify-between animate-fade-in">
+        <div role="status" className="p-3.5 bg-blue-50 dark:bg-blue-500/10 text-blue-900 dark:text-blue-300 text-xs font-semibold rounded-2xl border border-blue-200 dark:border-blue-500/30 flex items-center justify-between animate-fade-in">
           <span>{statusMessage}</span>
-          <button type="button" onClick={() => setStatusMessage(null)} className="text-blue-700 font-bold ml-3">
+          <button type="button" onClick={() => setStatusMessage(null)} className="text-blue-700 dark:text-blue-300 font-bold ml-3">
             ✕
           </button>
         </div>
@@ -640,47 +643,47 @@ export function ProviderHub({
       {/* Honest Summary Cards (PRD 7.1 — never invent fake bookings/earnings) */}
       {metrics && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-up [animation-delay:0ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
-            <span className="text-slate-500 block font-semibold">Total listings</span>
-            <span className="text-2xl font-black text-slate-900 mt-1 block tabular-nums"><CountUp value={metrics.totalListings} /></span>
-            <span className="text-[11px] text-slate-500 mt-0.5 block">
+          <div className="p-4 bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline shadow-sm animate-fade-up [animation-delay:0ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
+            <span className="text-slate-500 dark:text-ink-3 block font-semibold">Total listings</span>
+            <span className="text-2xl font-black text-slate-900 dark:text-ink mt-1 block tabular-nums"><CountUp value={metrics.totalListings} /></span>
+            <span className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5 block">
               {metrics.draftListings} draft · {metrics.pendingListings} in review
             </span>
           </div>
 
-          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-up [animation-delay:60ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
-            <span className="text-slate-500 block font-semibold">Active listings</span>
-            <span className="text-2xl font-black text-emerald-700 mt-1 block tabular-nums"><CountUp value={metrics.verifiedListings} /></span>
-            <span className="text-[11px] text-slate-500 mt-0.5 block">Approved &amp; visible to drivers</span>
+          <div className="p-4 bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline shadow-sm animate-fade-up [animation-delay:60ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
+            <span className="text-slate-500 dark:text-ink-3 block font-semibold">Active listings</span>
+            <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1 block tabular-nums"><CountUp value={metrics.verifiedListings} /></span>
+            <span className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5 block">Approved &amp; visible to drivers</span>
           </div>
 
-          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-up [animation-delay:120ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
-            <span className="text-slate-500 block font-semibold">Bookings</span>
+          <div className="p-4 bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline shadow-sm animate-fade-up [animation-delay:120ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
+            <span className="text-slate-500 dark:text-ink-3 block font-semibold">Bookings</span>
             {metrics.totalBookingsCount > 0 ? (
               <>
-                <span className="text-2xl font-black text-slate-900 mt-1 block tabular-nums"><CountUp value={metrics.totalBookingsCount} /></span>
-                <span className="text-[11px] text-slate-500 mt-0.5 block">
+                <span className="text-2xl font-black text-slate-900 dark:text-ink mt-1 block tabular-nums"><CountUp value={metrics.totalBookingsCount} /></span>
+                <span className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5 block">
                   {metrics.activeBookingsCount} active now
                 </span>
               </>
             ) : (
-              <span className="text-xs font-medium text-slate-500 mt-2 block">
+              <span className="text-xs font-medium text-slate-500 dark:text-ink-3 mt-2 block">
                 Bookings will appear here once reservations open.
               </span>
             )}
           </div>
 
-          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-up [animation-delay:180ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
-            <span className="text-slate-500 block font-semibold">Earnings</span>
+          <div className="p-4 bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline shadow-sm animate-fade-up [animation-delay:180ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
+            <span className="text-slate-500 dark:text-ink-3 block font-semibold">Earnings</span>
             {metrics.totalEarnings > 0 ? (
               <>
-                <span className="text-2xl font-black text-[#0A5CFF] mt-1 block tabular-nums">
+                <span className="text-2xl font-black text-[#0A5CFF] dark:text-[var(--transit-accent)] mt-1 block tabular-nums">
                   <CountUp value={metrics.totalEarnings} format={(n) => `₹${n.toFixed(2)}`} />
                 </span>
-                <span className="text-[11px] text-slate-500 mt-0.5 block">Host gross parking fees</span>
+                <span className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5 block">Host gross parking fees</span>
               </>
             ) : (
-              <span className="text-xs font-medium text-slate-500 mt-2 block">
+              <span className="text-xs font-medium text-slate-500 dark:text-ink-3 mt-2 block">
                 No earnings yet. Verify email before payouts begin.
               </span>
             )}
@@ -691,15 +694,15 @@ export function ProviderHub({
       {/* Listings & Activity Split */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-3">
-          <h2 className="font-black text-slate-900 text-base">Your Parking Spaces</h2>
+          <h2 className="font-black text-slate-900 dark:text-ink text-base">Your Parking Spaces</h2>
 
           {loading ? (
-            <div role="status" className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs animate-fade-in">
+            <div role="status" className="p-8 text-center bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline text-slate-500 dark:text-ink-3 text-xs animate-fade-in">
               Loading your listings...
             </div>
           ) : listings.length === 0 ? (
-            <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs space-y-3 animate-fade-in">
-              <p className="font-semibold text-slate-700 text-sm">You haven&apos;t added a parking space yet.</p>
+            <div className="p-10 text-center bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline text-slate-500 dark:text-ink-3 text-xs space-y-3 animate-fade-in">
+              <p className="font-semibold text-slate-700 dark:text-ink-2 text-sm">You haven&apos;t added a parking space yet.</p>
               <p>Start with a draft and upload 3 photos + ownership/society proof when ready.</p>
               <button
                 type="button"
@@ -718,7 +721,7 @@ export function ProviderHub({
                   <div
                     key={l.id}
                     style={staggerStyle(index)}
-                    className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3 text-xs animate-fade-up transition-shadow duration-200 hover:shadow-md"
+                    className="bg-white dark:bg-surface rounded-2xl p-5 border border-slate-200 dark:border-hairline shadow-sm space-y-3 text-xs animate-fade-up transition-shadow duration-200 hover:shadow-md"
                   >
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div className="space-y-1 min-w-0">
@@ -727,19 +730,19 @@ export function ProviderHub({
                             {chip.label}
                           </span>
                           {l.status === 'VERIFIED' && l.isStale && (
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 flex items-center gap-1">
                               <AlertTriangle className="w-3 h-3" />
                               Unconfirmed &gt;30d (Demoted)
                             </span>
                           )}
-                          <span className="text-slate-400 font-mono text-[11px]">
+                          <span className="text-slate-400 dark:text-ink-3 font-mono text-[11px]">
                             {l.photos.length} photos · {l.totalCapacity} {l.totalCapacity === 1 ? 'slot' : 'slots'}
                           </span>
                         </div>
 
-                        <h3 className="font-black text-base text-slate-900">{l.title}</h3>
-                        <p className="text-slate-600">{l.address}</p>
-                        <p className="text-slate-500 text-[11px]">
+                        <h3 className="font-black text-base text-slate-900 dark:text-ink">{l.title}</h3>
+                        <p className="text-slate-600 dark:text-ink-2">{l.address}</p>
+                        <p className="text-slate-500 dark:text-ink-3 text-[11px]">
                           ₹{l.pricing.hourlyRate}/hr
                           {l.pricing.dailyRate ? ` · ₹${l.pricing.dailyRate}/day` : ''}
                           {l.pricing.monthlyRate ? ` · ₹${l.pricing.monthlyRate}/mo` : ''} · {l.isCovered ? 'Covered' : 'Open'} · Confirmed{' '}
@@ -752,7 +755,7 @@ export function ProviderHub({
                           <button
                             type="button"
                             onClick={() => openEditWizard(l)}
-                            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold flex items-center gap-1.5"
+                            className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-surface-alt hover:bg-slate-200 dark:hover:bg-hairline-strong text-slate-900 dark:text-ink font-bold flex items-center gap-1.5"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                             Edit / Submit
@@ -762,7 +765,7 @@ export function ProviderHub({
                           <button
                             type="button"
                             onClick={() => handleReconfirm(l.id)}
-                            className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0A5CFF] font-bold border border-blue-200 flex items-center gap-1.5 transition-colors"
+                            className="px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-[#0A5CFF] dark:text-[var(--transit-accent)] font-bold border border-blue-200 dark:border-blue-500/30 flex items-center gap-1.5 transition-colors"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Reconfirm Availability
@@ -772,8 +775,8 @@ export function ProviderHub({
                     </div>
 
                     {l.reviewReason && (l.status === 'NEEDS_INFO' || l.status === 'REJECTED' || l.status === 'SUSPENDED') && (
-                      <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-900 flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                      <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-300 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
                         <div>
                           <span className="font-bold block">Reviewer Note:</span>
                           <span>{l.reviewReason}</span>
@@ -789,10 +792,10 @@ export function ProviderHub({
 
         {/* Activity & Notices (PRD 7.1) */}
         <div className="space-y-3 text-xs">
-          <h2 className="font-black text-slate-900 text-base">Activity &amp; Notices</h2>
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-sm">
+          <h2 className="font-black text-slate-900 dark:text-ink text-base">Activity &amp; Notices</h2>
+          <div className="bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline p-4 space-y-3 shadow-sm">
             {!currentUser?.email && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-1">
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-300 space-y-1">
                 <span className="font-bold block">Email needed for payouts</span>
                 <span className="text-[11px] block">
                   Optional at sign-up, required before bank settlement payouts open.
@@ -800,16 +803,16 @@ export function ProviderHub({
               </div>
             )}
             {listings.length === 0 ? (
-              <p className="text-slate-500">
+              <p className="text-slate-500 dark:text-ink-3">
                 Verification updates, admin review requests, and reconfirmation reminders will appear here.
               </p>
             ) : (
               listings.slice(0, 5).map((l) => (
-                <div key={l.id} className="pb-2.5 border-b border-slate-100 last:border-b-0 last:pb-0 flex items-start gap-2">
-                  <Clock className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                <div key={l.id} className="pb-2.5 border-b border-slate-100 dark:border-hairline last:border-b-0 last:pb-0 flex items-start gap-2">
+                  <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-ink-3 mt-0.5 flex-shrink-0" />
                   <div>
-                    <span className="font-bold text-slate-800 block">{l.title}</span>
-                    <span className="text-slate-500">
+                    <span className="font-bold text-slate-800 dark:text-ink block">{l.title}</span>
+                    <span className="text-slate-500 dark:text-ink-3">
                       Status: <strong>{STATUS_CHIP[l.status].label}</strong> · Updated{' '}
                       {new Date(l.updatedAt).toLocaleDateString('en-IN')}
                     </span>
@@ -831,8 +834,8 @@ export function ProviderHub({
           aria-modal="true"
           aria-label="Add or edit parking space"
         >
-          <ModalPanel className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+          <ModalPanel className="w-full max-w-2xl bg-white dark:bg-surface rounded-2xl shadow-2xl border border-slate-200 dark:border-hairline overflow-hidden my-auto max-h-[92vh] flex flex-col">
+            <div className="bg-slate-900 dark:bg-surface-alt dark:border-b dark:border-hairline text-white dark:text-ink px-6 py-4 flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-mono uppercase text-blue-400 font-bold block">
                   Step {wizardStep} of 4 · {editingListingId ? 'Edit Listing' : 'Add your parking space'}
@@ -843,7 +846,7 @@ export function ProviderHub({
                 type="button"
                 aria-label="Close wizard"
                 onClick={() => setShowAddWizard(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 dark:text-ink-3 hover:text-white p-1"
               >
                 ✕
               </button>
@@ -858,8 +861,10 @@ export function ProviderHub({
             </div>
 
             <div className="p-6 space-y-4 text-xs overflow-y-auto">
+              <ListingSubmissionNotice />
+
               {formError && (
-                <div role="alert" className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 font-semibold animate-fade-in">
+                <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-300 font-semibold animate-fade-in">
                   {formError}
                 </div>
               )}
@@ -867,18 +872,18 @@ export function ProviderHub({
               {/* STEP 1 */}
               {wizardStep === 1 && (
                 <div key="wizard-step-1" className={`${wizardStepEnter} space-y-3.5`}>
-                  <h3 className="font-black text-slate-900 text-sm">1. Provider Situation, Type &amp; Map Pin</h3>
+                  <h3 className="font-black text-slate-900 dark:text-ink text-sm">1. Provider Situation, Type &amp; Map Pin</h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="prov-situation" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="prov-situation" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Your Situation (PRD 7.3)
                       </label>
                       <select
                         id="prov-situation"
                         value={formData.providerSituation}
                         onChange={(e) => handleSituationChange(e.target.value as ProviderSituation)}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
                       >
                         {(Object.keys(PROVIDER_SITUATION_EVIDENCE) as ProviderSituation[]).map((key) => (
                           <option key={key} value={key}>
@@ -889,14 +894,14 @@ export function ProviderHub({
                     </div>
 
                     <div>
-                      <label htmlFor="space-category" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="space-category" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Space Type
                       </label>
                       <select
                         id="space-category"
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value as ParkingCategory })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
                       >
                         <option value="PRIVATE">Residential Slot (Driveway / Stilt / Villa)</option>
                         <option value="COMMERCIAL">Commercial Lot / Complex</option>
@@ -906,7 +911,7 @@ export function ProviderHub({
                   </div>
 
                   <div>
-                    <label htmlFor="listing-title" className="font-bold text-slate-700 block mb-1">
+                    <label htmlFor="listing-title" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                       Space Title *
                     </label>
                     <input
@@ -915,13 +920,13 @@ export function ProviderHub({
                       placeholder="e.g. Shree Nivas Covered Driveway"
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-bold"
+                      className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="listing-address" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="listing-address" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Complete Address *
                       </label>
                       <input
@@ -930,11 +935,11 @@ export function ProviderHub({
                         placeholder="#142, 4th Phase, Yelahanka New Town"
                         value={formData.address}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5"
                       />
                     </div>
                     <div>
-                      <label htmlFor="listing-locality" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="listing-locality" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Neighbourhood / Anchor
                       </label>
                       <select
@@ -949,7 +954,7 @@ export function ProviderHub({
                             longitude: anchor ? anchor.longitude : formData.longitude,
                           });
                         }}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
                       >
                         {YELAHANKA_ANCHORS.map((a) => (
                           <option key={a.id} value={a.locality}>
@@ -964,8 +969,8 @@ export function ProviderHub({
                   {/* Interactive Map Pin Picker (PRD 7.2) */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-700">Confirm Map Pin (Click anywhere on grid)</span>
-                      <span className="font-mono text-[11px] text-[#0A5CFF] font-bold">
+                      <span className="font-bold text-slate-700 dark:text-ink-2">Confirm Map Pin (Click anywhere on grid)</span>
+                      <span className="font-mono text-[11px] text-[#0A5CFF] dark:text-[var(--transit-accent)] font-bold">
                         Pin: {formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)}
                       </span>
                     </div>
@@ -973,10 +978,10 @@ export function ProviderHub({
                       onClick={handleMapPinClick}
                       role="application"
                       aria-label="Click to confirm parking coordinates"
-                      className="relative h-36 rounded-xl border border-slate-300 bg-[#f4f6f8] overflow-hidden cursor-crosshair select-none"
+                      className="relative h-36 rounded-xl border border-slate-300 dark:border-hairline-strong bg-[#f4f6f8] dark:bg-surface-alt overflow-hidden cursor-crosshair select-none"
                     >
                       <div className="absolute inset-0 opacity-40 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:16px_16px]" />
-                      <span className="absolute top-2 left-2.5 text-[10px] font-bold text-slate-500 uppercase">
+                      <span className="absolute top-2 left-2.5 text-[10px] font-bold text-slate-500 dark:text-ink-3 uppercase">
                         Yelahanka Map Grid
                       </span>
                       <div
@@ -999,11 +1004,11 @@ export function ProviderHub({
               {/* STEP 2 */}
               {wizardStep === 2 && (
                 <div key="wizard-step-2" className={`${wizardStepEnter} space-y-4`}>
-                  <h3 className="font-black text-slate-900 text-sm">2. Capacity, Vehicles &amp; Dimensions</h3>
+                  <h3 className="font-black text-slate-900 dark:text-ink text-sm">2. Capacity, Vehicles &amp; Dimensions</h3>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="total-capacity" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="total-capacity" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Total Vehicle Capacity (Whole Number) *
                       </label>
                       <input
@@ -1016,18 +1021,18 @@ export function ProviderHub({
                         onChange={(e) =>
                           setFormData({ ...formData, totalCapacity: Math.max(1, parseInt(e.target.value, 10) || 1) })
                         }
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-bold font-mono"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold font-mono"
                       />
                     </div>
                     <div>
-                      <label htmlFor="cover-type" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="cover-type" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Covered or Open *
                       </label>
                       <select
                         id="cover-type"
                         value={formData.isCovered ? 'true' : 'false'}
                         onChange={(e) => setFormData({ ...formData, isCovered: e.target.value === 'true' })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
                       >
                         <option value="true">Covered / Basement / Stilt</option>
                         <option value="false">Open Ground / Driveway</option>
@@ -1036,7 +1041,7 @@ export function ProviderHub({
                   </div>
 
                   <div>
-                    <span className="font-bold text-slate-700 block mb-1.5">Allowed Vehicle Types</span>
+                    <span className="font-bold text-slate-700 dark:text-ink-2 block mb-1.5">Allowed Vehicle Types</span>
                     <div className="flex flex-wrap gap-2">
                       {ALL_VEHICLE_TYPES.map((vt) => {
                         const checked = formData.vehicleTypes.includes(vt.id);
@@ -1047,8 +1052,8 @@ export function ProviderHub({
                             onClick={() => handleToggleVehicle(vt.id)}
                             className={`px-3 py-1.5 rounded-full border font-semibold transition-colors ${
                               checked
-                                ? 'bg-blue-50 border-[#0A5CFF] text-[#0A5CFF]'
-                                : 'bg-white border-slate-200 text-slate-600'
+                                ? 'bg-blue-50 dark:bg-blue-500/10 border-[#0A5CFF] text-[#0A5CFF] dark:text-[var(--transit-accent)]'
+                                : 'bg-white dark:bg-surface border-slate-200 dark:border-hairline text-slate-600 dark:text-ink-2'
                             }`}
                           >
                             {checked ? '✓ ' : ''}
@@ -1061,7 +1066,7 @@ export function ProviderHub({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="dim-notes" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="dim-notes" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Dimensions / Notes (Optional)
                       </label>
                       <input
@@ -1070,11 +1075,11 @@ export function ProviderHub({
                         placeholder="e.g. Fits SUVs up to 4.7m; straight reverse entry"
                         value={formData.dimensionsNotes}
                         onChange={(e) => setFormData({ ...formData, dimensionsNotes: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5"
                       />
                     </div>
                     <div>
-                      <label htmlFor="height-clear" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="height-clear" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Height Clearance in meters (Optional)
                       </label>
                       <input
@@ -1084,15 +1089,15 @@ export function ProviderHub({
                         placeholder="e.g. 2.2"
                         value={formData.heightClearanceMeters}
                         onChange={(e) => setFormData({ ...formData, heightClearanceMeters: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-mono"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-mono"
                       />
                     </div>
                   </div>
 
-                  <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200 flex items-center justify-between">
+                  <div className="p-3 bg-blue-50/70 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/30 flex items-center justify-between">
                     <div>
-                      <span className="font-bold text-slate-900 block">EV Charging Point Available?</span>
-                      <span className="text-[11px] text-slate-600">Attract EV commuters needing slow/7.4kW charging</span>
+                      <span className="font-bold text-slate-900 dark:text-ink block">EV Charging Point Available?</span>
+                      <span className="text-[11px] text-slate-600 dark:text-ink-2">Attract EV commuters needing slow/7.4kW charging</span>
                     </div>
                     <input
                       type="checkbox"
@@ -1108,11 +1113,11 @@ export function ProviderHub({
               {/* STEP 3 */}
               {wizardStep === 3 && (
                 <div key="wizard-step-3" className={`${wizardStepEnter} space-y-4`}>
-                  <h3 className="font-black text-slate-900 text-sm">3. Pricing (₹) &amp; Access Instructions</h3>
+                  <h3 className="font-black text-slate-900 dark:text-ink text-sm">3. Pricing (₹) &amp; Access Instructions</h3>
 
                   <div className="grid grid-cols-3 gap-2 font-mono">
                     <div>
-                      <label htmlFor="rate-hourly" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="rate-hourly" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Hourly (₹) *
                       </label>
                       <input
@@ -1121,11 +1126,11 @@ export function ProviderHub({
                         min={10}
                         value={formData.hourlyRate}
                         onChange={(e) => setFormData({ ...formData, hourlyRate: parseInt(e.target.value, 10) || 40 })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-bold"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold"
                       />
                     </div>
                     <div>
-                      <label htmlFor="rate-daily" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="rate-daily" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Daily Optional (₹)
                       </label>
                       <input
@@ -1133,11 +1138,11 @@ export function ProviderHub({
                         type="number"
                         value={formData.dailyRate}
                         onChange={(e) => setFormData({ ...formData, dailyRate: parseInt(e.target.value, 10) || 0 })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-bold"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold"
                       />
                     </div>
                     <div>
-                      <label htmlFor="rate-monthly" className="font-bold text-slate-700 block mb-1">
+                      <label htmlFor="rate-monthly" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Monthly Optional (₹)
                       </label>
                       <input
@@ -1145,20 +1150,20 @@ export function ProviderHub({
                         type="number"
                         value={formData.monthlyRate}
                         onChange={(e) => setFormData({ ...formData, monthlyRate: parseInt(e.target.value, 10) || 0 })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-bold"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label htmlFor="access-method" className="font-bold text-slate-700 block mb-1">
+                    <label htmlFor="access-method" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                       Entry Access Method
                     </label>
                     <select
                       id="access-method"
                       value={formData.accessMethod}
                       onChange={(e) => setFormData({ ...formData, accessMethod: e.target.value as AccessMethod })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold"
+                      className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
                     >
                       <option value="GATE_GUARD">Security Guard / Gate Verification</option>
                       <option value="BOOM_BARRIER">Boom Barrier / Scanner</option>
@@ -1169,7 +1174,7 @@ export function ProviderHub({
                   </div>
 
                   <div>
-                    <label htmlFor="access-instructions" className="font-bold text-slate-700 block mb-1">
+                    <label htmlFor="access-instructions" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                       Driver Entry Instructions
                     </label>
                     <textarea
@@ -1178,15 +1183,15 @@ export function ProviderHub({
                       value={formData.accessInstructions}
                       onChange={(e) => setFormData({ ...formData, accessInstructions: e.target.value })}
                       placeholder="e.g. Ring bell at Gate 2 or share QR pass with society watchman."
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5"
+                      className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5"
                     />
-                    <span className="text-[11px] text-[#0A5CFF] mt-1 block font-medium">
+                    <span className="text-[11px] text-[#0A5CFF] dark:text-[var(--transit-accent)] mt-1 block font-medium">
                       Privacy rule: shown to drivers only after confirmed booking.
                     </span>
                   </div>
 
                   <div>
-                    <label htmlFor="house-rules" className="font-bold text-slate-700 block mb-1">
+                    <label htmlFor="house-rules" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                       House Rules (comma-separated)
                     </label>
                     <input
@@ -1194,7 +1199,7 @@ export function ProviderHub({
                       type="text"
                       value={formData.houseRules}
                       onChange={(e) => setFormData({ ...formData, houseRules: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5"
+                      className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5"
                     />
                   </div>
                 </div>
@@ -1204,19 +1209,19 @@ export function ProviderHub({
               {wizardStep === 4 && (
                 <div key="wizard-step-4" className={`${wizardStepEnter} space-y-4`}>
                   <div>
-                    <h3 className="font-black text-slate-900 text-sm">
+                    <h3 className="font-black text-slate-900 dark:text-ink text-sm">
                       4. Space Photos (Min 3, EXIF Stripped) &amp; Verification Proof
                     </h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5">
                       Required evidence for <strong>{PROVIDER_SITUATION_EVIDENCE[formData.providerSituation].label}</strong>:{' '}
                       {PROVIDER_SITUATION_EVIDENCE[formData.providerSituation].requirement}.
                     </p>
                   </div>
 
                   {/* Photos Uploader */}
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="p-4 bg-slate-50 dark:bg-surface-alt rounded-2xl border border-slate-200 dark:border-hairline space-y-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="font-bold text-slate-800">
+                      <span className="font-bold text-slate-800 dark:text-ink">
                         Space Photos ({formData.photos.length}/3 minimum required)
                       </span>
                       <div className="flex gap-2">
@@ -1242,7 +1247,7 @@ export function ProviderHub({
                             type="button"
                             disabled={uploadingPhoto}
                             onClick={handleGenerateSamplePhotos}
-                            className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100"
+                            className="px-3 py-1.5 rounded-lg bg-white dark:bg-surface border border-slate-300 dark:border-hairline-strong text-slate-700 dark:text-ink-2 font-semibold hover:bg-slate-100 dark:hover:bg-hairline"
                           >
                             + Add 3 Test Photos
                           </button>
@@ -1253,7 +1258,7 @@ export function ProviderHub({
                     {formData.photos.length > 0 ? (
                       <div className="grid grid-cols-3 gap-2">
                         {formData.photos.map((url, idx) => (
-                          <div key={idx} className="relative h-24 rounded-xl overflow-hidden border border-slate-200 bg-white">
+                          <div key={idx} className="relative h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-hairline bg-white dark:bg-surface">
                             <img src={url} alt={`Space photo ${idx + 1}`} className="w-full h-full object-cover" />
                             <button
                               type="button"
@@ -1272,20 +1277,20 @@ export function ProviderHub({
                         ))}
                       </div>
                     ) : (
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-slate-500 dark:text-ink-3">
                         Upload clear entrance, parking bay, and lane approach photos (JPEG/PNG/WebP, max 5 MB each; GPS EXIF removed automatically).
                       </p>
                     )}
                   </div>
 
                   {/* Private Verification Proof Upload */}
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+                  <div className="p-4 bg-slate-50 dark:bg-surface-alt rounded-2xl border border-slate-200 dark:border-hairline space-y-2.5">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div>
-                        <span className="font-bold text-slate-800 block">
+                        <span className="font-bold text-slate-800 dark:text-ink block">
                           Proof of Right to Rent (Private &amp; Audit-Logged)
                         </span>
-                        <span className="text-[11px] text-slate-500">
+                        <span className="text-[11px] text-slate-500 dark:text-ink-3">
                           Document type: <strong>{formData.docType.replace(/_/g, ' ')}</strong>
                         </span>
                       </div>
@@ -1301,7 +1306,7 @@ export function ProviderHub({
                           type="button"
                           disabled={uploadingProof}
                           onClick={() => proofInputRef.current?.click()}
-                          className="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-700 text-white font-bold flex items-center gap-1"
                         >
                           <Upload className="w-3.5 h-3.5" />
                           {uploadingProof ? 'Uploading...' : 'Select Document'}
@@ -1311,7 +1316,7 @@ export function ProviderHub({
                             type="button"
                             disabled={uploadingProof}
                             onClick={handleGenerateSampleProof}
-                            className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100"
+                            className="px-3 py-1.5 rounded-lg bg-white dark:bg-surface border border-slate-300 dark:border-hairline-strong text-slate-700 dark:text-ink-2 font-semibold hover:bg-slate-100 dark:hover:bg-hairline"
                           >
                             Attach Sample PDF
                           </button>
@@ -1320,12 +1325,12 @@ export function ProviderHub({
                     </div>
 
                     {formData.docFileName ? (
-                      <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center gap-2 font-mono text-[11px]">
-                        <FileText className="w-4 h-4 text-emerald-600" />
+                      <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-300 flex items-center gap-2 font-mono text-[11px]">
+                        <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         <span>Uploaded to private storage: {formData.docFileName}</span>
                       </div>
                     ) : (
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-slate-500 dark:text-ink-3">
                         Stored outside public web directories; only accessible to authorized trust reviewers.
                       </p>
                     )}
@@ -1334,13 +1339,13 @@ export function ProviderHub({
               )}
 
               {/* Footer Nav & Save Draft / Submit */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-100">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-100 dark:border-hairline">
                 <div className="flex items-center gap-2">
                   {wizardStep > 1 && (
                     <button
                       type="button"
                       onClick={() => setWizardStep(wizardStep - 1)}
-                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold flex items-center gap-1"
+                      className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-surface-alt hover:bg-slate-200 dark:hover:bg-hairline-strong text-slate-700 dark:text-ink-2 font-semibold flex items-center gap-1"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
                       Back
@@ -1351,7 +1356,7 @@ export function ProviderHub({
                     type="button"
                     disabled={isSubmitting}
                     onClick={() => handleSaveListing(true)}
-                    className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold"
+                    className="px-4 py-2 rounded-xl border border-slate-300 dark:border-hairline-strong hover:bg-slate-50 dark:hover:bg-surface-alt text-slate-800 dark:text-ink font-bold"
                   >
                     Save as Draft
                   </button>

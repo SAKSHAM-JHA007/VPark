@@ -8,7 +8,9 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { Presence } from '@/components/motion/Presence';
 import { DropdownSurface } from '@/components/motion/AnimatedModal';
 import { useSlidingIndicator } from '@/components/motion/useSlidingIndicator';
+import { MobileNav } from '@/components/MobileNav';
 import {
+  MapPin,
   Bell,
   User as UserIcon,
   ChevronDown,
@@ -79,38 +81,38 @@ export function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#0B0C10] border-b border-neutral-800 text-white select-none">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header className="vp-nav sticky top-0 z-40 select-none">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo + Primary Navigation */}
-        <div className="flex items-center gap-6 lg:gap-8">
+        <div className="flex items-center gap-5 lg:gap-8 min-w-0">
           <button
             type="button"
             onClick={() => onTabChange('search')}
-            className="flex items-center gap-2.5 text-left rounded-sm focus-visible:outline-none"
+            aria-label="VPark home: find parking"
+            className="flex items-center text-left rounded-sm flex-shrink-0"
           >
-            <VParkLogo className="h-8 w-auto" />
+            <VParkLogo className="h-7 sm:h-8 w-auto" />
           </button>
 
           <nav
             ref={navPill.containerRef}
             aria-label="Main navigation"
-            className="relative hidden md:flex items-center gap-1.5 text-xs"
+            className="relative hidden md:flex items-center gap-1"
           >
             {navPill.ready && (
               <span
                 aria-hidden="true"
                 style={navPill.indicatorStyle}
-                className={`${navPill.indicatorClassName} rounded-full bg-neutral-800 shadow-xs`}
+                className={`${navPill.indicatorClassName} vp-nav-pill rounded-full`}
               />
             )}
             <button
               type="button"
               ref={navPill.register('search')}
               onClick={() => onTabChange('search')}
-              className={`relative px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                activeTab === 'search'
-                  ? navPill.ready ? 'text-white' : 'bg-neutral-800 text-white shadow-xs'
-                  : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
+              aria-current={activeTab === 'search' ? 'page' : undefined}
+              className={`vp-nav-link ${
+                activeTab === 'search' ? `vp-nav-link-active ${navPill.ready ? '' : 'vp-nav-pill'}` : ''
               }`}
             >
               {t.findParking}
@@ -120,10 +122,9 @@ export function Header({
               type="button"
               ref={navPill.register('provider')}
               onClick={handleListSpaceClick}
-              className={`relative px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                activeTab === 'provider'
-                  ? navPill.ready ? 'text-white' : 'bg-neutral-800 text-white shadow-xs'
-                  : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
+              aria-current={activeTab === 'provider' ? 'page' : undefined}
+              className={`vp-nav-link ${
+                activeTab === 'provider' ? `vp-nav-link-active ${navPill.ready ? '' : 'vp-nav-pill'}` : ''
               }`}
             >
               {t.listSpace}
@@ -133,10 +134,9 @@ export function Header({
               type="button"
               ref={navPill.register('monthly')}
               onClick={() => onTabChange('monthly')}
-              className={`relative px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                activeTab === 'monthly'
-                  ? navPill.ready ? 'text-white' : 'bg-neutral-800 text-white shadow-xs'
-                  : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
+              aria-current={activeTab === 'monthly' ? 'page' : undefined}
+              className={`vp-nav-link ${
+                activeTab === 'monthly' ? `vp-nav-link-active ${navPill.ready ? '' : 'vp-nav-pill'}` : ''
               }`}
             >
               For Businesses
@@ -148,23 +148,23 @@ export function Header({
                 onTabChange('search');
                 setTimeout(onScrollHowItWorks, 50);
               }}
-              className="relative px-4 py-1.5 rounded-full text-xs font-semibold text-neutral-300 hover:text-white hover:bg-neutral-800/60 transition-colors inline-flex items-center gap-1"
+              className="vp-nav-link"
             >
-              <span>{t.howItWorks}</span>
-              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+              {t.howItWorks}
             </button>
 
             {hasAdmin && (
               <button
                 type="button"
                 onClick={() => onTabChange('admin')}
-                className={`relative px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                aria-current={activeTab === 'admin' ? 'page' : undefined}
+                className={`vp-nav-link gap-1.5 ${
                   activeTab === 'admin'
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800/60'
+                    ? 'bg-amber-500/15 !text-amber-700 dark:!text-amber-300 ring-1 ring-inset ring-amber-500/40'
+                    : ''
                 }`}
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 {t.adminConsole}
               </button>
             )}
@@ -172,26 +172,23 @@ export function Header({
         </div>
 
         {/* Right Side: Location, Language, Theme Toggle, Log in / Profile */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Location Badge */}
-          <div className="hidden lg:flex items-center gap-1 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-200 text-xs">
-            <span className="text-[#0A5CFF] font-bold text-xs">📍</span>
-            <span className="font-medium text-[11px]">Bengaluru</span>
-            <ChevronDown className="w-3 h-3 text-neutral-400 ml-0.5" />
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          {/* Pilot city (informational only) */}
+          <div className="vp-nav-control hidden xl:flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap">
+            <MapPin className="w-3.5 h-3.5 text-[var(--transit-accent)]" aria-hidden="true" />
+            <span>Bengaluru</span>
           </div>
 
-          {/* Language Selector */}
+          {/* Current language (changed from the account menu) */}
           {onLangChange && (
-            <div className="relative group">
-              <button
-                type="button"
-                className="hidden sm:flex items-center gap-1 px-2.5 py-1 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
-                title="Change language"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span className="uppercase text-[11px] font-semibold">{currentLang}</span>
-              </button>
-            </div>
+            <span
+              className="vp-nav-ghost hidden lg:flex items-center gap-1 px-1.5 py-1 text-[11px] font-semibold uppercase"
+              title="Language can be changed from the account menu"
+            >
+              <Globe className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="sr-only">Language: </span>
+              {currentLang}
+            </span>
           )}
 
           <ThemeToggle />
@@ -202,13 +199,13 @@ export function Header({
               onClick={() => onTabChange('bookings')}
               aria-label="My Bookings & Notifications"
               title="My Bookings & Notifications"
-              className="relative p-2 rounded-full border border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
+              className="vp-nav-control relative h-8 w-8 flex items-center justify-center rounded-full"
             >
               <Bell className="w-3.5 h-3.5" />
               {bookingsCount > 0 && (
                 <span
                   key={bookingsCount}
-                  className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-[#0A5CFF] text-white text-[9px] font-bold leading-tight animate-pop"
+                  className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-brand text-white text-[9px] font-bold leading-tight animate-pop"
                 >
                   {bookingsCount}
                 </span>
@@ -217,18 +214,18 @@ export function Header({
           )}
 
           {!currentUser ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 type="button"
                 onClick={() => onOpenLogin('driver')}
-                className="px-3 py-1.5 text-neutral-300 hover:text-white text-xs font-medium transition-colors"
+                className="vp-nav-ghost px-2 sm:px-3 py-1.5 text-xs font-semibold whitespace-nowrap"
               >
                 {t.logIn}
               </button>
               <button
                 type="button"
                 onClick={() => onOpenLogin('driver')}
-                className="px-4 py-1.5 rounded-full bg-white hover:bg-neutral-100 text-neutral-950 text-xs font-bold transition-[background-color,transform] duration-150 active:scale-[0.96] shadow-sm"
+                className="vp-nav-cta hidden sm:inline-flex px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap active:scale-[0.96]"
               >
                 Sign up
               </button>
@@ -240,16 +237,16 @@ export function Header({
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 aria-expanded={showProfileMenu}
                 aria-label="Open account menu"
-                className="flex items-center gap-2 p-1.5 pl-2.5 pr-2 rounded-full border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-white transition-colors"
+                className="vp-nav-control flex items-center gap-2 p-1.5 pl-2 sm:pl-2.5 pr-2 rounded-full"
               >
-                <div className="w-5 h-5 rounded-full bg-[#0A5CFF] text-white flex items-center justify-center font-bold text-[10px]">
+                <div className="w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center font-bold text-[10px]">
                   {(currentUser.name || 'V')[0].toUpperCase()}
                 </div>
-                <span className="hidden sm:inline text-xs font-medium text-neutral-200 max-w-[120px] truncate">
+                <span className="hidden sm:inline text-xs font-medium text-[var(--nav-ink)] max-w-[120px] truncate">
                   {currentUser.name || currentUser.phone}
                 </span>
                 <ChevronDown
-                  className={`w-3 h-3 text-neutral-400 transition-transform duration-200 ease-out-quart ${
+                  className={`w-3 h-3 transition-transform duration-200 ease-out-quart ${
                     showProfileMenu ? 'rotate-180' : ''
                   }`}
                 />
@@ -258,7 +255,7 @@ export function Header({
               <Presence>
               {showProfileMenu && (
                 <DropdownSurface
-                  className="absolute right-0 mt-1 w-72 bg-[var(--surface-bg)] rounded-sm border border-[var(--hairline-strong)] shadow-sm p-2 z-50 text-xs text-[var(--ink)]"
+                  className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-surface rounded-card border border-hairline-strong shadow-raised p-2 z-50 text-xs text-ink"
                 >
                   <div className="px-3 py-2 border-b border-[var(--hairline)]">
                     <span className="font-semibold text-[var(--ink)] block text-xs">
@@ -286,7 +283,7 @@ export function Header({
                         className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between ${
                           currentRole === 'DRIVER' && activeTab !== 'provider'
                             ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0A5CFF] dark:text-blue-400 font-semibold'
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750'
+                            : 'text-ink-2 hover:bg-surface-alt hover:text-ink'
                         }`}
                       >
                         <span className="flex items-center gap-2">
@@ -323,7 +320,7 @@ export function Header({
                         className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between ${
                           currentRole === 'PROVIDER' || activeTab === 'provider'
                             ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-semibold'
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                            : 'text-ink-2 hover:bg-surface-alt hover:text-ink'
                         }`}
                       >
                         <span>Host Dashboard (Rent your space)</span>
@@ -357,7 +354,7 @@ export function Header({
                         className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between ${
                           activeTab === 'admin'
                             ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold'
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                            : 'text-ink-2 hover:bg-surface-alt hover:text-ink'
                         }`}
                       >
                         <span>Admin Verification Queue</span>
@@ -369,14 +366,14 @@ export function Header({
                   </div>
 
                   {/* Navigation Shortcuts & DPDP */}
-                  <div className="py-1.5 border-t border-slate-100 dark:border-slate-700 space-y-0.5">
+                  <div className="py-1.5 border-t border-hairline space-y-0.5">
                     <button
                       type="button"
                       onClick={() => {
                         onTabChange('bookings');
                         setShowProfileMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 rounded-lg text-ink-2 hover:bg-surface-alt hover:text-ink flex items-center gap-2"
                     >
                       <Car className="w-4 h-4 text-[#0A5CFF]" />
                       {t.myBookings}
@@ -388,7 +385,7 @@ export function Header({
                         onTabChange('monthly');
                         setShowProfileMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 rounded-lg text-ink-2 hover:bg-surface-alt hover:text-ink flex items-center gap-2"
                     >
                       <Calendar className="w-4 h-4 text-indigo-500" />
                       {t.monthlyPasses}
@@ -400,17 +397,17 @@ export function Header({
                         onOpenDpdp();
                         setShowProfileMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 rounded-lg text-ink-2 hover:bg-surface-alt hover:text-ink flex items-center gap-2"
                     >
-                      <FileText className="w-4 h-4 text-slate-400" />
+                      <FileText className="w-4 h-4 text-ink-3" />
                       DPDP 2023 Data Privacy
                     </button>
                   </div>
 
                   {/* Language Selector (PRD Section 10) */}
                   {onLangChange && (
-                    <div className="py-1.5 px-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <div className="py-1.5 px-3 border-t border-hairline flex items-center justify-between">
+                      <span className="text-ink-3 flex items-center gap-1.5">
                         <Globe className="w-3.5 h-3.5" />
                         Language
                       </span>
@@ -423,7 +420,7 @@ export function Header({
                             className={`px-2 py-0.5 rounded font-semibold uppercase text-xs ${
                               currentLang === langCode
                                 ? 'bg-[#0A5CFF] text-white'
-                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                : 'bg-surface-alt text-ink-2 hover:bg-hairline'
                             }`}
                           >
                             {langCode}
@@ -453,6 +450,36 @@ export function Header({
               </Presence>
             </div>
           )}
+
+          <MobileNav
+            items={[
+              { key: 'search', label: t.findParking, active: activeTab === 'search', onClick: () => onTabChange('search') },
+              { key: 'provider', label: t.listSpace, active: activeTab === 'provider', onClick: handleListSpaceClick },
+              { key: 'monthly', label: 'For Businesses', active: activeTab === 'monthly', onClick: () => onTabChange('monthly') },
+              {
+                key: 'how',
+                label: t.howItWorks,
+                onClick: () => {
+                  onTabChange('search');
+                  setTimeout(onScrollHowItWorks, 50);
+                },
+              },
+              ...(hasAdmin
+                ? [{ key: 'admin', label: t.adminConsole, active: activeTab === 'admin', onClick: () => onTabChange('admin') }]
+                : []),
+            ]}
+            footer={
+              !currentUser ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenLogin('driver')}
+                  className="vp-nav-cta w-full rounded-control px-3 py-2.5 text-sm font-bold sm:hidden"
+                >
+                  Sign up
+                </button>
+              ) : undefined
+            }
+          />
         </div>
       </div>
     </header>
