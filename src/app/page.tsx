@@ -205,7 +205,7 @@ export default function RootHomePage() {
           {/* Two Hero Action Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {/* Card 1: Find Parking */}
-            <div className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#060D1E] via-[#09152F] to-[#0A1A3A] border border-blue-900/40 p-7 sm:p-9 text-white flex flex-col justify-between shadow-lg min-h-[260px] sm:min-h-[290px] animate-fade-up [animation-delay:130ms] transition-[transform,box-shadow,border-color] duration-300 ease-out-quart hover:border-blue-700/60 hover:shadow-2xl hover:shadow-blue-950/40 motion-safe:hover:-translate-y-1">
+            <div className="group relative overflow-hidden rounded-card bg-gradient-to-br from-[#060D1E] via-[#09152F] to-[#0A1A3A] border border-blue-900/40 p-6 sm:p-9 text-white flex flex-col justify-between shadow-card min-h-[260px] sm:min-h-[290px] animate-fade-up [animation-delay:130ms] transition-[transform,box-shadow,border-color] duration-300 ease-out-quart hover:border-blue-700/60 hover:shadow-raised motion-safe:hover:-translate-y-1">
               <div className="z-10 max-w-[240px] sm:max-w-[270px] space-y-2.5">
                 <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                   Find Parking
@@ -225,18 +225,18 @@ export default function RootHomePage() {
               </div>
 
               {/* Right Illustration: White Car in Blue Stall with [P] */}
-              <div className="absolute right-[-10px] bottom-[-15px] sm:right-2 sm:bottom-0 w-[240px] sm:w-[320px] pointer-events-none select-none opacity-95 transition-transform duration-500 ease-out-quart motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:translate-x-1">
+              <div className="relative -mb-4 -mr-2 mt-4 self-end w-[230px] sm:absolute sm:right-2 sm:bottom-0 sm:m-0 sm:w-[320px] pointer-events-none select-none transition-transform duration-500 ease-out-quart motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:translate-x-1">
                 <FindParkingIllustration />
               </div>
             </div>
 
             {/* Card 2: Rent Your Space */}
-            <div className="group relative overflow-hidden rounded-3xl bg-white dark:bg-neutral-900/90 border border-slate-200 dark:border-neutral-800 p-7 sm:p-9 text-slate-900 dark:text-white flex flex-col justify-between shadow-sm min-h-[260px] sm:min-h-[290px] animate-fade-up [animation-delay:190ms] transition-[transform,box-shadow,border-color] duration-300 ease-out-quart hover:border-slate-300 dark:hover:border-neutral-700 hover:shadow-xl motion-safe:hover:-translate-y-1">
+            <div className="group relative overflow-hidden rounded-card bg-surface border border-hairline p-6 sm:p-9 text-ink flex flex-col justify-between shadow-card min-h-[260px] sm:min-h-[290px] animate-fade-up [animation-delay:190ms] transition-[transform,box-shadow,border-color] duration-300 ease-out-quart hover:border-hairline-strong hover:shadow-raised motion-safe:hover:-translate-y-1">
               <div className="z-10 max-w-[240px] sm:max-w-[270px] space-y-2.5">
-                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
                   Rent Your Space
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-ink-2 leading-relaxed">
                   List your unused parking space and earn money.
                 </p>
                 <div className="pt-3">
@@ -252,7 +252,7 @@ export default function RootHomePage() {
               </div>
 
               {/* Right Illustration: 3D Garage Bay with Hazard Stripes & [P] */}
-              <div className="absolute right-[-10px] bottom-[-10px] sm:right-2 sm:bottom-0 w-[240px] sm:w-[320px] pointer-events-none select-none opacity-95 transition-transform duration-500 ease-out-quart motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:-translate-x-1">
+              <div className="relative -mb-3 mt-4 self-end w-[220px] sm:absolute sm:right-4 sm:bottom-1 sm:m-0 sm:w-[300px] pointer-events-none select-none transition-transform duration-500 ease-out-quart motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:-translate-x-1">
                 <RentSpaceIllustration />
               </div>
             </div>
