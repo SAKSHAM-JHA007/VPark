@@ -111,12 +111,9 @@ export function AuthPanel({
       if (err?.code === 'auth/popup-closed-by-user') {
         setError('Google sign-in was closed before completion.');
       } else if (err?.code === 'auth/unauthorized-domain' || (err?.message && err.message.includes('auth/unauthorized-domain'))) {
-        const domain = typeof window !== 'undefined' ? window.location.hostname : 'vpark-one.vercel.app';
-        setError(
-          `Domain "${domain}" is not in the Firebase Authorized Domains list. Please add "${domain}" in Firebase Console → Authentication → Settings → Authorized domains. You can sign in using your Email & Password below!`
-        );
+        setError('Google sign-in is not authorized for this domain. Please register or sign in using your Email & Password directly.');
       } else {
-        setError(err?.message || 'Google authentication encountered an error.');
+        setError(err?.message || 'Google authentication encountered an error. Please continue with Email & Password.');
       }
     } finally {
       setGoogleSigningIn(false);
@@ -381,45 +378,9 @@ export function AuthPanel({
           </div>
         )}
 
-        {/* Step 1: Credentials (Google Sign-In + Email with 2-Step Password) */}
+        {/* Step 1: Credentials (Email with 2-Step Password + Google Sign-In) */}
         {step === 'credentials' && (
           <div className={`space-y-4${stepEnterClass}`}>
-            {/* Google Authentication 1-Click Button */}
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={googleSigningIn || loading}
-                className="w-full py-2.5 px-4 rounded-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-[var(--hairline-strong)] text-[var(--ink)] font-semibold text-xs flex items-center justify-center gap-2.5 transition-colors cursor-pointer shadow-xs disabled:opacity-60"
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.1.74-2.51 1.18-4.22 1.18-3.24 0-5.99-2.19-6.97-5.13H1.05v3.14C3.07 21.2 7.24 24 12 24Z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.03 14.04c-.25-.74-.39-1.53-.39-2.34s.14-1.6.39-2.34V6.22H1.05C.38 7.56 0 9.09 0 11.7s.38 4.14 1.05 5.48l3.98-3.14Z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.65c1.8 0 3.41.62 4.68 1.83l3.51-3.51C18.07 1.09 15.3 0 12 0 7.24 0 3.07 2.8 1.05 6.22l3.98 3.14c.98-2.94 3.73-5.13 6.97-5.13Z"
-                  />
-                </svg>
-                <span>{googleSigningIn ? 'Connecting to Google...' : 'Continue with Google'}</span>
-              </button>
-
-              <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wider">
-                <div className="flex-1 h-px bg-[var(--hairline)]" />
-                <span>Or continue with Email</span>
-                <div className="flex-1 h-px bg-[var(--hairline)]" />
-              </div>
-            </div>
-
             {/* Mode Tabs: Sign Up (Create Account) vs Sign In */}
             <div className="flex border-b border-[var(--hairline-strong)] mb-2">
               <button
@@ -620,6 +581,36 @@ export function AuthPanel({
                 </button>
               </div>
             </form>
+
+            {/* Google Authentication 1-Click Button */}
+            <div className="pt-2 border-t border-[var(--hairline)] space-y-2">
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={googleSigningIn || loading}
+                className="w-full py-2 px-4 rounded-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-[var(--hairline-strong)] text-[var(--ink)] font-semibold text-xs flex items-center justify-center gap-2.5 transition-colors cursor-pointer shadow-xs disabled:opacity-60"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.1.74-2.51 1.18-4.22 1.18-3.24 0-5.99-2.19-6.97-5.13H1.05v3.14C3.07 21.2 7.24 24 12 24Z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.03 14.04c-.25-.74-.39-1.53-.39-2.34s.14-1.6.39-2.34V6.22H1.05C.38 7.56 0 9.09 0 11.7s.38 4.14 1.05 5.48l3.98-3.14Z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.65c1.8 0 3.41.62 4.68 1.83l3.51-3.51C18.07 1.09 15.3 0 12 0 7.24 0 3.07 2.8 1.05 6.22l3.98 3.14c.98-2.94 3.73-5.13 6.97-5.13Z"
+                  />
+                </svg>
+                <span>{googleSigningIn ? 'Connecting to Google...' : 'Continue with Google'}</span>
+              </button>
+            </div>
           </div>
         )}
 
