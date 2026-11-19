@@ -64,7 +64,7 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
         }),
       });
       if (res.status === 401) {
-        setStatusMessage('Please sign in with Phone OTP to subscribe to a monthly pass.');
+        setStatusMessage('Please sign in to get a monthly pass.');
         if (onRequireAuth) onRequireAuth();
         return;
       }
@@ -94,7 +94,7 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
             <h1 className="text-2xl font-black">Monthly Commuter Passes</h1>
           </div>
           <p className="text-xs text-indigo-200 mt-1">
-            Guaranteed 24/7 dedicated bay for daily commuters at Rail Wheel Factory, Aster CMI, and Yelahanka Station (PRD Section 13)
+            A reserved bay for regular commuters near Rail Wheel Factory, Aster CMI and Yelahanka Station. Passes run in test mode during the pilot.
           </p>
         </div>
       </div>
@@ -185,7 +185,7 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
                 {selectedListing.title} · Dedicated Reserved Bay
               </span>
               <span className="text-indigo-800 text-xs">
-                Includes RFID / QR Access, 24/7 in-and-out privileges, and dedicated parking spot.
+                A dedicated bay for the month. The host shares access details once your pass is issued.
               </span>
             </div>
 

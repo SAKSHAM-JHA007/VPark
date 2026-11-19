@@ -5,6 +5,7 @@ import { Presence } from '@/components/motion/Presence';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import { CountUp } from '@/components/motion/CountUp';
 import { staggerStyle } from '@/components/motion/tokens';
+import { ListingSubmissionNotice } from '@/components/HowItWorks';
 import {
   Listing,
   ProviderType,
@@ -628,6 +629,8 @@ export function ProviderHub({
         </button>
       </div>
 
+      <ListingSubmissionNotice />
+
       {statusMessage && (
         <div role="status" className="p-3.5 bg-blue-50 text-blue-900 text-xs font-semibold rounded-2xl border border-blue-200 flex items-center justify-between animate-fade-in">
           <span>{statusMessage}</span>
@@ -858,6 +861,8 @@ export function ProviderHub({
             </div>
 
             <div className="p-6 space-y-4 text-xs overflow-y-auto">
+              <ListingSubmissionNotice />
+
               {formError && (
                 <div role="alert" className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 font-semibold animate-fade-in">
                   {formError}

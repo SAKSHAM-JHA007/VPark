@@ -173,7 +173,7 @@ export function DigitalPassModal({
         <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-5 flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-mono tracking-widest text-emerald-300 font-bold block">
-              Official VPark Access Pass
+              VPark booking pass
             </span>
             <span className="text-xl font-black font-mono tracking-wider">{booking.referenceNumber}</span>
           </div>
@@ -188,7 +188,7 @@ export function DigitalPassModal({
           <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-3">
             <div className="flex justify-center">{getStatusBadge()}</div>
 
-            {/* Simulated QR Code */}
+            {/* Simulated QR code (QR check-in is not live yet) */}
             <div className="inline-block p-4 bg-white rounded-2xl shadow-sm border border-slate-200 animate-scale-in [animation-delay:160ms]">
               <div className="w-36 h-36 border-4 border-slate-900 p-2 flex flex-col justify-between">
                 <div className="flex justify-between">
@@ -206,7 +206,7 @@ export function DigitalPassModal({
             </div>
 
             <p className="text-xs text-slate-500 font-medium">
-              Scan at gate scanner or present to on-duty security guard
+              Sample pass code. QR check-in isn&apos;t live yet, so show your booking reference to the host or guard.
             </p>
           </div>
 
@@ -230,11 +230,11 @@ export function DigitalPassModal({
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
-                        Precise Exact Location Unlocked
+                        Exact location
                       </span>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold">
-                      Payment Verified · Live
+                      Booking confirmed
                     </span>
                   </div>
 
@@ -243,7 +243,7 @@ export function DigitalPassModal({
                     <p className="text-xs text-slate-700 font-medium mt-0.5">{booking.listingAddress}</p>
                     <p className="text-[11px] font-mono text-emerald-800 mt-1 flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                      <span>Exact GPS: {exactLat.toFixed(6)}, {exactLng.toFixed(6)}</span>
+                      <span>GPS: {exactLat.toFixed(6)}, {exactLng.toFixed(6)}</span>
                     </p>
                   </div>
 
@@ -259,7 +259,7 @@ export function DigitalPassModal({
                     className="w-full py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                   >
                     <Navigation className="w-4 h-4 fill-white" />
-                    <span>Navigate to Exact Bay via Google Maps</span>
+                    <span>Get directions in Google Maps</span>
                     <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                   </a>
                 </div>
@@ -268,7 +268,7 @@ export function DigitalPassModal({
 
             {booking.listingAccessInstructions && (
               <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-1">
-                <span className="text-[#0A5CFF] font-bold block">Unlocked Gate &amp; Entry Instructions</span>
+                <span className="text-[#0A5CFF] font-bold block">Gate &amp; entry instructions</span>
                 <p className="text-slate-800 font-medium">{booking.listingAccessInstructions}</p>
               </div>
             )}
@@ -361,7 +361,7 @@ export function DigitalPassModal({
                 className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1"
               >
                 <FileText className="w-3.5 h-3.5" />
-                {showInvoice ? 'Hide Tax Invoice' : 'View GST Tax Invoice'}
+                {showInvoice ? 'Hide receipt' : 'View receipt (test mode)'}
               </button>
 
               <button
@@ -421,9 +421,12 @@ export function DigitalPassModal({
             </div>
           )}
 
-          {/* Compliant GST Tax Invoice View (PRD 8.11) */}
+          {/* Receipt view (PRD 8.11). Payments are simulated in the pilot, so this is labelled as a sample. */}
           {showInvoice && (
             <div className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-xs space-y-2 font-mono">
+              <p className="rounded-md bg-amber-400/15 px-2 py-1 text-[11px] font-semibold text-amber-300">
+                Sample receipt from a test-mode booking. Not a tax invoice.
+              </p>
               <div className="flex justify-between border-b border-slate-700 pb-2">
                 <span className="font-bold text-emerald-400">VPARK TECHNOLOGIES INDIA PVT LTD</span>
                 <span>GSTIN: 29AABCU9603R1ZM</span>

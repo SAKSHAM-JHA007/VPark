@@ -793,7 +793,7 @@ export function AuthPanel({
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
+              className="w-full py-2.5 rounded-sm bg-brand hover:bg-brand-hover disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
             >
               {loading ? 'Saving Details...' : 'Confirm Registration'}
             </button>

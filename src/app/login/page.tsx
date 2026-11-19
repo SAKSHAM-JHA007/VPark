@@ -51,7 +51,7 @@ export default function LoginPage() {
             className="text-xs font-mono uppercase tracking-wider text-[var(--ink-secondary)] hover:text-[var(--ink)] flex items-center gap-1.5 transition-colors border border-[var(--hairline)] px-3 py-1.5 rounded-sm hover:bg-[var(--surface-alt)]"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Registry
+            Back to parking search
           </Link>
         </div>
       </header>
@@ -59,13 +59,13 @@ export default function LoginPage() {
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 space-y-6">
         <div className="text-center space-y-1.5 max-w-md animate-fade-up">
           <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--transit-accent)] block">
-            Bengaluru Municipal Pilot · Yelahanka Sector 01
+            Pilot area · Yelahanka, Bengaluru
           </span>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight uppercase text-[var(--ink)]">
-            Driver &amp; Host Email Access
+            Sign in to VPark
           </h1>
           <p className="text-xs text-[var(--ink-secondary)]">
-            Sign in with your email address. Mobile number is stored in user profile for parking access and booking coordination.
+            Use your email address. One account works for parking and for listing a space.
           </p>
         </div>
 
@@ -91,7 +91,7 @@ export default function LoginPage() {
           Contact Support
         </Link>
         <span>·</span>
-        <span>© {new Date().getFullYear()} {APP_CONFIG.appName} · DPDP ACT 2023 COMPLIANT // SECTOR 01</span>
+        <span>© {new Date().getFullYear()} {APP_CONFIG.appName}</span>
       </footer>
     </div>
   );

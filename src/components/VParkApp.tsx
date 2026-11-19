@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/Header';
+import { HowItWorks } from '@/components/HowItWorks';
 import { ListingCard } from '@/components/ListingCard';
 import { ListingDetailModal } from '@/components/ListingDetailModal';
 import { DigitalPassModal } from '@/components/DigitalPassModal';
@@ -389,19 +390,14 @@ export function VParkApp({
                     <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--ink)] leading-none animate-fade-up">
                       Plan your parking
                     </h1>
-                    <p className="text-xs text-[var(--ink-secondary)] mt-1.5">
-                      Verified parking discovery and reservation across Yelahanka pilot anchors.
+                    <p className="text-xs sm:text-sm text-[var(--ink-secondary)] mt-1.5">
+                      Find reviewed parking spaces near landmarks in the Yelahanka pilot area.
                     </p>
-                  </div>
-                  <div className="font-mono text-[11px] text-[var(--ink-tertiary)] flex items-center gap-2">
-                    <span>SECTOR 01</span>
-                    <span>·</span>
-                    <span>13.1007°N, 77.5963°E</span>
                   </div>
                 </div>
 
                 {/* Unified Rounded Search Card */}
-                <div className="bg-[var(--surface-bg)] rounded-3xl border border-[var(--hairline-strong)] p-4 sm:p-5 shadow-xs space-y-4 animate-fade-up [animation-delay:80ms]">
+                <div className="bg-[var(--surface-bg)] rounded-card border border-[var(--hairline)] p-4 sm:p-5 shadow-card space-y-4 animate-fade-up [animation-delay:80ms]">
                   {/* Mode Tabs */}
                   <div className="flex items-center gap-2">
                     <button
@@ -428,7 +424,7 @@ export function VParkApp({
                   {/* Horizontal Inputs Bar */}
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                     {/* Location */}
-                    <div className="md:col-span-4 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
+                    <div className="md:col-span-4 p-3 rounded-control bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
                       <MapPin className="w-4 h-4 text-[#0A5CFF] flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
@@ -454,7 +450,7 @@ export function VParkApp({
                     </div>
 
                     {/* Date */}
-                    <div className="md:col-span-3 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
+                    <div className="md:col-span-3 p-3 rounded-control bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
                       <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
@@ -475,7 +471,7 @@ export function VParkApp({
                     </div>
 
                     {/* Time */}
-                    <div className="md:col-span-3 p-3 rounded-2xl bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
+                    <div className="md:col-span-3 p-3 rounded-control bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
                       <Clock className="w-4 h-4 text-slate-400 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
@@ -501,7 +497,7 @@ export function VParkApp({
                       <button
                         type="button"
                         onClick={fetchListings}
-                        className="group/cta w-full py-3.5 px-4 rounded-2xl bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-[background-color,box-shadow,transform] duration-150 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.97]"
+                        className="group/cta w-full py-3.5 px-4 rounded-control bg-brand hover:bg-brand-hover text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-[background-color,transform] duration-150 active:scale-[0.97]"
                       >
                         <span>Search Parking</span>
                         <ArrowRight className="w-4 h-4 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" />
@@ -511,18 +507,16 @@ export function VParkApp({
                 </div>
 
                 {/* Secondary Telemetry Strip */}
-                <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] text-[var(--ink-secondary)] pt-1">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--ink-secondary)] pt-1">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => setSelectedAnchor(YELAHANKA_ANCHORS[0])}
-                      className="hover:text-[var(--transit-accent)] flex items-center gap-1 uppercase underline underline-offset-4"
+                      className="hover:text-[var(--transit-accent)] flex items-center gap-1 underline underline-offset-4"
                     >
                       <LocateFixed className="w-3 h-3 text-[var(--transit-accent)]" />
-                      Current Location ({selectedAnchor.locality})
+                      Reset location
                     </button>
-                    <span>·</span>
-                    <span>15-MIN ARRIVAL BUFFER INCLUDED</span>
                   </div>
 
                   <button
@@ -532,9 +526,9 @@ export function VParkApp({
                       else if (!currentUser.roles.includes('PROVIDER')) handleAddCapability('PROVIDER').then(() => setActiveTab('provider'));
                       else setActiveTab('provider');
                     }}
-                    className="hover:text-[var(--transit-accent)] uppercase underline underline-offset-4"
+                    className="hover:text-[var(--transit-accent)] underline underline-offset-4"
                   >
-                    Host unused driveway or space →
+                    Have a space to rent out? →
                   </button>
                 </div>
               </div>
@@ -546,7 +540,7 @@ export function VParkApp({
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="px-2.5 py-1 border border-[var(--hairline-strong)] hover:bg-[var(--surface-alt)] uppercase text-[11px] text-[var(--ink-secondary)] flex items-center gap-1 transition-colors"
+                  className="px-3 py-1 rounded-full border border-[var(--hairline-strong)] hover:bg-[var(--surface-alt)] uppercase text-[11px] text-[var(--ink-secondary)] flex items-center gap-1 transition-colors"
                 >
                   <SlidersHorizontal className="w-3 h-3" />
                   Reset
@@ -556,7 +550,7 @@ export function VParkApp({
                   aria-label="Filter by space type"
                   value={selectedCategoryFilter}
                   onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                  className="bg-[var(--surface-bg)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-2.5 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
+                  className="bg-[var(--surface-bg)] rounded-full border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-3 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
                 >
                   <option value="All" className="dark:bg-slate-900">Type: All</option>
                   <option value="Commercial" className="dark:bg-slate-900">Type: Commercial</option>
@@ -568,7 +562,7 @@ export function VParkApp({
                   aria-label="Filter by hourly price"
                   value={selectedPriceFilter}
                   onChange={(e) => setSelectedPriceFilter(e.target.value)}
-                  className="bg-[var(--surface-bg)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-2.5 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
+                  className="bg-[var(--surface-bg)] rounded-full border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-3 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
                 >
                   <option value="All" className="dark:bg-slate-900">Rate: All</option>
                   <option value="Under ₹40" className="dark:bg-slate-900">Rate: &lt;₹40/hr</option>
@@ -579,7 +573,7 @@ export function VParkApp({
                   aria-label="Filter by vehicle size"
                   value={selectedVehicleFilter}
                   onChange={(e) => setSelectedVehicleFilter(e.target.value)}
-                  className="bg-[var(--surface-bg)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-2.5 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
+                  className="bg-[var(--surface-bg)] rounded-full border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-3 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
                 >
                   <option value="All" className="dark:bg-slate-900">Vehicle: Any</option>
                   <option value="Sedan" className="dark:bg-slate-900">Vehicle: Sedan</option>
@@ -592,7 +586,7 @@ export function VParkApp({
                   aria-label="Filter by covered or open"
                   value={selectedCoveredFilter}
                   onChange={(e) => setSelectedCoveredFilter(e.target.value)}
-                  className="bg-[var(--surface-bg)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-2.5 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
+                  className="bg-[var(--surface-bg)] rounded-full border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-3 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
                 >
                   <option value="All" className="dark:bg-slate-900">Cover: Any</option>
                   <option value="Covered" className="dark:bg-slate-900">Cover: Basement/Covered</option>
@@ -600,18 +594,18 @@ export function VParkApp({
                 </select>
               </div>
 
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[11px] font-mono text-[var(--ink-secondary)]">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--surface-alt)] border border-[var(--hairline)] text-[11px] text-[var(--ink-secondary)]">
                 <Lock className="w-3 h-3 text-[var(--transit-accent)]" />
-                <span>Exact Map &amp; Navigation Pin Unlocked After Payment</span>
+                <span>Exact location and directions are shared after booking</span>
               </div>
             </div>
 
             {/* MAIN CONTENT: Verified Listings Grid (Map preview removed prior to payment) */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
               <div className="flex items-baseline justify-between pb-3 border-b border-[var(--hairline)] mb-4">
-                <h2 className="text-xs font-mono font-bold text-[var(--ink)] tracking-wider uppercase">
-                  Index // {results.length} {results.length === 1 ? 'Bay' : 'Bays'} Available Near{' '}
-                  <span className="text-[var(--transit-accent)]">{selectedAnchor.locality}</span>
+                <h2 className="text-sm font-bold text-[var(--ink)] tracking-tight">
+                  {results.length} {results.length === 1 ? 'parking space' : 'parking spaces'} near{' '}
+                  <span className="text-[var(--transit-accent)]">{selectedAnchor.name}</span>
                 </h2>
 
                 <div className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--ink-secondary)]">
@@ -632,22 +626,23 @@ export function VParkApp({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                 {loading ? (
                   <>
-                    <div role="status" className="md:col-span-2 py-2 font-mono text-xs text-[var(--ink-secondary)] uppercase tracking-wider animate-fade-in">
-                      Querying Yelahanka Sector 01 Registry...
+                    <div role="status" className="md:col-span-2 py-2 text-xs text-[var(--ink-secondary)] animate-fade-in">
+                      Finding parking near {selectedAnchor.name}…
                     </div>
                     {[0, 1, 2, 3].map((i) => (
                       <ListingCardSkeleton key={i} style={staggerStyle(i, 70)} />
                     ))}
                   </>
                 ) : results.length === 0 ? (
-                  <div className="md:col-span-2 p-8 text-center bg-[var(--surface-bg)] border border-[var(--hairline-strong)] text-[var(--ink-secondary)] font-mono text-xs space-y-2 animate-fade-in">
-                    <p className="font-bold uppercase text-[var(--ink)]">No verified bays match filter parameters.</p>
+                  <div className="md:col-span-2 p-8 text-center bg-[var(--surface-bg)] rounded-card border border-[var(--hairline)] text-[var(--ink-secondary)] text-xs space-y-3 animate-fade-in">
+                    <p className="text-sm font-bold text-[var(--ink)]">No parking spaces match these filters</p>
+                    <p>Try removing a filter or choosing a different landmark.</p>
                     <button
                       type="button"
                       onClick={resetFilters}
-                      className="px-3.5 py-1.5 bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[var(--ink)] uppercase font-semibold text-[11px]"
+                      className="px-4 py-2 rounded-full bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[var(--ink)] font-semibold text-xs hover:bg-[var(--surface-bg)] transition-colors"
                     >
-                      Reset All Filters
+                      Reset filters
                     </button>
                   </div>
                 ) : (
@@ -665,106 +660,19 @@ export function VParkApp({
               </div>
             </div>
 
-            {/* BELOW THE FOLD: Municipal Operating Protocols */}
-            <section ref={howItWorksRef} id="how-it-works" className="bg-[var(--surface-bg)] border-t border-[var(--hairline)] py-12 px-4 sm:px-6 lg:px-8">
-              <div className="max-w-7xl mx-auto space-y-8">
-                <div className="border-b border-[var(--hairline)] pb-3">
-                  <span className="font-mono text-[10px] tracking-widest uppercase text-[var(--ink-tertiary)] block">
-                    Operating Manual · PRD Foundation Release
-                  </span>
-                  <h2 className="text-xl font-bold tracking-tight uppercase text-[var(--ink)] mt-0.5">
-                    Municipal Network Protocols
-                  </h2>
-                </div>
-
-                {/* Two-Column Asymmetric Protocol Matrix */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--hairline)] border border-[var(--hairline)] vp-reveal">
-                  {/* Protocol A: Driver */}
-                  <div className="bg-[var(--surface-bg)] p-6 space-y-5 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between font-mono text-[11px] text-[var(--ink-tertiary)] uppercase">
-                        <span>Protocol 01 // Driver</span>
-                        <span>Direct Bay Access</span>
-                      </div>
-                      <h3 className="text-base font-bold uppercase tracking-tight text-[var(--ink)]">
-                        Locate, Hold &amp; Park With Digital Pass
-                      </h3>
-                      <ol className="space-y-3 font-mono text-xs text-[var(--ink-secondary)]">
-                        <li className="flex items-start gap-2.5">
-                          <span className="font-bold text-[var(--ink)]">01/</span>
-                          <span><strong>Filter by vehicle &amp; coverage:</strong> Select destination landmark, vehicle dimensions, and basement/open preference.</span>
-                        </li>
-                        <li className="flex items-start gap-2.5">
-                          <span className="font-bold text-[var(--ink)]">02/</span>
-                          <span><strong>10-minute slot lock:</strong> Authenticate with +91 OTP. The bay locks exclusively to prevent concurrent double-booking.</span>
-                        </li>
-                        <li className="flex items-start gap-2.5">
-                          <span className="font-bold text-[var(--ink)]">03/</span>
-                          <span><strong>Digital pass check-in:</strong> Gate codes and host relay number unlock on confirmation, with 15-min arrival grace.</span>
-                        </li>
-                      </ol>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => searchSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                      className="w-full py-2.5 bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] border border-[var(--hairline-strong)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider transition-colors"
-                    >
-                      Browse Available Bays →
-                    </button>
-                  </div>
-
-                  {/* Protocol B: Host */}
-                  <div className="bg-[var(--surface-bg)] p-6 space-y-5 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between font-mono text-[11px] text-[var(--ink-tertiary)] uppercase">
-                        <span>Protocol 02 // Space Owner</span>
-                        <span>Driveway Dispatch</span>
-                      </div>
-                      <h3 className="text-base font-bold uppercase tracking-tight text-[var(--ink)]">
-                        List Unused Bay With Proof of Right-to-Rent
-                      </h3>
-                      <ol className="space-y-3 font-mono text-xs text-[var(--ink-secondary)]">
-                        <li className="flex items-start gap-2.5">
-                          <span className="font-bold text-[var(--ink)]">01/</span>
-                          <span><strong>GPS Pin &amp; Rate Setting:</strong> Mark physical bay location, assign hourly or monthly rates, and specify vehicle clearance.</span>
-                        </li>
-                        <li className="flex items-start gap-2.5">
-                          <span className="font-bold text-[var(--ink)]">02/</span>
-                          <span><strong>Deed Verification:</strong> Upload municipal tax receipt, landlord consent, or society NOC to our encrypted DPDP vault.</span>
-                        </li>
-                        <li className="flex items-start gap-2.5">
-                          <span className="font-bold text-[var(--ink)]">03/</span>
-                          <span><strong>Go live after audit:</strong> Start accepting reservations with monthly automated payouts in exact paise.</span>
-                        </li>
-                      </ol>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!currentUser) openLoginModal('provider');
-                        else if (!currentUser.roles.includes('PROVIDER')) handleAddCapability('PROVIDER').then(() => setActiveTab('provider'));
-                        else setActiveTab('provider');
-                      }}
-                      className="w-full py-2.5 bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 active:scale-[0.99]"
-                    >
-                      Register Driveway / Commercial Space →
-                    </button>
-                  </div>
-                </div>
-
-                {/* Audit & Trust Verification Footer Line */}
-                <div className="p-3.5 bg-[var(--surface-alt)] border border-[var(--hairline)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-[11px] text-[var(--ink-secondary)]">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-[var(--transit-accent)] flex-shrink-0" />
-                    <span className="font-bold text-[var(--ink)] uppercase">Trust &amp; Safety Gate:</span>
-                    <span>All listings inspected before inclusion in public dispatch registry.</span>
-                  </div>
-                  <span className="text-[var(--ink-tertiary)]">DPDP ACT 2023 COMPLIANT</span>
-                </div>
-              </div>
-            </section>
+            {/* BELOW THE FOLD: How VPark works (driver and space-owner journeys) */}
+            <div className="bg-[var(--surface-bg)] border-t border-[var(--hairline)] py-12 px-4 sm:px-6 lg:px-8">
+              <HowItWorks
+                className="max-w-7xl mx-auto"
+                sectionRef={howItWorksRef}
+                onBrowse={() => searchSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                onSetUpHost={() => {
+                  if (!currentUser) openLoginModal('provider');
+                  else if (!currentUser.roles.includes('PROVIDER')) handleAddCapability('PROVIDER').then(() => setActiveTab('provider'));
+                  else setActiveTab('provider');
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -781,11 +689,11 @@ export function VParkApp({
             {!currentUser ? (
               <div className="p-8 text-center bg-[var(--surface-bg)] border border-[var(--hairline-strong)] space-y-3 text-xs">
                 <p className="font-bold uppercase text-[var(--ink)]">Authentication Required</p>
-                <p className="text-[var(--ink-secondary)]">Sign in with primary mobile OTP to retrieve passes and billing ledger.</p>
+                <p className="text-[var(--ink-secondary)]">Sign in with your email to see your bookings and passes.</p>
                 <button
                   type="button"
                   onClick={() => openLoginModal('driver')}
-                  className="px-4 py-2 bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] text-white font-mono uppercase tracking-wider transition-colors"
+                  className="px-4 py-2 bg-brand hover:bg-brand-hover text-white font-mono uppercase tracking-wider transition-colors"
                 >
                   Authenticate via OTP
                 </button>

@@ -153,7 +153,7 @@ export default function MasterAdminLoginPage() {
 
       {/* Footer */}
       <footer className="border-t border-neutral-900 py-3 text-center text-[10px] text-slate-600">
-        VPark Enterprise Security · Restricted Root Console // Yelahanka Sector 01
+        VPark · Admin access only
       </footer>
     </div>
   );

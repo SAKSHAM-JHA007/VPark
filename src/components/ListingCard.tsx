@@ -51,7 +51,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
           onSelect();
         }
       }}
-      className={`group bg-[var(--surface-bg)] rounded-sm p-4 border cursor-pointer transition-[border-color,box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5 ${
+      className={`group bg-[var(--surface-bg)] rounded-card p-4 border cursor-pointer transition-[border-color,box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5 ${
         isSelected
           ? 'border-[var(--transit-accent)] ring-1 ring-[var(--transit-accent)]'
           : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]'
@@ -59,7 +59,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
     >
       <div className="flex flex-col sm:flex-row gap-4 items-stretch">
         {/* Photo with category badge */}
-        <div className="relative w-full sm:w-44 h-32 sm:h-36 rounded-xs overflow-hidden bg-[var(--surface-alt)] border border-[var(--hairline)] flex-shrink-0">
+        <div className="relative w-full sm:w-44 h-32 sm:h-36 rounded-control overflow-hidden bg-[var(--surface-alt)] border border-[var(--hairline)] flex-shrink-0">
           <img
             src={listing.photos[0] || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800'}
             alt={listing.title ? `Verified parking bay: ${listing.title}` : 'Verified parking space bay in Bengaluru'}
@@ -69,7 +69,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
           />
 
           <span
-            className={`absolute top-2 left-2 px-1.5 py-0.5 rounded-none font-mono text-[10px] tracking-wider uppercase border ${categoryBadgeClass}`}
+            className={`absolute top-2 left-2 px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border ${categoryBadgeClass}`}
           >
             {categoryLabel}
           </span>
@@ -106,7 +106,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
               <span className="text-[var(--hairline-strong)]">·</span>
               <span className="inline-flex items-center gap-0.5 text-[10px] text-[var(--ink-tertiary)] font-mono flex-shrink-0">
                 <Lock className="w-2.5 h-2.5 text-[var(--transit-accent)]" />
-                Exact pin unlocked on pass
+                Exact location after booking
               </span>
             </div>
 
@@ -119,8 +119,8 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
                   <span className="text-[var(--ink-tertiary)] font-normal">({listing.reviewCount})</span>
                 </div>
               ) : (
-                <span className="border border-emerald-600/40 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 rounded-none text-[10px] uppercase">
-                  VERIFIED DEED
+                <span className="border border-emerald-600/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.2 rounded-full text-[10px] uppercase">
+                  VERIFIED
                 </span>
               )}
 
@@ -148,16 +148,16 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
           {/* Row 4: Availability & Action Button */}
           <div className="flex items-center justify-between gap-3 pt-2.5 mt-2.5 border-t border-[var(--hairline)]">
             {listing.category === 'PUBLIC' ? (
-              <span className="px-2 py-0.5 rounded-none font-mono text-[10px] tracking-wider uppercase border border-[var(--hairline-strong)] text-[var(--ink-secondary)]">
-                DISCOVERY ONLY
+              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border border-[var(--hairline-strong)] text-[var(--ink-secondary)]">
+                PUBLIC · NOT BOOKABLE
               </span>
             ) : availableCapacity > 0 ? (
-              <span className="px-2 py-0.5 rounded-none font-mono text-[10px] tracking-wider uppercase border border-emerald-600/30 text-emerald-700 dark:text-emerald-400">
+              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border border-emerald-600/30 text-emerald-700 dark:text-emerald-400">
                 {availableCapacity} {availableCapacity === 1 ? 'BAY' : 'BAYS'} AVAILABLE
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded-none font-mono text-[10px] tracking-wider uppercase border border-amber-600/30 text-amber-700 dark:text-amber-400">
-                WINDOW FILLED
+              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border border-amber-600/30 text-amber-700 dark:text-amber-400">
+                FULL FOR THIS TIME
               </span>
             )}
 
@@ -168,7 +168,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
                   e.stopPropagation();
                   onBook();
                 }}
-                className="px-3.5 py-1.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 active:scale-[0.96]"
+                className="px-3.5 py-1.5 rounded-full bg-brand hover:bg-brand-hover text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 active:scale-[0.96]"
               >
                 RESERVE BAY
               </button>
@@ -179,9 +179,9 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
                   e.stopPropagation();
                   onBook();
                 }}
-                className="px-3 py-1.5 rounded-sm bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider border border-[var(--hairline-strong)] transition-[background-color,transform] duration-150 active:scale-[0.96]"
+                className="px-3 py-1.5 rounded-full bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider border border-[var(--hairline-strong)] transition-[background-color,transform] duration-150 active:scale-[0.96]"
               >
-                INSPECT DETAILS
+                VIEW DETAILS
               </button>
             )}
           </div>

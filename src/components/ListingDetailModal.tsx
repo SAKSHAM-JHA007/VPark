@@ -352,7 +352,7 @@ export function ListingDetailModal({
               <div className="flex items-center justify-between font-bold text-slate-900">
                 <span className="text-base">Reserve Your Slot</span>
                 <span className="text-xs text-[#0A5CFF] font-semibold bg-blue-100 px-2.5 py-0.5 rounded-full">
-                  Instant Confirmation
+                  Test-mode booking
                 </span>
               </div>
 
