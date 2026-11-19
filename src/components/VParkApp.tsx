@@ -437,7 +437,7 @@ export function VParkApp({
                             const a = YELAHANKA_ANCHORS.find((item) => item.id === e.target.value);
                             if (a) setSelectedAnchor(a);
                           }}
-                          className="w-full bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
+                          className="w-full appearance-none bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
                         >
                           {YELAHANKA_ANCHORS.map((anchor) => (
                             <option key={anchor.id} value={anchor.id} className="dark:bg-slate-900">
@@ -460,7 +460,7 @@ export function VParkApp({
                           aria-label="Select parking date"
                           value={selectedDate}
                           onChange={(e) => setSelectedDate(e.target.value)}
-                          className="w-full bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
+                          className="w-full appearance-none bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
                         >
                           <option value="Today" className="dark:bg-slate-900">Today</option>
                           <option value="Tomorrow" className="dark:bg-slate-900">Tomorrow</option>
@@ -481,7 +481,7 @@ export function VParkApp({
                           aria-label="Select parking time range"
                           value={selectedTimeRange}
                           onChange={(e) => setSelectedTimeRange(e.target.value)}
-                          className="w-full bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
+                          className="w-full appearance-none bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
                         >
                           <option value="2:00 PM – 6:00 PM" className="dark:bg-slate-900">14:00 – 18:00 (Standard)</option>
                           <option value="9:00 AM – 1:00 PM" className="dark:bg-slate-900">09:00 – 13:00 (Morning)</option>

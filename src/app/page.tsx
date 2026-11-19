@@ -364,7 +364,7 @@ export default function RootHomePage() {
                   <select
                     value={selectedAnchorId}
                     onChange={(e) => setSelectedAnchorId(e.target.value)}
-                    className="w-full bg-transparent font-bold text-xs text-ink focus:outline-none cursor-pointer truncate"
+                    className="w-full appearance-none bg-transparent font-bold text-xs text-ink focus:outline-none cursor-pointer truncate"
                   >
                     {YELAHANKA_ANCHORS.map((anchor) => (
                       <option key={anchor.id} value={anchor.id} className="dark:bg-slate-900">
@@ -386,7 +386,7 @@ export default function RootHomePage() {
                   <select
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full bg-transparent font-bold text-xs text-ink focus:outline-none cursor-pointer truncate"
+                    className="w-full appearance-none bg-transparent font-bold text-xs text-ink focus:outline-none cursor-pointer truncate"
                   >
                     <option value="Today" className="dark:bg-slate-900">Today</option>
                     <option value="Tomorrow" className="dark:bg-slate-900">Tomorrow</option>
@@ -406,7 +406,7 @@ export default function RootHomePage() {
                   <select
                     value={selectedTimeRange}
                     onChange={(e) => setSelectedTimeRange(e.target.value)}
-                    className="w-full bg-transparent font-bold text-xs text-ink focus:outline-none cursor-pointer truncate"
+                    className="w-full appearance-none bg-transparent font-bold text-xs text-ink focus:outline-none cursor-pointer truncate"
                   >
                     <option value="14:00 - 18:00 (4 hrs)" className="dark:bg-slate-900">14:00 – 18:00 (4 hrs)</option>
                     <option value="09:00 - 13:00 (4 hrs)" className="dark:bg-slate-900">09:00 – 13:00 (Morning)</option>
