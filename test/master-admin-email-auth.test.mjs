@@ -27,14 +27,14 @@ describe('Master Admin & Email-Based Authentication', () => {
     assert.ok(routeCode.includes('jhasaksham.7453k@gmail.com'), 'Route must recognize master email');
   });
 
-  it('login UI uses email ID as primary credential and hides master password for admin email', () => {
+  it('login UI uses Google Sign-In as primary authentication with Remember Sign-In ID', () => {
     const authModalCode = fs.readFileSync('src/components/AuthModal.tsx', 'utf-8');
-    assert.ok(authModalCode.includes('Primary Email ID'), 'Login form must label primary email ID');
-    assert.ok(!authModalCode.includes('Primary Mobile Number (+91 E.164)'), 'Mobile number must not be on initial login');
+    assert.ok(authModalCode.includes('Continue with Google'), 'Login UI must include Google Sign-In as primary method');
+    assert.ok(authModalCode.includes('Remember sign-in ID on this device'), 'Must have remember sign-in ID option');
+    assert.ok(authModalCode.includes('vpark_remembered_email'), 'Must store remembered sign-in ID');
     assert.ok(authModalCode.includes('jhasaksham.7453k@gmail.com'), 'Must recognize master admin email');
     assert.ok(authModalCode.includes('master_password'), 'Must have master password state');
     assert.ok(authModalCode.includes('Mobile Number (User Contact Details)'), 'Phone number must be collected strictly in onboarding user details');
-    assert.ok(authModalCode.includes('Continue with Google'), 'Login UI must include Google Sign-In');
   });
 
   it('firebase client and google auth endpoint support Google identity & master admin', () => {
@@ -48,19 +48,12 @@ describe('Master Admin & Email-Based Authentication', () => {
     assert.ok(googleRouteCode.includes('jhasaksham.7453k@gmail.com'), 'Google route must check for master admin email');
   });
 
-  it('removes demo persona buttons and implements 2-step password setup for email signup', () => {
+  it('removes demo persona buttons and other manual login forms in favor of Google Sign-In', () => {
     const authModalCode = fs.readFileSync('src/components/AuthModal.tsx', 'utf-8');
-    // Ensure demo personas are removed
     assert.ok(!authModalCode.includes('Pilot Quick-Access Personas'), 'Demo quick-access personas must be removed');
     assert.ok(!authModalCode.includes('handleDemoLogin'), 'Demo login handler must be removed');
+    assert.ok(!authModalCode.includes('Step 1: Set Password'), 'Manual password inputs must be removed in favor of Google');
 
-    // Ensure 2-step password setup exists
-    assert.ok(authModalCode.includes('Step 1: Set Password'), 'Must include step 1 password');
-    assert.ok(authModalCode.includes('Step 2: Confirm Password'), 'Must include step 2 confirm password');
-    assert.ok(authModalCode.includes('Passwords match'), 'Must validate password confirmation');
-    assert.ok(authModalCode.includes('Passwords do not match'), 'Must warn on mismatched passwords');
-
-    // Header must also not have demo personas
     const headerCode = fs.readFileSync('src/components/Header.tsx', 'utf-8');
     assert.ok(!headerCode.includes('Demo Personas'), 'Demo personas must be removed from Header menu');
   });

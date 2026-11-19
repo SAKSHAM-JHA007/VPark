@@ -8,18 +8,14 @@ import { validatePlateNumber, normalizeIndianPhone } from '@/lib/validation';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import {
   X,
-  Mail,
   Phone,
   ShieldCheck,
   Car,
   Building2,
-  CheckCircle2,
-  ArrowRight,
   Lock,
   KeyRound,
-  Eye,
-  EyeOff,
   AlertCircle,
+  UserCheck,
 } from 'lucide-react';
 
 interface AuthPanelProps {
@@ -36,8 +32,7 @@ export function AuthPanel({
   embedded = false,
 }: AuthPanelProps) {
   const [intent, setIntent] = useState<'driver' | 'provider'>(initialIntent);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
-  const [step, setStep] = useState<'credentials' | 'master_password' | 'onboarding'>('credentials');
+  const [step, setStep] = useState<'google_auth' | 'master_password' | 'onboarding'>('google_auth');
 
   const initialStepRef = useRef(step);
   const stepChangedRef = useRef(false);
@@ -46,14 +41,14 @@ export function AuthPanel({
 
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
-
   const [phone, setPhone] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [providerType, setProviderType] = useState<ProviderType>('OWNER');
   const [acceptTerms, setAcceptTerms] = useState<boolean>(true);
+  const [rememberId, setRememberId] = useState<boolean>(true);
+  const [rememberedEmail, setRememberedEmail] = useState<string | null>(null);
+  const [rememberedName, setRememberedName] = useState<string | null>(null);
+
   const [loading, setLoading] = useState<boolean>(false);
   const [googleSigningIn, setGoogleSigningIn] = useState<boolean>(false);
   const [plateNumber, setPlateNumber] = useState<string>('');
@@ -65,8 +60,21 @@ export function AuthPanel({
     setIntent(initialIntent);
   }, [initialIntent]);
 
-  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
-  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedEmail = localStorage.getItem('vpark_remembered_email');
+        const savedName = localStorage.getItem('vpark_remembered_name');
+        if (savedEmail) {
+          setRememberedEmail(savedEmail);
+          setEmail(savedEmail);
+          if (savedName) setRememberedName(savedName);
+        }
+      } catch {
+        // LocalStorage disabled or not accessible
+      }
+    }
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -79,6 +87,16 @@ export function AuthPanel({
     try {
       const cred = await signInWithGooglePopup();
       const fbUser = cred.user;
+
+      if (rememberId && fbUser.email) {
+        try {
+          localStorage.setItem('vpark_remembered_email', fbUser.email);
+          if (fbUser.displayName) localStorage.setItem('vpark_remembered_name', fbUser.displayName);
+          localStorage.setItem('vpark_remembered_id', fbUser.uid);
+        } catch {
+          // Ignore storage quota
+        }
+      }
 
       const res = await fetch('/api/auth/google', {
         method: 'POST',
@@ -102,99 +120,21 @@ export function AuthPanel({
       if (user.roles.includes('ADMIN') || (user.phone && user.vehicles.length > 0)) {
         onAuthenticated(user);
       } else {
-        setFullName(user.name || '');
-        setEmail(user.email || '');
+        setFullName(user.name || fbUser.displayName || '');
+        setEmail(user.email || fbUser.email || '');
         setStep('onboarding');
       }
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       if (err?.code === 'auth/popup-closed-by-user') {
-        setError('Google sign-in was closed before completion.');
+        setError('Google sign-in window was closed.');
       } else if (err?.code === 'auth/unauthorized-domain' || (err?.message && err.message.includes('auth/unauthorized-domain'))) {
-        setError('Google sign-in is not authorized for this domain. Please register or sign in using your Email & Password directly.');
+        setError('Domain not authorized yet in Firebase Console. Please add your domain to Firebase Authorized Domains.');
       } else {
-        setError(err?.message || 'Google authentication encountered an error. Please continue with Email & Password.');
+        setError(err?.message || 'Google authentication encountered an error. Please try again.');
       }
     } finally {
       setGoogleSigningIn(false);
-    }
-  };
-
-  const handleCredentialsSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-
-    // Direct client detection for Master Administrator
-    if (cleanEmail === 'jhasaksham.7453k@gmail.com') {
-      setStep('master_password');
-      return;
-    }
-
-    if (!password) {
-      setError('Please enter a password.');
-      return;
-    }
-
-    if (authMode === 'signup') {
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters long.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError('Passwords do not match. Please verify both password fields.');
-        return;
-      }
-      if (!acceptTerms) {
-        setError('Please agree to the VPark Terms of Service & Privacy Policy.');
-        return;
-      }
-    }
-
-    setLoading(true);
-    try {
-      const endpoint = '/api/auth/email';
-      const payload =
-        authMode === 'signup'
-          ? { action: 'SIGNUP', email: cleanEmail, password, confirmPassword, intent }
-          : { action: 'LOGIN', email: cleanEmail, password };
-
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        // Helpful redirection if user tried to login on an unregistered email
-        if (authMode === 'signin' && data.error && data.error.includes('No account found')) {
-          setError('No account found for this email. Switched to Sign Up so you can set your password.');
-          setAuthMode('signup');
-        } else if (authMode === 'signup' && data.error && data.error.includes('already exists')) {
-          setError('An account with this email already exists. Switched to Sign In.');
-          setAuthMode('signin');
-        } else {
-          setError(data.error || 'Authentication failed. Please check your credentials.');
-        }
-        return;
-      }
-
-      if (data.onboardingRequired) {
-        setFullName(data.user.name || '');
-        setStep('onboarding');
-      } else {
-        onAuthenticated(data.user);
-      }
-    } catch {
-      setError('Network error during authentication. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -203,7 +143,7 @@ export function AuthPanel({
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/email', {
+      const res = await fetch('/api/auth/otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -216,6 +156,12 @@ export function AuthPanel({
       if (!res.ok || !data.success) {
         setError(data.error || 'Invalid master credentials.');
       } else {
+        if (rememberId) {
+          try {
+            localStorage.setItem('vpark_remembered_email', 'jhasaksham.7453k@gmail.com');
+            localStorage.setItem('vpark_remembered_name', 'Saksham Jha (Master Admin)');
+          } catch {}
+        }
         onAuthenticated(data.user);
       }
     } catch {
@@ -223,6 +169,17 @@ export function AuthPanel({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgetSavedId = () => {
+    try {
+      localStorage.removeItem('vpark_remembered_email');
+      localStorage.removeItem('vpark_remembered_name');
+      localStorage.removeItem('vpark_remembered_id');
+      setRememberedEmail(null);
+      setRememberedName(null);
+      setEmail('');
+    } catch {}
   };
 
   const handleCompleteOnboarding = async (e: React.FormEvent) => {
@@ -311,9 +268,7 @@ export function AuthPanel({
               ? 'Complete User Details'
               : step === 'master_password'
               ? 'Master Admin Authentication'
-              : authMode === 'signup'
-              ? 'Create VPark Account'
-              : 'Sign In to VPark'}
+              : 'Sign In with Google'}
           </h2>
         </div>
         {onClose && (
@@ -378,219 +333,45 @@ export function AuthPanel({
           </div>
         )}
 
-        {/* Step 1: Credentials (Email with 2-Step Password + Google Sign-In) */}
-        {step === 'credentials' && (
-          <div className={`space-y-4${stepEnterClass}`}>
-            {/* Mode Tabs: Sign Up (Create Account) vs Sign In */}
-            <div className="flex border-b border-[var(--hairline-strong)] mb-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('signup');
-                  setError(null);
-                }}
-                className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider text-center border-b-2 transition-colors cursor-pointer ${
-                  authMode === 'signup'
-                    ? 'border-[var(--transit-accent)] text-[var(--transit-accent)] font-bold'
-                    : 'border-transparent text-[var(--ink-tertiary)] hover:text-[var(--ink)]'
-                }`}
-              >
-                Sign Up (New Account)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('signin');
-                  setError(null);
-                }}
-                className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider text-center border-b-2 transition-colors cursor-pointer ${
-                  authMode === 'signin'
-                    ? 'border-[var(--transit-accent)] text-[var(--transit-accent)] font-bold'
-                    : 'border-transparent text-[var(--ink-tertiary)] hover:text-[var(--ink)]'
-                }`}
-              >
-                Sign In
-              </button>
-            </div>
-
-            <form onSubmit={handleCredentialsSubmit} className="space-y-3.5">
-              {/* Email Input */}
-              <div>
-                <label
-                  htmlFor="vpark-email-input"
-                  className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5"
-                >
-                  Primary Email ID
-                </label>
-                <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-[var(--ink-tertiary)] absolute left-3" />
-                  <input
-                    id="vpark-email-input"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (e.target.value.trim().toLowerCase() === 'jhasaksham.7453k@gmail.com') {
-                        setStep('master_password');
-                      }
-                    }}
-                    placeholder="e.g. driver@vpark.in or your.name@example.com"
-                    className="w-full pl-9 pr-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
-                  />
-                </div>
-              </div>
-
-              {/* Password Input (Step 1) */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label
-                    htmlFor="vpark-password-input"
-                    className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)]"
-                  >
-                    {authMode === 'signup' ? 'Step 1: Set Password (min 6 characters)' : 'Password'}
-                  </label>
-                </div>
-                <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 text-[var(--ink-tertiary)] absolute left-3" />
-                  <input
-                    id="vpark-password-input"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={authMode === 'signup' ? 'Create a secure password' : 'Enter your password'}
-                    className="w-full pl-9 pr-9 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-[var(--ink-tertiary)] hover:text-[var(--ink)] cursor-pointer"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password (Step 2 - Only during Sign Up) */}
-              {authMode === 'signup' && (
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label
-                      htmlFor="vpark-confirm-password-input"
-                      className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)]"
-                    >
-                      Step 2: Confirm Password
-                    </label>
-                    {passwordsMatch && (
-                      <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
-                        <CheckCircle2 className="w-3 h-3" /> Passwords match
-                      </span>
-                    )}
-                    {passwordsMismatch && (
-                      <span className="font-mono text-[10px] text-red-600 dark:text-red-400 font-semibold">
-                        Passwords do not match
-                      </span>
-                    )}
+        {/* Step 1: Sole Authentication Method - Google Sign-In with Remembered ID */}
+        {step === 'google_auth' && (
+          <div className={`space-y-4 py-1${stepEnterClass}`}>
+            {/* Remembered Sign-In Identity Banner */}
+            {rememberedEmail && (
+              <div className="p-3 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline-strong)] flex items-center justify-between">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="w-7 h-7 rounded-full bg-[var(--transit-accent)]/15 text-[var(--transit-accent)] flex items-center justify-center font-bold text-xs shrink-0">
+                    <UserCheck className="w-4 h-4" />
                   </div>
-                  <div className="relative flex items-center">
-                    <Lock className="w-4 h-4 text-[var(--ink-tertiary)] absolute left-3" />
-                    <input
-                      id="vpark-confirm-password-input"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      required
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Re-enter your password to confirm"
-                      className={`w-full pl-9 pr-9 py-2 rounded-sm border bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none ${
-                        passwordsMismatch
-                          ? 'border-red-500 focus:border-red-500'
-                          : passwordsMatch
-                          ? 'border-emerald-500 focus:border-emerald-500'
-                          : 'border-[var(--hairline-strong)] focus:border-[var(--transit-accent)]'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 text-[var(--ink-tertiary)] hover:text-[var(--ink)] cursor-pointer"
-                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                  <div className="min-w-0">
+                    <span className="text-[9px] font-mono text-[var(--ink-tertiary)] uppercase tracking-wider block">
+                      Remembered Sign-In ID
+                    </span>
+                    <span className="text-xs font-semibold text-[var(--ink)] block truncate">
+                      {rememberedName ? `${rememberedName} (${rememberedEmail})` : rememberedEmail}
+                    </span>
                   </div>
                 </div>
-              )}
-
-              {authMode === 'signup' && (
-                <label className="flex items-start gap-2 p-2 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline)] cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={acceptTerms}
-                    onChange={(e) => setAcceptTerms(e.target.checked)}
-                    className="mt-0.5 w-3.5 h-3.5 accent-[var(--transit-accent)]"
-                  />
-                  <span className="text-[10px] font-mono text-[var(--ink-secondary)] leading-relaxed">
-                    I agree to VPark Terms of Service &amp; DPDP Act 2023 Privacy Notice.
-                  </span>
-                </label>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || (authMode === 'signup' && passwordsMismatch)}
-                className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
-              >
-                {loading
-                  ? 'Authenticating...'
-                  : authMode === 'signup'
-                  ? 'Create Account & Proceed'
-                  : 'Continue with Email'}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-
-              <div className="text-center pt-1 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => {
-                    setAuthMode(authMode === 'signup' ? 'signin' : 'signup');
-                    setError(null);
-                  }}
-                  className="text-[var(--ink-secondary)] hover:text-[var(--ink)] font-mono text-[10px] uppercase hover:underline cursor-pointer"
+                  onClick={handleForgetSavedId}
+                  className="text-[10px] font-mono text-[var(--ink-tertiary)] hover:text-red-500 underline ml-2 shrink-0 cursor-pointer"
+                  title="Clear remembered sign-in ID"
                 >
-                  {authMode === 'signup'
-                    ? 'Already have an account? Sign in'
-                    : "Don't have an account? Sign up"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('jhasaksham.7453k@gmail.com');
-                    setStep('master_password');
-                  }}
-                  className="text-[10px] text-[var(--transit-accent)] hover:underline flex items-center gap-1 font-mono cursor-pointer"
-                  title="Master Administrator Portal"
-                >
-                  <Lock className="w-3 h-3" />
-                  <span>Master Login</span>
+                  Switch
                 </button>
               </div>
-            </form>
+            )}
 
             {/* Google Authentication 1-Click Button */}
-            <div className="pt-2 border-t border-[var(--hairline)] space-y-2">
+            <div className="space-y-3 pt-1">
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={googleSigningIn || loading}
-                className="w-full py-2 px-4 rounded-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-[var(--hairline-strong)] text-[var(--ink)] font-semibold text-xs flex items-center justify-center gap-2.5 transition-colors cursor-pointer shadow-xs disabled:opacity-60"
+                className="w-full py-3 px-4 rounded-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border-2 border-[var(--hairline-strong)] hover:border-[var(--transit-accent)] text-[var(--ink)] font-bold text-xs flex items-center justify-center gap-3 transition-all cursor-pointer shadow-xs hover:shadow-sm disabled:opacity-60"
               >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     fill="#4285F4"
                     d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
@@ -608,8 +389,58 @@ export function AuthPanel({
                     d="M12 4.65c1.8 0 3.41.62 4.68 1.83l3.51-3.51C18.07 1.09 15.3 0 12 0 7.24 0 3.07 2.8 1.05 6.22l3.98 3.14c.98-2.94 3.73-5.13 6.97-5.13Z"
                   />
                 </svg>
-                <span>{googleSigningIn ? 'Connecting to Google...' : 'Continue with Google'}</span>
+                <span className="text-xs">
+                  {googleSigningIn
+                    ? 'Connecting to Google...'
+                    : rememberedEmail
+                    ? `Continue as ${rememberedEmail}`
+                    : 'Continue with Google'}
+                </span>
               </button>
+
+              <div className="space-y-2 pt-1">
+                {/* Remember Sign-In ID Checkbox */}
+                <label className="flex items-center gap-2 p-2 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberId}
+                    onChange={(e) => setRememberId(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-[var(--transit-accent)]"
+                  />
+                  <span className="text-[10px] font-mono text-[var(--ink)] leading-tight">
+                    Remember sign-in ID on this device
+                  </span>
+                </label>
+
+                {/* Terms & DPDP Notice Checkbox */}
+                <label className="flex items-start gap-2 p-2 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    className="mt-0.5 w-3.5 h-3.5 accent-[var(--transit-accent)]"
+                  />
+                  <span className="text-[10px] font-mono text-[var(--ink-secondary)] leading-relaxed">
+                    I agree to VPark Terms of Service &amp; DPDP Act 2023 Privacy Notice.
+                  </span>
+                </label>
+              </div>
+
+              {/* Master Admin Portal Direct Shortcut */}
+              <div className="pt-2 text-right">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('jhasaksham.7453k@gmail.com');
+                    setStep('master_password');
+                  }}
+                  className="text-[10px] text-[var(--ink-tertiary)] hover:text-[var(--transit-accent)] hover:underline inline-flex items-center gap-1 font-mono cursor-pointer"
+                  title="Master Administrator Portal"
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>Master Login</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -623,7 +454,7 @@ export function AuthPanel({
                 <span className="font-bold text-[11px] uppercase tracking-wider block text-[var(--ink)]">
                   Master Administrator Identified
                 </span>
-                <span className="text-[10px] font-mono text-[var(--ink-secondary)]">{email}</span>
+                <span className="text-[10px] font-mono text-[var(--ink-secondary)]">{email || 'jhasaksham.7453k@gmail.com'}</span>
               </div>
             </div>
 
@@ -661,13 +492,13 @@ export function AuthPanel({
             <button
               type="button"
               onClick={() => {
-                setStep('credentials');
+                setStep('google_auth');
                 setPassword('');
                 setError(null);
               }}
               className="text-center w-full text-[var(--ink-secondary)] hover:text-[var(--ink)] font-mono text-[10px] uppercase hover:underline cursor-pointer"
             >
-              Switch Account
+              Back to Google Sign-In
             </button>
           </form>
         )}
