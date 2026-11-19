@@ -27,7 +27,7 @@ interface HeaderProps {
   currentRole: UserRole;
   onRoleChange: (role: UserRole) => void;
   onAddCapability: (role: 'DRIVER' | 'PROVIDER') => void;
-  onSwitchDemoPersona: (role: UserRole) => void;
+  onSwitchDemoPersona?: (role: UserRole) => void;
   onOpenLogin: (intent?: 'driver' | 'provider') => void;
   onLogout: () => void;
   activeTab: 'search' | 'bookings' | 'monthly' | 'provider' | 'admin';
@@ -433,47 +433,8 @@ export function Header({
                     </div>
                   )}
 
-                  {/* Demo Persona Switcher + Logout */}
-                  <div className="pt-1.5 border-t border-slate-100 dark:border-slate-700 space-y-1">
-                    <div className="px-3 py-0.5 text-xs text-slate-400 font-medium flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      Demo Personas
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 px-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSwitchDemoPersona('DRIVER');
-                          onTabChange('search');
-                          setShowProfileMenu(false);
-                        }}
-                        className="py-1 rounded-md bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium text-xs"
-                      >
-                        Driver
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSwitchDemoPersona('PROVIDER');
-                          onTabChange('provider');
-                          setShowProfileMenu(false);
-                        }}
-                        className="py-1 rounded-md bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium text-xs"
-                      >
-                        Provider
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSwitchDemoPersona('ADMIN');
-                          onTabChange('admin');
-                          setShowProfileMenu(false);
-                        }}
-                        className="py-1 rounded-md bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium text-xs"
-                      >
-                        Admin
-                      </button>
-                    </div>
+                  {/* Profile Actions: Logout */}
+                  <div className="pt-1.5 border-t border-slate-100 dark:border-slate-700">
 
                     <button
                       type="button"

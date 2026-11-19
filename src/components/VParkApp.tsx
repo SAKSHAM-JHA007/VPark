@@ -323,7 +323,6 @@ export function VParkApp({
         currentRole={currentRole}
         onRoleChange={handleRoleChange}
         onAddCapability={handleAddCapability}
-        onSwitchDemoPersona={handleSwitchDemoPersona}
         onOpenLogin={openLoginModal}
         onLogout={handleLogout}
         activeTab={activeTab}

@@ -117,6 +117,7 @@ export interface User {
   roles: UserRole[]; // Derived from user_roles join records
   activeRole: UserRole;
   providerType?: ProviderType;
+  passwordHash?: string;
   // Timestamps instead of booleans per PRD v2.2 Section 9.1
   phoneVerifiedAt?: string | null;
   emailVerifiedAt?: string | null;

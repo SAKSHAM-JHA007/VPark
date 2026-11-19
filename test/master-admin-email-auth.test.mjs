@@ -47,4 +47,21 @@ describe('Master Admin & Email-Based Authentication', () => {
     assert.ok(googleRouteCode.includes('upsertGoogleUser'), 'Google route must call upsertGoogleUser');
     assert.ok(googleRouteCode.includes('jhasaksham.7453k@gmail.com'), 'Google route must check for master admin email');
   });
+
+  it('removes demo persona buttons and implements 2-step password setup for email signup', () => {
+    const authModalCode = fs.readFileSync('src/components/AuthModal.tsx', 'utf-8');
+    // Ensure demo personas are removed
+    assert.ok(!authModalCode.includes('Pilot Quick-Access Personas'), 'Demo quick-access personas must be removed');
+    assert.ok(!authModalCode.includes('handleDemoLogin'), 'Demo login handler must be removed');
+
+    // Ensure 2-step password setup exists
+    assert.ok(authModalCode.includes('Step 1: Set Password'), 'Must include step 1 password');
+    assert.ok(authModalCode.includes('Step 2: Confirm Password'), 'Must include step 2 confirm password');
+    assert.ok(authModalCode.includes('Passwords match'), 'Must validate password confirmation');
+    assert.ok(authModalCode.includes('Passwords do not match'), 'Must warn on mismatched passwords');
+
+    // Header must also not have demo personas
+    const headerCode = fs.readFileSync('src/components/Header.tsx', 'utf-8');
+    assert.ok(!headerCode.includes('Demo Personas'), 'Demo personas must be removed from Header menu');
+  });
 });

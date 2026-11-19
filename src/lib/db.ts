@@ -40,6 +40,7 @@ import {
   calculateRankingScore,
 } from './engine.mjs';
 import { hashOtp, verifyOtpHash } from './otp-crypto.mjs';
+import { hashPassword, verifyPassword } from './password';
 import { sqliteUserDb } from './sqlite-user-db';
 
 export interface DatabaseState {
@@ -518,6 +519,147 @@ class Database {
 
     this.persist();
     return { success: true, user: masterUser };
+  }
+
+  public checkEmailStatus(rawEmail: string): { exists: boolean; hasPassword: boolean; isMasterAdmin: boolean } {
+    const cleanEmail = (rawEmail || '').trim().toLowerCase();
+    if (!cleanEmail) return { exists: false, hasPassword: false, isMasterAdmin: false };
+    if (cleanEmail === 'jhasaksham.7453k@gmail.com') {
+      return { exists: true, hasPassword: true, isMasterAdmin: true };
+    }
+    const user = this.getUserByEmail(cleanEmail);
+    return {
+      exists: Boolean(user),
+      hasPassword: Boolean(user?.passwordHash),
+      isMasterAdmin: false,
+    };
+  }
+
+  public registerWithEmailPassword(params: {
+    email: string;
+    password: string;
+    intent?: 'driver' | 'provider';
+  }): { success: boolean; user?: User; onboardingRequired?: boolean; error?: string } {
+    const cleanEmail = (params.email || '').trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || cleanEmail.length < 5) {
+      return { success: false, error: 'A valid email address is required.' };
+    }
+    if (!params.password || params.password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long.' };
+    }
+
+    if (cleanEmail === 'jhasaksham.7453k@gmail.com') {
+      return { success: false, error: 'Master administrator account must use master security key.' };
+    }
+
+    const existing = this.getUserByEmail(cleanEmail);
+    const nowIso = new Date().toISOString();
+
+    if (existing) {
+      if (existing.passwordHash) {
+        return { success: false, error: 'An account with this email already exists. Please sign in instead.' };
+      }
+      // Account exists (e.g. from Google or guest booking) but has no password yet -> set password!
+      existing.passwordHash = hashPassword(params.password);
+      existing.emailVerifiedAt = existing.emailVerifiedAt || nowIso;
+      existing.lastLoginAt = nowIso;
+      existing.updatedAt = nowIso;
+      this.persist();
+      const onboardingRequired = !existing.phone || existing.vehicles.length === 0;
+      return { success: true, user: existing, onboardingRequired };
+    }
+
+    const assignedRole: UserRole = params.intent === 'provider' ? 'PROVIDER' : 'DRIVER';
+    const userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const roleId = params.intent === 'provider' ? 'role_provider' : 'role_driver';
+
+    const newUser: User = {
+      id: userId,
+      phone: '',
+      name: cleanEmail.split('@')[0],
+      email: cleanEmail,
+      passwordHash: hashPassword(params.password),
+      roles: [assignedRole],
+      activeRole: assignedRole,
+      providerType: params.intent === 'provider' ? 'OWNER' : undefined,
+      isPhoneVerified: false,
+      emailVerifiedAt: nowIso,
+      accountStatus: 'ACTIVE',
+      lastLoginAt: nowIso,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      vehicles: [],
+    };
+
+    this.state.users.push(newUser);
+    this.state.userRoles.push({
+      userId,
+      roleId,
+      roleName: assignedRole,
+      grantedAt: nowIso,
+      grantedBy: 'SELF_SIGNUP',
+    });
+
+    this.createAuditLog({
+      actorId: userId,
+      actorName: newUser.name,
+      actorRole: assignedRole,
+      action: 'LOGIN_OTP',
+      targetType: 'USER',
+      targetId: userId,
+      details: `User registered via email and password (${assignedRole}).`,
+    });
+
+    this.persist();
+    return { success: true, user: newUser, onboardingRequired: true };
+  }
+
+  public loginWithEmailPassword(params: {
+    email: string;
+    password: string;
+  }): { success: boolean; user?: User; isMasterAdmin?: boolean; error?: string } {
+    const cleanEmail = (params.email || '').trim().toLowerCase();
+    if (!cleanEmail || !params.password) {
+      return { success: false, error: 'Email and password are required.' };
+    }
+
+    if (cleanEmail === 'jhasaksham.7453k@gmail.com') {
+      if (params.password === 'Aduomi@1428') {
+        const masterRes = this.verifyMasterAdmin(cleanEmail, params.password);
+        return { ...masterRes, isMasterAdmin: true };
+      }
+      return { success: false, error: 'Invalid master administrator password.' };
+    }
+
+    const user = this.getUserByEmail(cleanEmail);
+    if (!user) {
+      return { success: false, error: 'No account found with this email. Please sign up.' };
+    }
+
+    if (!user.passwordHash) {
+      return { success: false, error: 'No password is set for this account. Please use Sign Up to set your password or Continue with Google.' };
+    }
+
+    if (!verifyPassword(params.password, user.passwordHash)) {
+      return { success: false, error: 'Incorrect password. Please try again.' };
+    }
+
+    const nowIso = new Date().toISOString();
+    user.lastLoginAt = nowIso;
+    user.updatedAt = nowIso;
+
+    this.createAuditLog({
+      actorId: user.id,
+      actorName: user.name,
+      actorRole: user.activeRole,
+      action: 'LOGIN_OTP',
+      targetType: 'USER',
+      targetId: user.id,
+      details: 'User authenticated via password.',
+    });
+
+    this.persist();
+    return { success: true, user };
   }
 
   public upsertGoogleUser(data: {

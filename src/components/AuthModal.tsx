@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ProviderType, User, UserRole, VehicleType } from '@/types';
+import { ProviderType, User, VehicleType } from '@/types';
 import { APP_CONFIG } from '@/lib/constants';
 import { signInWithGooglePopup } from '@/lib/firebase';
 import { validatePlateNumber, normalizeIndianPhone } from '@/lib/validation';
@@ -17,6 +17,9 @@ import {
   ArrowRight,
   Lock,
   KeyRound,
+  Eye,
+  EyeOff,
+  AlertCircle,
 } from 'lucide-react';
 
 interface AuthPanelProps {
@@ -33,43 +36,40 @@ export function AuthPanel({
   embedded = false,
 }: AuthPanelProps) {
   const [intent, setIntent] = useState<'driver' | 'provider'>(initialIntent);
-  const [step, setStep] = useState<'email' | 'otp' | 'master_password' | 'onboarding'>('email');
-  // Presentation only: slide a step in after the first step change (not on initial open).
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
+  const [step, setStep] = useState<'credentials' | 'master_password' | 'onboarding'>('credentials');
+
   const initialStepRef = useRef(step);
   const stepChangedRef = useRef(false);
   if (step !== initialStepRef.current) stepChangedRef.current = true;
   const stepEnterClass = stepChangedRef.current ? ' animate-slide-in' : '';
+
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+
   const [phone, setPhone] = useState<string>('');
-  const [otp, setOtp] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [providerType, setProviderType] = useState<ProviderType>('OWNER');
   const [acceptTerms, setAcceptTerms] = useState<boolean>(true);
-  const [cooldown, setCooldown] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [googleSigningIn, setGoogleSigningIn] = useState<boolean>(false);
   const [plateNumber, setPlateNumber] = useState<string>('');
   const [makeModel, setMakeModel] = useState<string>('');
   const [vehicleType, setVehicleType] = useState<VehicleType>('SEDAN');
   const [error, setError] = useState<string | null>(null);
-  const [hint, setHint] = useState<string | null>(null);
 
   useEffect(() => {
     setIntent(initialIntent);
   }, [initialIntent]);
 
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setInterval(() => {
-      setCooldown((c) => Math.max(0, c - 1));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [cooldown]);
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   const handleGoogleSignIn = async () => {
     setError(null);
-    setHint(null);
     if (!acceptTerms) {
       setError('Please accept the Terms of Service & DPDP Act 2023 Privacy Notice.');
       return;
@@ -113,7 +113,7 @@ export function AuthPanel({
       } else if (err?.code === 'auth/unauthorized-domain' || (err?.message && err.message.includes('auth/unauthorized-domain'))) {
         const domain = typeof window !== 'undefined' ? window.location.hostname : 'vpark-one.vercel.app';
         setError(
-          `Domain "${domain}" is not yet in the Firebase Authorized Domains list. Please add "${domain}" in Firebase Console → Authentication → Settings → Authorized domains. In the meantime, you can sign in below using your Email ID or Master Login!`
+          `Domain "${domain}" is not in the Firebase Authorized Domains list. Please add "${domain}" in Firebase Console → Authentication → Settings → Authorized domains. You can sign in using your Email & Password below!`
         );
       } else {
         setError(err?.message || 'Google authentication encountered an error.');
@@ -123,10 +123,9 @@ export function AuthPanel({
     }
   };
 
-  const handleEmailSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError(null);
-    setHint(null);
 
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -140,26 +139,63 @@ export function AuthPanel({
       return;
     }
 
+    if (!password) {
+      setError('Please enter a password.');
+      return;
+    }
+
+    if (authMode === 'signup') {
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters long.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match. Please verify both password fields.');
+        return;
+      }
+      if (!acceptTerms) {
+        setError('Please agree to the VPark Terms of Service & Privacy Policy.');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/otp', {
+      const endpoint = '/api/auth/email';
+      const payload =
+        authMode === 'signup'
+          ? { action: 'SIGNUP', email: cleanEmail, password, confirmPassword, intent }
+          : { action: 'LOGIN', email: cleanEmail, password };
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'REQUEST_OTP', email: cleanEmail }),
+        body: JSON.stringify(payload),
       });
+
       const data = await res.json();
       if (!res.ok || !data.success) {
-        if (data.retryAfterSeconds) setCooldown(data.retryAfterSeconds);
-        setError(data.error || 'Could not send verification code.');
-      } else if (data.isMasterAdmin) {
-        setStep('master_password');
+        // Helpful redirection if user tried to login on an unregistered email
+        if (authMode === 'signin' && data.error && data.error.includes('No account found')) {
+          setError('No account found for this email. Switched to Sign Up so you can set your password.');
+          setAuthMode('signup');
+        } else if (authMode === 'signup' && data.error && data.error.includes('already exists')) {
+          setError('An account with this email already exists. Switched to Sign In.');
+          setAuthMode('signin');
+        } else {
+          setError(data.error || 'Authentication failed. Please check your credentials.');
+        }
+        return;
+      }
+
+      if (data.onboardingRequired) {
+        setFullName(data.user.name || '');
+        setStep('onboarding');
       } else {
-        setStep('otp');
-        setCooldown(data.cooldownSeconds || APP_CONFIG.otpResendCooldownSeconds);
-        setHint(`Demo code: ${data.demoOtp || APP_CONFIG.demoOtp} (valid for ${APP_CONFIG.otpExpiryMinutes} mins)`);
+        onAuthenticated(data.user);
       }
     } catch {
-      setError('Network error requesting verification code.');
+      setError('Network error during authentication. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -170,7 +206,7 @@ export function AuthPanel({
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/otp', {
+      const res = await fetch('/api/auth/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -187,31 +223,6 @@ export function AuthPanel({
       }
     } catch {
       setError('Network error during master authentication.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'VERIFY_OTP', email: email.trim().toLowerCase(), otp, intent }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(data.error || 'Invalid verification code.');
-      } else if (data.onboardingRequired) {
-        setStep('onboarding');
-      } else {
-        onAuthenticated(data.user);
-      }
-    } catch {
-      setError('Network error verifying code.');
     } finally {
       setLoading(false);
     }
@@ -286,28 +297,6 @@ export function AuthPanel({
     }
   };
 
-  const handleDemoLogin = async (role: UserRole) => {
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/role', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'SWITCH_DEMO_PERSONA', role, switchDemoUser: true }),
-      });
-      const data = await res.json();
-      if (data.success && data.user) {
-        onAuthenticated(data.user);
-      } else {
-        setError(data.error || 'Could not switch demo profile.');
-      }
-    } catch {
-      setError('Failed to sign into demo account.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div
       className={`w-full max-w-md bg-[var(--surface-bg)] rounded-sm border border-[var(--hairline-strong)] overflow-hidden ${
@@ -325,7 +314,9 @@ export function AuthPanel({
               ? 'Complete User Details'
               : step === 'master_password'
               ? 'Master Admin Authentication'
-              : 'Driver & Host Login'}
+              : authMode === 'signup'
+              ? 'Create VPark Account'
+              : 'Sign In to VPark'}
           </h2>
         </div>
         {onClose && (
@@ -340,7 +331,7 @@ export function AuthPanel({
         )}
       </div>
 
-      <div className="p-5 space-y-5 text-xs">
+      <div className="p-5 space-y-4 text-xs">
         {/* Two-door intent selector */}
         {step !== 'onboarding' && step !== 'master_password' && (
           <div>
@@ -384,19 +375,14 @@ export function AuthPanel({
         )}
 
         {error && (
-          <div role="alert" className="p-2.5 rounded-sm bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 font-mono text-xs animate-fade-in">
-            {error}
+          <div role="alert" className="p-2.5 rounded-sm bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 font-mono text-xs flex items-start gap-2 animate-fade-in">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span className="flex-1">{error}</span>
           </div>
         )}
 
-        {hint && (
-          <div className="p-2.5 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[var(--ink)] font-mono text-xs animate-fade-in">
-            {hint}
-          </div>
-        )}
-
-        {/* Step 1: Authentication (Google Sign-In + Email/Master Key) */}
-        {step === 'email' && (
+        {/* Step 1: Credentials (Google Sign-In + Email with 2-Step Password) */}
+        {step === 'credentials' && (
           <div className={`space-y-4${stepEnterClass}`}>
             {/* Google Authentication 1-Click Button */}
             <div className="space-y-3">
@@ -434,9 +420,45 @@ export function AuthPanel({
               </div>
             </div>
 
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+            {/* Mode Tabs: Sign Up (Create Account) vs Sign In */}
+            <div className="flex border-b border-[var(--hairline-strong)] mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('signup');
+                  setError(null);
+                }}
+                className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider text-center border-b-2 transition-colors cursor-pointer ${
+                  authMode === 'signup'
+                    ? 'border-[var(--transit-accent)] text-[var(--transit-accent)] font-bold'
+                    : 'border-transparent text-[var(--ink-tertiary)] hover:text-[var(--ink)]'
+                }`}
+              >
+                Sign Up (New Account)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('signin');
+                  setError(null);
+                }}
+                className={`flex-1 py-2 font-mono text-xs uppercase tracking-wider text-center border-b-2 transition-colors cursor-pointer ${
+                  authMode === 'signin'
+                    ? 'border-[var(--transit-accent)] text-[var(--transit-accent)] font-bold'
+                    : 'border-transparent text-[var(--ink-tertiary)] hover:text-[var(--ink)]'
+                }`}
+              >
+                Sign In
+              </button>
+            </div>
+
+            <form onSubmit={handleCredentialsSubmit} className="space-y-3.5">
+              {/* Email Input */}
               <div>
-                <label htmlFor="vpark-email-input" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5">
+                <label
+                  htmlFor="vpark-email-input"
+                  className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5"
+                >
                   Primary Email ID
                 </label>
                 <div className="relative flex items-center">
@@ -447,36 +469,156 @@ export function AuthPanel({
                     required
                     autoComplete="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (e.target.value.trim().toLowerCase() === 'jhasaksham.7453k@gmail.com') {
+                        setStep('master_password');
+                      }
+                    }}
                     placeholder="e.g. driver@vpark.in or your.name@example.com"
                     className="w-full pl-9 pr-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
                   />
                 </div>
-                <span className="text-[10px] font-mono text-[var(--ink-tertiary)] mt-1 block">
-                  Single email handles driver reservations, host listings, and audit payouts.
-                </span>
               </div>
 
-              <label className="flex items-start gap-2 p-2 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline)] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={acceptTerms}
-                  onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="mt-0.5 w-3.5 h-3.5 accent-[var(--transit-accent)]"
-                />
-                <span className="text-[10px] font-mono text-[var(--ink-secondary)] leading-relaxed">
-                  I agree to VPark Terms of Service &amp; DPDP Act 2023 Privacy Notice.
-                </span>
-              </label>
+              {/* Password Input (Step 1) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label
+                    htmlFor="vpark-password-input"
+                    className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)]"
+                  >
+                    {authMode === 'signup' ? 'Step 1: Set Password (min 6 characters)' : 'Password'}
+                  </label>
+                </div>
+                <div className="relative flex items-center">
+                  <Lock className="w-4 h-4 text-[var(--ink-tertiary)] absolute left-3" />
+                  <input
+                    id="vpark-password-input"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={authMode === 'signup' ? 'Create a secure password' : 'Enter your password'}
+                    className="w-full pl-9 pr-9 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 text-[var(--ink-tertiary)] hover:text-[var(--ink)] cursor-pointer"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password (Step 2 - Only during Sign Up) */}
+              {authMode === 'signup' && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="vpark-confirm-password-input"
+                      className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)]"
+                    >
+                      Step 2: Confirm Password
+                    </label>
+                    {passwordsMatch && (
+                      <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                        <CheckCircle2 className="w-3 h-3" /> Passwords match
+                      </span>
+                    )}
+                    {passwordsMismatch && (
+                      <span className="font-mono text-[10px] text-red-600 dark:text-red-400 font-semibold">
+                        Passwords do not match
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative flex items-center">
+                    <Lock className="w-4 h-4 text-[var(--ink-tertiary)] absolute left-3" />
+                    <input
+                      id="vpark-confirm-password-input"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter your password to confirm"
+                      className={`w-full pl-9 pr-9 py-2 rounded-sm border bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none ${
+                        passwordsMismatch
+                          ? 'border-red-500 focus:border-red-500'
+                          : passwordsMatch
+                          ? 'border-emerald-500 focus:border-emerald-500'
+                          : 'border-[var(--hairline-strong)] focus:border-[var(--transit-accent)]'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 text-[var(--ink-tertiary)] hover:text-[var(--ink)] cursor-pointer"
+                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {authMode === 'signup' && (
+                <label className="flex items-start gap-2 p-2 rounded-sm bg-[var(--surface-alt)] border border-[var(--hairline)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    className="mt-0.5 w-3.5 h-3.5 accent-[var(--transit-accent)]"
+                  />
+                  <span className="text-[10px] font-mono text-[var(--ink-secondary)] leading-relaxed">
+                    I agree to VPark Terms of Service &amp; DPDP Act 2023 Privacy Notice.
+                  </span>
+                </label>
+              )}
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (authMode === 'signup' && passwordsMismatch)}
                 className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
               >
-                {loading ? 'Processing...' : 'Continue with Email'}
+                {loading
+                  ? 'Authenticating...'
+                  : authMode === 'signup'
+                  ? 'Create Account & Proceed'
+                  : 'Continue with Email'}
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
+
+              <div className="text-center pt-1 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode(authMode === 'signup' ? 'signin' : 'signup');
+                    setError(null);
+                  }}
+                  className="text-[var(--ink-secondary)] hover:text-[var(--ink)] font-mono text-[10px] uppercase hover:underline cursor-pointer"
+                >
+                  {authMode === 'signup'
+                    ? 'Already have an account? Sign in'
+                    : "Don't have an account? Sign up"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('jhasaksham.7453k@gmail.com');
+                    setStep('master_password');
+                  }}
+                  className="text-[10px] text-[var(--transit-accent)] hover:underline flex items-center gap-1 font-mono cursor-pointer"
+                  title="Master Administrator Portal"
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>Master Login</span>
+                </button>
+              </div>
             </form>
           </div>
         )}
@@ -495,7 +637,10 @@ export function AuthPanel({
             </div>
 
             <div>
-              <label htmlFor="vpark-master-pwd" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5">
+              <label
+                htmlFor="vpark-master-pwd"
+                className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5"
+              >
                 Master Security Key
               </label>
               <div className="relative flex items-center">
@@ -525,75 +670,25 @@ export function AuthPanel({
             <button
               type="button"
               onClick={() => {
-                setStep('email');
+                setStep('credentials');
                 setPassword('');
                 setError(null);
               }}
-              className="text-center w-full text-[var(--ink-secondary)] hover:text-[var(--ink)] font-mono text-[10px] uppercase hover:underline"
+              className="text-center w-full text-[var(--ink-secondary)] hover:text-[var(--ink)] font-mono text-[10px] uppercase hover:underline cursor-pointer"
             >
               Switch Account
             </button>
           </form>
         )}
 
-        {/* Step 2: Verify Email OTP */}
-        {step === 'otp' && (
-          <form key="step-otp" onSubmit={handleVerifyOtp} className={`space-y-4${stepEnterClass}`}>
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="vpark-otp-input" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)]">
-                  Enter 6-Digit Email Code
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep('email');
-                    setError(null);
-                  }}
-                  className="text-[var(--transit-accent)] font-mono text-[10px] uppercase hover:underline cursor-pointer"
-                >
-                  Edit Email
-                </button>
-              </div>
-              <input
-                id="vpark-otp-input"
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                required
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                placeholder="000000"
-                className="w-full px-4 py-2.5 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-center text-lg tracking-[0.35em] text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || otp.length < 4}
-              className="w-full py-2.5 rounded-sm bg-[var(--transit-accent)] hover:bg-[var(--transit-accent-hover)] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
-            >
-              {loading ? 'Verifying...' : 'Authenticate & Proceed'}
-            </button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                disabled={cooldown > 0 || loading}
-                onClick={() => handleEmailSubmit()}
-                className="text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-40 font-mono text-[10px] uppercase tracking-wider cursor-pointer"
-              >
-                {cooldown > 0 ? `Resend Available in ${cooldown}s` : 'Resend Verification Code'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Step 3: Complete User Details (Mobile Number Stored Here Exclusively as User Detail) */}
+        {/* Step 2: Complete User Details (Mobile Number & Vehicle Details Stored Here) */}
         {step === 'onboarding' && (
           <form key="step-onboarding" onSubmit={handleCompleteOnboarding} className={`space-y-3${stepEnterClass}`}>
             <div>
-              <label htmlFor="vpark-fullname" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1">
+              <label
+                htmlFor="vpark-fullname"
+                className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+              >
                 Full Legal Name *
               </label>
               <input
@@ -608,7 +703,10 @@ export function AuthPanel({
             </div>
 
             <div>
-              <label htmlFor="vpark-user-phone" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1">
+              <label
+                htmlFor="vpark-user-phone"
+                className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+              >
                 Mobile Number (User Contact Details)
               </label>
               <div className="relative flex items-center">
@@ -630,7 +728,10 @@ export function AuthPanel({
             {intent === 'driver' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label htmlFor="vpark-onboard-plate" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1">
+                  <label
+                    htmlFor="vpark-onboard-plate"
+                    className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+                  >
                     Vehicle Plate (Optional)
                   </label>
                   <input
@@ -643,7 +744,10 @@ export function AuthPanel({
                   />
                 </div>
                 <div>
-                  <label htmlFor="vpark-onboard-vtype" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1">
+                  <label
+                    htmlFor="vpark-onboard-vtype"
+                    className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+                  >
                     Vehicle Class
                   </label>
                   <select
@@ -664,7 +768,10 @@ export function AuthPanel({
 
             {intent === 'provider' && (
               <div>
-                <label htmlFor="vpark-prov-type" className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1">
+                <label
+                  htmlFor="vpark-prov-type"
+                  className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+                >
                   Host Capacity Tier
                 </label>
                 <select
@@ -700,56 +807,6 @@ export function AuthPanel({
               {loading ? 'Saving Details...' : 'Confirm Registration'}
             </button>
           </form>
-        )}
-
-        {/* Quick Demo Persona Launcher */}
-        {step !== 'onboarding' && step !== 'master_password' && (
-          <div className="pt-3 border-t border-[var(--hairline)] space-y-1.5">
-            <div className="flex items-center justify-between font-mono text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wider">
-              <span>Pilot Quick-Access Personas</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('jhasaksham.7453k@gmail.com');
-                  setStep('master_password');
-                }}
-                className="text-[9px] text-[var(--transit-accent)] hover:underline flex items-center gap-1 cursor-pointer"
-                title="Master Console Access"
-              >
-                <Lock className="w-3 h-3" />
-                <span>Master Login</span>
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoLogin('DRIVER')}
-                className="p-1.5 rounded-sm border border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-center transition-colors font-mono text-xs cursor-pointer"
-              >
-                <span className="font-bold text-[var(--ink)] block text-[11px]">RAJESH</span>
-                <span className="text-[9px] text-[var(--ink-tertiary)] uppercase">Driver</span>
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoLogin('PROVIDER')}
-                className="p-1.5 rounded-sm border border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-center transition-colors font-mono text-xs cursor-pointer"
-              >
-                <span className="font-bold text-[var(--ink)] block text-[11px]">SURESH</span>
-                <span className="text-[9px] text-[var(--ink-tertiary)] uppercase">Host</span>
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoLogin('ADMIN')}
-                className="p-1.5 rounded-sm border border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-center transition-colors font-mono text-xs cursor-pointer"
-              >
-                <span className="font-bold text-[var(--ink)] block text-[11px]">VIKRAM</span>
-                <span className="text-[9px] text-[var(--ink-tertiary)] uppercase">Admin</span>
-              </button>
-            </div>
-          </div>
         )}
       </div>
     </div>
