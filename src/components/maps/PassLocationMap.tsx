@@ -19,6 +19,10 @@ interface PassLocationMapProps {
 
 type MapStatus = 'loading' | 'ready' | 'fallback';
 
+// Some key problems (e.g. a malformed key) only log a console warning and never call
+// gm_authFailure, leaving a blank map. If no tiles render in this time, use the iframe.
+const TILE_TIMEOUT_MS = 8000;
+
 // Single-pin marker in VPark blue (an SVG path, so no extra marker library is needed).
 const PIN_PATH =
   'M12 0C5.4 0 0 5.3 0 11.9 0 20.8 12 32 12 32s12-11.2 12-20.1C24 5.3 18.6 0 12 0zm0 16.5a4.6 4.6 0 1 1 0-9.2 4.6 4.6 0 0 1 0 9.2z';
@@ -42,6 +46,7 @@ export function PassLocationMap({ latitude, longitude, title, className = 'h-48'
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const watchdogRef = useRef<number | undefined>(undefined);
   const [status, setStatus] = useState<MapStatus>(() =>
     apiKey && !hasGoogleMapsAuthFailed() ? 'loading' : 'fallback'
   );
@@ -68,6 +73,7 @@ export function PassLocationMap({ latitude, longitude, title, className = 'h-48'
           clickableIcons: false,
           gestureHandling: 'cooperative',
         });
+        const map = mapRef.current;
         markerRef.current = new Marker({
           position,
           map: mapRef.current,
@@ -82,7 +88,20 @@ export function PassLocationMap({ latitude, longitude, title, className = 'h-48'
             anchor: new Point(12, 32),
           },
         });
-        setStatus('ready');
+
+        // Only reveal the map once tiles actually render; otherwise fall back.
+        const tilesListener = map.addListener('tilesloaded', () => {
+          window.clearTimeout(watchdogRef.current);
+          tilesListener.remove();
+          setStatus('ready');
+        });
+        watchdogRef.current = window.setTimeout(() => {
+          tilesListener.remove();
+          markerRef.current?.setMap(null);
+          markerRef.current = null;
+          mapRef.current = null;
+          setStatus('fallback');
+        }, TILE_TIMEOUT_MS);
       })
       .catch(() => {
         if (!cancelled) setStatus('fallback');
@@ -112,6 +131,7 @@ export function PassLocationMap({ latitude, longitude, title, className = 'h-48'
   // Detach the marker when the pass closes.
   useEffect(
     () => () => {
+      window.clearTimeout(watchdogRef.current);
       markerRef.current?.setMap(null);
       markerRef.current = null;
       mapRef.current = null;
