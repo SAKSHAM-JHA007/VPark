@@ -51,7 +51,7 @@ export default function MasterAdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between font-mono">
+    <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between font-sans">
       {/* Header */}
       <header className="vp-nav px-4 sm:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
