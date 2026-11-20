@@ -69,7 +69,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
           />
 
           <span
-            className={`absolute top-2 left-2 px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border ${categoryBadgeClass}`}
+            className={`absolute top-2 left-2 px-2 py-0.5 rounded-full font-sans text-[10px] tracking-wider uppercase border ${categoryBadgeClass}`}
           >
             {categoryLabel}
           </span>
@@ -84,7 +84,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
                 {listing.title}
               </h3>
 
-              <div className="text-right flex-shrink-0 font-mono">
+              <div className="text-right flex-shrink-0 tabular-nums">
                 {isFree ? (
                   <span className="text-sm font-bold text-[var(--ink)]">FREE</span>
                 ) : (
@@ -104,14 +104,14 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
               <span className="text-[var(--hairline-strong)]">·</span>
               <span className="font-mono text-[11px] text-[var(--ink)] flex-shrink-0">{distanceKm} KM</span>
               <span className="text-[var(--hairline-strong)]">·</span>
-              <span className="inline-flex items-center gap-0.5 text-[10px] text-[var(--ink-tertiary)] font-mono flex-shrink-0">
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-[var(--ink-tertiary)] font-sans flex-shrink-0">
                 <Lock className="w-2.5 h-2.5 text-[var(--transit-accent)]" />
                 Exact location after booking
               </span>
             </div>
 
             {/* Row 3: Verification, Rating & Attributes */}
-            <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-[var(--ink-secondary)] pt-1">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-sans text-[var(--ink-secondary)] pt-1">
               {listing.reviewCount > 0 ? (
                 <div className="flex items-center gap-1 font-semibold text-[var(--ink)]">
                   <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
@@ -148,15 +148,15 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
           {/* Row 4: Availability & Action Button */}
           <div className="flex items-center justify-between gap-3 pt-2.5 mt-2.5 border-t border-[var(--hairline)]">
             {listing.category === 'PUBLIC' ? (
-              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border border-[var(--hairline-strong)] text-[var(--ink-secondary)]">
+              <span className="px-2 py-0.5 rounded-full font-sans text-[10px] tracking-wider uppercase border border-[var(--hairline-strong)] text-[var(--ink-secondary)]">
                 PUBLIC · NOT BOOKABLE
               </span>
             ) : availableCapacity > 0 ? (
-              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border border-emerald-600/30 text-emerald-700 dark:text-emerald-400">
+              <span className="px-2 py-0.5 rounded-full font-sans text-[10px] tracking-wider uppercase border border-emerald-600/30 text-emerald-700 dark:text-emerald-400">
                 {availableCapacity} {availableCapacity === 1 ? 'BAY' : 'BAYS'} AVAILABLE
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border border-amber-600/30 text-amber-700 dark:text-amber-400">
+              <span className="px-2 py-0.5 rounded-full font-sans text-[10px] tracking-wider uppercase border border-amber-600/30 text-amber-700 dark:text-amber-400">
                 FULL FOR THIS TIME
               </span>
             )}
@@ -168,7 +168,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
                   e.stopPropagation();
                   onBook();
                 }}
-                className="px-3.5 py-1.5 rounded-full bg-brand hover:bg-brand-hover text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 active:scale-[0.96]"
+                className="px-3.5 py-1.5 rounded-full bg-brand hover:bg-brand-hover text-white font-sans text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 active:scale-[0.96]"
               >
                 RESERVE BAY
               </button>
@@ -179,7 +179,7 @@ export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardP
                   e.stopPropagation();
                   onBook();
                 }}
-                className="px-3 py-1.5 rounded-full bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider border border-[var(--hairline-strong)] transition-[background-color,transform] duration-150 active:scale-[0.96]"
+                className="px-3 py-1.5 rounded-full bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-[var(--ink)] font-sans text-xs uppercase tracking-wider border border-[var(--hairline-strong)] transition-[background-color,transform] duration-150 active:scale-[0.96]"
               >
                 VIEW DETAILS
               </button>
