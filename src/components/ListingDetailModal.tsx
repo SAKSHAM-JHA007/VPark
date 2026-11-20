@@ -177,7 +177,7 @@ export function ListingDetailModal({
         <div className="px-5 py-3.5 border-b border-[var(--hairline)] flex items-center justify-between bg-[var(--surface-alt)]">
           <div className="flex items-center gap-2">
             <span
-              className={`px-2 py-0.5 rounded-none font-mono text-[10px] font-bold uppercase tracking-wider border ${
+              className={`px-2 py-0.5 rounded-none font-sans text-[10px] font-bold uppercase tracking-wider border ${
                 listing.category === 'PRIVATE'
                   ? 'border-purple-600/40 text-purple-700 dark:text-purple-400 bg-[var(--surface-bg)]'
                   : listing.category === 'COMMERCIAL'
@@ -188,7 +188,7 @@ export function ListingDetailModal({
               {listing.category}
             </span>
             {listing.status === 'VERIFIED' && (
-              <span className="flex items-center gap-1 font-mono text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 bg-[var(--surface-bg)] px-2 py-0.5 border border-emerald-600/40">
+              <span className="flex items-center gap-1 font-sans text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 bg-[var(--surface-bg)] px-2 py-0.5 border border-emerald-600/40">
                 <ShieldCheck className="w-3 h-3" />
                 Verified Deed
               </span>
@@ -229,13 +229,13 @@ export function ListingDetailModal({
                 {listing.landmark && (
                   <>
                     <span className="text-[var(--hairline-strong)]">·</span>
-                    <span className="font-mono text-[11px]">Near {listing.landmark}</span>
+                    <span className="font-sans text-[11px]">Near {listing.landmark}</span>
                   </>
                 )}
                 {listing.locationPrecision === 'APPROXIMATE' && (
                   <>
                     <span className="text-[var(--hairline-strong)]">·</span>
-                    <span className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-mono">
+                    <span className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-sans">
                       <Lock className="w-3 h-3" />
                       Exact street address &amp; precise map pin unlocked after payment
                     </span>
@@ -243,11 +243,11 @@ export function ListingDetailModal({
                 )}
               </div>
               {listing.dimensionsNotes && (
-                <p className="text-xs font-mono text-[var(--ink-tertiary)] mt-1">{listing.dimensionsNotes}</p>
+                <p className="text-xs font-sans text-[var(--ink-tertiary)] mt-1">{listing.dimensionsNotes}</p>
               )}
             </div>
 
-            <div className="text-right flex-shrink-0 font-mono">
+            <div className="text-right flex-shrink-0 tabular-nums">
               <span className="text-2xl font-bold text-slate-900">₹{listing.pricing.hourlyRate}</span>
               <span className="text-xs text-slate-500 block">per hour</span>
             </div>
@@ -400,12 +400,12 @@ export function ListingDetailModal({
                     }`}
                   />
                   {plateNumber.trim() && !validatePlateNumber(plateNumber) && (
-                    <span className="text-[10px] text-red-600 block mt-1 font-mono">
+                    <span className="text-[10px] text-red-600 block mt-1 font-sans">
                       Invalid plate. Format: KA-04-MB-1234 or 22-BH-1234-AA
                     </span>
                   )}
                   {plateNumber.trim() && validatePlateNumber(plateNumber) && (
-                    <span className="text-[10px] text-emerald-600 block mt-1 font-mono">
+                    <span className="text-[10px] text-emerald-600 block mt-1 font-sans">
                       ✓ Valid Indian registration plate
                     </span>
                   )}
@@ -431,7 +431,7 @@ export function ListingDetailModal({
                 />
               </div>
 
-              <div className="p-3.5 bg-white rounded-xl border border-slate-200 text-xs space-y-1.5 font-mono">
+              <div className="p-3.5 bg-white rounded-xl border border-slate-200 text-xs space-y-1.5">
                 <div className="flex justify-between text-slate-600">
                   <span>Parking Fee ({durationHours} hrs × ₹{listing.pricing.hourlyRate})</span>
                   <span>₹{pricing.parkingFee.toFixed(2)}</span>
@@ -505,7 +505,7 @@ export function ListingDetailModal({
           <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-scale-in">
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-mono text-blue-400 font-bold uppercase tracking-wider block">
+                <span className="text-[10px] font-sans text-blue-400 font-bold uppercase tracking-wider block">
                   Razorpay Route · Pilot Test Mode
                 </span>
                 <span className="font-black text-lg">{APP_CONFIG.appName} Bengaluru</span>
