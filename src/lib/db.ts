@@ -48,7 +48,11 @@ const LIVE_BOOKING_STATUSES: BookingStatus[] = ['CONFIRMED', 'CHECKED_IN'];
 
 function localDataDir(): string {
   // VPARK_DATA_DIR lets automated tests run against an isolated temporary directory.
-  return process.env.VPARK_DATA_DIR ? path.resolve(process.env.VPARK_DATA_DIR) : path.join(process.cwd(), '.data');
+  if (process.env.VPARK_DATA_DIR) return path.resolve(process.env.VPARK_DATA_DIR);
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join('/tmp', 'vpark_data');
+  }
+  return path.join(process.cwd(), '.data');
 }
 
 /** Collision-resistant IDs: many serverless instances may create records in the same millisecond. */

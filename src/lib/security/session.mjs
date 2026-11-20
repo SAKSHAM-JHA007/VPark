@@ -58,7 +58,7 @@ export function resolveSessionSecret(env = process.env) {
     }
     return { secret: raw, source: 'env' };
   }
-  if (env.NODE_ENV === 'production') {
+  if (env.NODE_ENV === 'production' && !env.VERCEL && env.VPARK_ALLOW_LOCAL_FALLBACK !== 'true') {
     return { secret: null, error: 'SESSION_SECRET is not configured.' };
   }
   const g = globalThis;

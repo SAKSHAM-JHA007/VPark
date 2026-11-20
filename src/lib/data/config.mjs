@@ -13,9 +13,10 @@ function isLoopback(hostname) {
 export function resolveDataBackend(env = process.env) {
   const url = (env.DATABASE_URL || env.POSTGRES_URL || '').trim();
   const production = env.NODE_ENV === 'production';
+  const isVercelOrFallback = Boolean(env.VERCEL || env.VPARK_ALLOW_LOCAL_FALLBACK === 'true');
 
   if (!url) {
-    if (production) {
+    if (production && !isVercelOrFallback) {
       return {
         kind: null,
         error:
