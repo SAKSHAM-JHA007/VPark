@@ -1,6 +1,6 @@
 # VPark — Bengaluru Smart Parking & Reservation Platform
 
-> Implementation of the [Product Requirements Document](docs/PRD.md) for the **Yelahanka Pilot Micro-Market, Bengaluru, India**. Built with Next.js 14, React 18, TypeScript, Tailwind CSS, and an active SQLite / relational transactional database engine with PostGIS-equivalent spatial distance computation.
+> Implementation of the [Product Requirements Document](docs/PRD.md) for the **Yelahanka Pilot Micro-Market, Bengaluru, India**. Built with Next.js 14, React 18, TypeScript, Tailwind CSS, and PostgreSQL for durable, shared application data (with a local JSON store for development).
 
 ---
 
@@ -92,18 +92,35 @@
 npm install
 ```
 
-### 2. Run Tests
-The verification test suite covers Haversine distance, ranking formula weights, stale penalties, overbooking prevention, and cancellation refund calculations:
+### 2. Choose a data store
+- **Local development (default):** with no `DATABASE_URL`, data lives in `.data/vpark_database.json`. It is single-process and is never used in production.
+- **PostgreSQL (required in production):** set `DATABASE_URL` in `.env.local`, then apply the schema:
+  ```bash
+  npm run db:migrate
+  ```
+  `npm run db:status` shows the schema version. A fresh database starts empty: accounts are created at Google sign-in, and `.data` is never imported automatically.
+
+In production a missing or unmigrated database makes every data request return `503`. The app never falls back to local files.
+
+### 3. Run Tests
+The verification test suite covers the pricing and ranking engine, location privacy, sessions, Google sign-in, admin access, and the data layer:
 ```bash
 npm test
 ```
+Data-layer tests come in three tiers, labelled in each file:
+- **Mocks:** `data-store-failures`.
+- **Embedded PostgreSQL engine:** `data-store-pglite`, using PGlite. It always runs.
+- **Real PostgreSQL server:** `data-store-postgres-server`. It is skipped unless a disposable database is configured. To run it:
+```bash
+VPARK_TEST_DATABASE_URL="postgres://user:pass@localhost:5432/vpark_test" npm run test:postgres
+```
 
-### 3. Build for Production
+### 4. Build for Production
 ```bash
 npm run build
 ```
 
-### 4. Start Server
+### 5. Start Server
 ```bash
 npm start
 ```
@@ -117,10 +134,11 @@ Sign-in is **Google only**, verified on the server from a Firebase ID token. The
 Before running the app, copy `.env.example` to `.env.local` and set at least:
 - `NEXT_PUBLIC_FIREBASE_*` and `FIREBASE_PROJECT_ID`: your Firebase project (public values, not secrets).
 - `SESSION_SECRET`: 32+ random characters (required in production).
-- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`: the durable, shared session store (required in production; production sign-in returns `503` without it). Local development uses `.data` when these are unset.
+- `DATABASE_URL`: PostgreSQL for all application data and sessions (required in production; see above).
+- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (optional): store sessions in Redis instead of PostgreSQL.
 - `VPARK_ADMIN_FIREBASE_UIDS`: Firebase UIDs that get admin access.
 
 Without `FIREBASE_PROJECT_ID`, Google sign-in returns `503` (fails closed). See [docs/SECURITY.md](docs/SECURITY.md) for the security architecture, deployment steps and known limitations.
 
-The seeded demo records (Rajesh Kumar, Suresh Sharma, Vikram Rao) are still in a fresh database for fixtures, but nobody can sign in as them.
+The seeded demo records (Rajesh Kumar, Suresh Sharma, Vikram Rao) are still in a fresh *local development* store for fixtures, but nobody can sign in as them. They are never seeded into PostgreSQL in production.
 

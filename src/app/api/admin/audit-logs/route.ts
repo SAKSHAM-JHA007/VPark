@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCapability } from '@/lib/auth';
+import { requireCapability, errorResponse } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,10 +9,13 @@ export async function GET(req: NextRequest) {
   if (auth.error) return auth.error;
 
   try {
-    const logs = db.getAuditLogs();
-    const payments = db.getPayments();
-    const payouts = db.getPayouts();
-    const allBookings = db.getBookings();
+    const [logs, payments, payouts, allBookings, disputes] = await Promise.all([
+      db.getAuditLogs(),
+      db.getPayments(),
+      db.getPayouts(),
+      db.getBookings(),
+      db.getDisputes(),
+    ]);
 
     const totalTransactions = payments.length;
     const reconciledTransactions = payments.filter((p) => p.reconciled).length;
@@ -30,13 +33,12 @@ export async function GET(req: NextRequest) {
         totalProcessedVolume: Math.round(totalProcessedVolume * 100) / 100,
         totalPlatformRevenue: Math.round(totalPlatformRevenue * 100) / 100,
         totalProviderOwed: Math.round(totalProviderOwed * 100) / 100,
-        disputeRate: allBookings.length > 0 ? (db.getDisputes().length / allBookings.length) * 100 : 0,
+        disputeRate: allBookings.length > 0 ? (disputes.length / allBookings.length) * 100 : 0,
         payments,
         payouts,
       },
     });
   } catch (error) {
-    console.error('Audit logs error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to retrieve admin logs' }, { status: 500 });
+    return errorResponse(error, 'Failed to retrieve admin logs', 'Audit logs error');
   }
 }

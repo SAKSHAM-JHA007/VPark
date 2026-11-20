@@ -93,8 +93,8 @@ export function walk(value, prefix = '$', out = []) {
 }
 
 /** Create a verified listing directly in the database (test fixture). */
-export function seedVerifiedListing(db, overrides = {}) {
-  const listing = db.createListing({
+export async function seedVerifiedListing(db, overrides = {}) {
+  const listing = await db.createListing({
     title: 'Covered stilt bay',
     description: 'Private bay at 42 Secret Lane next to the blue gate.',
     providerId: 'usr_owner_1',
@@ -139,7 +139,7 @@ export function seedVerifiedListing(db, overrides = {}) {
     ...overrides,
   });
   // Seeding at the database layer (the seeded admin record is fine for fixtures).
-  const res = db.adminUpdateListingStatus('usr_admin_1', listing.id, 'VERIFIED');
+  const res = await db.adminUpdateListingStatus('usr_admin_1', listing.id, 'VERIFIED');
   if (!res.success) throw new Error(`fixture: ${res.error}`);
-  return db.getListingById(listing.id);
+  return await db.getListingById(listing.id);
 }

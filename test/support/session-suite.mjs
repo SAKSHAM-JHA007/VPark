@@ -84,7 +84,7 @@ export async function defineSessionEnforcementTests(label, app, makeStore) {
     });
 
     it('account deletion revokes every session of that account', async () => {
-      const victim = db.upsertVerifiedGoogleUser({ uid: `delete-me-${label}`, email: `delete.me.${label}@example.com`, grantAdmin: false }).user;
+      const victim = (await db.upsertVerifiedGoogleUser({ uid: `delete-me-${label}`, email: `delete.me.${label}@example.com`, grantAdmin: false })).user;
       const a = await sessionFor(victim.id);
       const b = await sessionFor(victim.id);
       const res = await userDelete.POST(request('POST', '/api/user/delete', { token: a }));
@@ -114,7 +114,7 @@ export async function defineSessionEnforcementTests(label, app, makeStore) {
       assert.equal(add.status, 403);
       const sw = await role.POST(request('POST', '/api/auth/role', { token, body: { action: 'SWITCH_MODE', role: 'ADMIN' } }));
       assert.equal(sw.status, 403);
-      assert.ok(!db.getUserById('usr_driver_1').roles.includes('ADMIN'));
+      assert.ok(!(await db.getUserById('usr_driver_1')).roles.includes('ADMIN'));
     });
 
     it('the removed demo-persona switch cannot be used to become another user', async () => {

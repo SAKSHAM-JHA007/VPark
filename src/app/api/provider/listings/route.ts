@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCapability } from '@/lib/auth';
+import { requireCapability, errorResponse } from '@/lib/auth';
 import type { ParkingCategory } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -13,8 +13,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const userId = auth.user.id;
-    const listings = db.getListingsByProvider(userId);
-    const allBookings = db.getBookings().filter((b) => b.providerId === userId);
+    const [listings, allBookings] = await Promise.all([db.getListingsByProvider(userId), db.getBookingsForProvider(userId)]);
 
     const activeBookings = allBookings.filter((b) => b.status === 'CONFIRMED' || b.status === 'CHECKED_IN');
     const totalEarnings = allBookings.reduce(
@@ -37,8 +36,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Provider listings error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch provider listings' }, { status: 500 });
+    return errorResponse(error, 'Failed to fetch provider listings', 'Provider listings error');
   }
 }
 
@@ -141,7 +139,7 @@ export async function POST(req: NextRequest) {
 
     const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
-    const newListing = db.createListing({
+    const newListing = await db.createListing({
       title: String(title).trim(),
       description: String(description || 'Verified private parking space in Bengaluru.').trim(),
       providerId: user.id,
@@ -205,8 +203,7 @@ export async function POST(req: NextRequest) {
         : 'Listing submitted for Admin verification. Invisible to drivers until approved.',
     });
   } catch (error) {
-    console.error('Create listing error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create listing' }, { status: 500 });
+    return errorResponse(error, 'Failed to create listing', 'Create listing error');
   }
 }
 
@@ -221,7 +218,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Listing ID is required.' }, { status: 400 });
     }
 
-    const existing = db.getListingById(id);
+    const existing = await db.getListingById(id);
     if (!existing || existing.providerId !== auth.user.id) {
       return NextResponse.json({ success: false, error: 'Listing not found or unauthorized.' }, { status: 403 });
     }
@@ -234,7 +231,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const result = db.updateProviderListing(id, auth.user.id, { ...updates, submitForReview });
+    const result = await db.updateProviderListing(id, auth.user.id, { ...updates, submitForReview });
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error }, { status: 400 });
     }
@@ -245,7 +242,6 @@ export async function PATCH(req: NextRequest) {
       message: submitForReview ? 'Listing submitted for Admin review!' : 'Draft updated.',
     });
   } catch (error) {
-    console.error('Update listing error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update listing' }, { status: 500 });
+    return errorResponse(error, 'Failed to update listing', 'Update listing error');
   }
 }

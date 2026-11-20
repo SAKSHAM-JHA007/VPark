@@ -68,9 +68,9 @@ async function getBooking(id, token) {
   return read(await bookingRoute.GET(request('GET', `/api/bookings/${id}`, { token }), { params: { id } }));
 }
 
-before(() => {
-  privateListing = seedVerifiedListing(db);
-  publicListing = seedVerifiedListing(db, {
+before(async () => {
+  privateListing = await seedVerifiedListing(db);
+  publicListing = await seedVerifiedListing(db, {
     title: 'Surveyed on-street bays',
     category: 'PUBLIC',
     providerName: 'VPark Survey Team',
@@ -82,9 +82,9 @@ before(() => {
     isBookable: false,
     documents: [],
   });
-  const admin = db.upsertVerifiedGoogleUser({ uid: ADMIN_UID, email: 'ops-admin@example.com', grantAdmin: true });
+  const admin = await db.upsertVerifiedGoogleUser({ uid: ADMIN_UID, email: 'ops-admin@example.com', grantAdmin: true });
   adminUserId = admin.user.id;
-  const other = db.upsertVerifiedGoogleUser({ uid: 'other-driver-uid', email: 'other.driver@example.com', grantAdmin: false });
+  const other = await db.upsertVerifiedGoogleUser({ uid: 'other-driver-uid', email: 'other.driver@example.com', grantAdmin: false });
   otherDriverId = other.user.id;
 });
 

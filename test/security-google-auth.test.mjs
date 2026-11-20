@@ -66,7 +66,7 @@ async function signIn(body, opts = {}) {
   return { ...(await read(res)), token: sessionTokenFrom(res) };
 }
 
-const userCount = () => db.getUsers().length;
+const userCount = async () => (await db.getUsers()).length;
 
 beforeEach(() => {
   verifierCalls = 0;
@@ -74,20 +74,20 @@ beforeEach(() => {
 
 describe('Rejected sign-ins create or modify nothing', () => {
   it('rejects a missing ID token', async () => {
-    const before = userCount();
+    const before = await userCount();
     const res = await signIn({ uid: 'u', email: 'mallory@example.com' });
     assert.equal(res.status, 400);
     assert.equal(res.token, undefined);
-    assert.equal(userCount(), before);
+    assert.equal(await userCount(), before);
   });
 
   it('rejects an invalid (unsigned / unknown) token', async () => {
-    const before = userCount();
+    const before = await userCount();
     const forged = `${b64({ alg: 'RS256' })}.${b64(claimsFor())}.${b64('forged')}`;
     const res = await signIn({ idToken: forged });
     assert.equal(res.status, 401);
     assert.equal(res.token, undefined);
-    assert.equal(userCount(), before);
+    assert.equal(await userCount(), before);
   });
 
   it('rejects malformed tokens before calling the verifier', async () => {
@@ -113,7 +113,7 @@ describe('Rejected sign-ins create or modify nothing', () => {
 
   it('rejects unverified email, non-Google providers and stale sign-ins', async () => {
     const now = Math.floor(Date.now() / 1000);
-    const before = userCount();
+    const before = await userCount();
     for (const bad of [
       claimsFor({ sub: 'u-unverified', email_verified: false }),
       claimsFor({ sub: 'u-noemail', email: undefined }),
@@ -124,7 +124,7 @@ describe('Rejected sign-ins create or modify nothing', () => {
       const res = await signIn({ idToken: mintToken(bad) });
       assert.equal(res.status, 401, `expected rejection for ${bad.sub}`);
     }
-    assert.equal(userCount(), before);
+    assert.equal(await userCount(), before);
   });
 
   it('rejects cross-origin sign-in requests', async () => {
@@ -157,16 +157,16 @@ describe('Accepted sign-ins derive identity from the token only', () => {
     assert.equal(res.json.user.email, 'bob@example.com');
     assert.equal(res.json.isMasterAdmin, false);
     assert.ok(!res.json.user.roles.includes('ADMIN'));
-    const stored = db.getUsers().find((u) => u.firebaseUid === 'google-uid-bob');
+    const stored = (await db.getUsers()).find((u) => u.firebaseUid === 'google-uid-bob');
     assert.equal(stored.email, 'bob@example.com');
-    assert.ok(!db.getUsers().some((u) => u.firebaseUid === ADMIN_UID && u.email === 'bob@example.com'));
+    assert.ok(!(await db.getUsers()).some((u) => u.firebaseUid === ADMIN_UID && u.email === 'bob@example.com'));
   });
 
   it('does not take over an account already linked to a different Firebase UID', async () => {
     const res = await signIn({ idToken: mintToken(claimsFor({ sub: 'google-uid-alice-2', email: 'alice@example.com' })) });
     assert.equal(res.status, 200);
-    const alice = db.getUsers().find((u) => u.firebaseUid === 'google-uid-alice');
-    const alice2 = db.getUsers().find((u) => u.firebaseUid === 'google-uid-alice-2');
+    const alice = (await db.getUsers()).find((u) => u.firebaseUid === 'google-uid-alice');
+    const alice2 = (await db.getUsers()).find((u) => u.firebaseUid === 'google-uid-alice-2');
     assert.ok(alice && alice2);
     assert.notEqual(alice.id, alice2.id);
   });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireSession } from '@/lib/auth';
+import { requireSession, errorResponse } from '@/lib/auth';
 import { getBookingRelation, toBookingView } from '@/lib/security/listing-privacy.mjs';
 
 export const dynamic = 'force-dynamic';
@@ -12,13 +12,18 @@ export async function GET(req: NextRequest) {
 
   try {
     const user = session.user;
-    const ownBookings = db.getBookings().filter((b) => b.driverId === user.id || b.providerId === user.id);
+    const [asDriver, asProvider] = await Promise.all([db.getBookingsForDriver(user.id), db.getBookingsForProvider(user.id)]);
+    const byId = new Map<string, (typeof asDriver)[number]>();
+    for (const b of [...asDriver, ...asProvider]) byId.set(b.id, b);
+    const ownBookings = Array.from(byId.values()).sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt)
+    );
     // Same location-privacy rules as the bookings API.
     const bookings = ownBookings.map((b) => toBookingView(b, b.providerId === user.id ? 'PROVIDER' : getBookingRelation(b, { id: user.id, roles: [] })));
-    const payments = db.getPayments().filter((p) => ownBookings.some((b) => b.id === p.bookingId));
-    const passes = db.getMonthlyPasses().filter((p) => p.driverId === user.id);
-    const listings = db.getListingsByProvider(user.id);
-    const consents = db.getUserConsents(user.id);
+    const payments = await db.getPaymentsForBookings(ownBookings.map((b) => b.id));
+    const passes = await db.getMonthlyPassesForDriver(user.id);
+    const listings = await db.getListingsByProvider(user.id);
+    const consents = await db.getUserConsents(user.id);
 
     const exportData = {
       compliance: 'India Digital Personal Data Protection Act, 2023 (DPDP)',
@@ -51,7 +56,6 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Data export error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to export data' }, { status: 500 });
+    return errorResponse(error, 'Failed to export data', 'Data export error');
   }
 }

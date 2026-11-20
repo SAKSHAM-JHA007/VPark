@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from './db';
+import { db, isDataStoreUnavailable } from './db';
 import type { SessionRecord, User, UserRole } from '@/types';
 import { hasCapability } from './engine.mjs';
 import {
@@ -109,7 +109,7 @@ export function getSessionManager(): SessionManager | null {
   const key =
     backend.kind === 'redis'
       ? `redis|${backend.config.url}|${backend.config.keyPrefix}|${resolved.secret}`
-      : `local|${resolved.secret}`;
+      : `database|${resolved.secret}`;
   if (cachedSessionManager && cachedSessionManager.key === key) return cachedSessionManager.manager;
 
   let store: SessionStore;
@@ -118,13 +118,35 @@ export function getSessionManager(): SessionManager | null {
   } else {
     if (!warnedLocalStore && process.env.NODE_ENV !== 'test') {
       warnedLocalStore = true;
-      console.warn('[auth] Using the local development session store (.data). Configure Redis for shared, durable sessions.');
+      console.warn('[auth] Sessions are stored in the application database (no Redis configured).');
     }
     store = db.getSessionStore();
   }
   const manager = createSessionManager({ store, secret: resolved.secret });
   cachedSessionManager = { key, manager };
   return manager;
+}
+
+/** 503 for a data store that is unconfigured, unreachable or not migrated (fail closed). */
+export function serviceUnavailableResponse(): NextResponse {
+  return NextResponse.json(
+    { success: false, error: 'The service is temporarily unavailable. Please try again later.' },
+    { status: 503 }
+  );
+}
+
+/**
+ * Response for an unexpected error in a route handler: 503 when the data store is
+ * unavailable (never a silent fallback), otherwise a generic 500. Details are logged
+ * server-side only.
+ */
+export function errorResponse(error: unknown, message: string, logLabel?: string): NextResponse {
+  if (isDataStoreUnavailable(error)) {
+    console.error(`[api] ${logLabel || message}: ${(error as Error).message}`);
+    return serviceUnavailableResponse();
+  }
+  console.error(`[api] ${logLabel || message}:`, error);
+  return NextResponse.json({ success: false, error: message }, { status: 500 });
 }
 
 export class SessionConfigurationError extends Error {
@@ -163,7 +185,7 @@ export async function getSessionContext(req: NextRequest): Promise<SessionContex
   if (!manager) return null;
   const session = await manager.validateSession(token);
   if (!session) return null;
-  const stored = db.getUserById(session.userId);
+  const stored = await db.getUserById(session.userId);
   if (!stored) {
     // The account is unknown to this instance's user store. Do not revoke the shared
     // session from here; just refuse the request.
@@ -188,7 +210,13 @@ export async function requireSession(
     if (csrfError) return { error: csrfError };
   }
 
-  const user = await getSessionUser(req);
+  let user: User | null;
+  try {
+    user = await getSessionUser(req);
+  } catch (error) {
+    if (isDataStoreUnavailable(error)) return { error: serviceUnavailableResponse() };
+    throw error;
+  }
   if (!user) {
     return {
       error: NextResponse.json(

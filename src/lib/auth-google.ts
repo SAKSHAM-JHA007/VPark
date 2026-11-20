@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from './db';
 import {
   checkAuthIpRateLimit,
+  errorResponse,
   getClientIp,
   getSessionManager,
   issueSession,
@@ -78,14 +79,19 @@ export function createGoogleSignInHandler(deps: GoogleSignInDependencies) {
     const allowlist = getAdminUidAllowlist();
     const isAdmin = isAllowlistedAdminUid(identity.uid, allowlist);
 
-    const result = db.upsertVerifiedGoogleUser({
-      uid: identity.uid,
-      email: identity.email,
-      name: identity.name,
-      photoUrl: identity.picture,
-      intent: intent === 'provider' ? 'provider' : 'driver',
-      grantAdmin: isAdmin,
-    });
+    let result: Awaited<ReturnType<typeof db.upsertVerifiedGoogleUser>>;
+    try {
+      result = await db.upsertVerifiedGoogleUser({
+        uid: identity.uid,
+        email: identity.email,
+        name: identity.name,
+        photoUrl: identity.picture,
+        intent: intent === 'provider' ? 'provider' : 'driver',
+        grantAdmin: isAdmin,
+      });
+    } catch (error) {
+      return errorResponse(error, 'Google sign-in failed.', 'Google sign-in account update failed');
+    }
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error }, { status: result.status });
     }

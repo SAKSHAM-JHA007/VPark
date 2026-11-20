@@ -96,10 +96,16 @@ describe('Session manager (unit)', () => {
     assert.equal(getSessionCookieName({ NODE_ENV: 'production' }), '__Host-vpark_session');
   });
 
-  it('only uses the local file store outside production', () => {
-    assert.equal(resolveSessionBackend({ NODE_ENV: 'development' }).kind, 'local');
-    assert.equal(resolveSessionBackend({ NODE_ENV: 'test' }).kind, 'local');
+  it('stores sessions in the application database, which must be PostgreSQL in production', () => {
+    // Development / test without DATABASE_URL: the local JSON development store.
+    assert.equal(resolveSessionBackend({ NODE_ENV: 'development' }).kind, 'database');
+    assert.equal(resolveSessionBackend({ NODE_ENV: 'test' }).kind, 'database');
+    // Production never uses local files: PostgreSQL (or Redis) is required.
     assert.equal(resolveSessionBackend({ NODE_ENV: 'production' }).kind, null);
+    assert.equal(
+      resolveSessionBackend({ NODE_ENV: 'production', DATABASE_URL: 'postgres://u:p@db.example.com/vpark?sslmode=require' }).kind,
+      'database'
+    );
   });
 });
 

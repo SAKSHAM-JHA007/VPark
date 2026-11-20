@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getSessionUser, requireCapability } from '@/lib/auth';
+import { getSessionUser, requireCapability, errorResponse } from '@/lib/auth';
 import { validatePlateNumber } from '@/lib/validation';
 import { getBookingRelation, toBookingView } from '@/lib/security/listing-privacy.mjs';
 import type { Booking, PaymentMethod, VehicleType } from '@/types';
@@ -20,18 +20,17 @@ export async function GET(req: NextRequest) {
     // `user` carries effective roles: ADMIN only when backed by the server allowlist.
     const { searchParams } = new URL(req.url);
     const filterRole = searchParams.get('role');
-    let bookings = db.getBookings();
-
+    let bookings: Booking[];
     if (filterRole === 'PROVIDER' && user.roles.includes('PROVIDER')) {
-      bookings = bookings.filter((b) => b.providerId === user.id);
+      bookings = await db.getBookingsForProvider(user.id);
     } else if (filterRole === 'ADMIN' && user.roles.includes('ADMIN')) {
-      // Admin views all
+      bookings = await db.getBookings(); // Admin views all
     } else if (user.activeRole === 'PROVIDER' && user.roles.includes('PROVIDER')) {
-      bookings = bookings.filter((b) => b.providerId === user.id);
+      bookings = await db.getBookingsForProvider(user.id);
     } else if (user.activeRole === 'ADMIN' && user.roles.includes('ADMIN')) {
-      // Admin views all
+      bookings = await db.getBookings(); // Admin views all
     } else {
-      bookings = bookings.filter((b) => b.driverId === user.id);
+      bookings = await db.getBookingsForDriver(user.id);
     }
 
     const views = [...bookings]
@@ -45,8 +44,7 @@ export async function GET(req: NextRequest) {
       data: views,
     });
   } catch (error) {
-    console.error('Fetch bookings error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch bookings' }, { status: 500 });
+    return errorResponse(error, 'Failed to fetch bookings', 'Fetch bookings error');
   }
 }
 
@@ -79,7 +77,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = db.createBooking({
+    const result = await db.createBooking({
       listingId,
       driverId: auth.user.id,
       vehicleType,
@@ -101,7 +99,6 @@ export async function POST(req: NextRequest) {
       message: 'Booking confirmed successfully!',
     });
   } catch (error) {
-    console.error('Create booking error:', error);
-    return NextResponse.json({ success: false, error: 'Booking failed' }, { status: 500 });
+    return errorResponse(error, 'Booking failed', 'Create booking error');
   }
 }

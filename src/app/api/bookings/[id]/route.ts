@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireSession } from '@/lib/auth';
+import { requireSession, errorResponse } from '@/lib/auth';
 import {
   getBookingRelation,
   toBookingView,
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (session.error) return session.error;
 
   try {
-    const booking = db.getBookings().find((b) => b.id === params.id || b.referenceNumber === params.id);
+    const booking = await db.getBookingByIdOrReference(params.id);
     if (!booking) {
       return NextResponse.json({ success: false, error: 'Booking not found' }, { status: 404 });
     }
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    const listing = db.getListingById(booking.listingId);
+    const listing = await db.getListingById(booking.listingId);
     // Providers (owners) and admins see the full listing; a driver only ever receives
     // the public projection. The driver's exact location comes from the booking view,
     // and only while the booking qualifies.
@@ -51,8 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       listing: listingView,
     });
   } catch (error) {
-    console.error('Get booking error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to retrieve booking' }, { status: 500 });
+    return errorResponse(error, 'Failed to retrieve booking', 'Get booking error');
   }
 }
 
@@ -62,7 +61,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   try {
     const bookingId = params.id;
-    const existing = db.getBookings().find((b) => b.id === bookingId);
+    const found = await db.getBookingByIdOrReference(bookingId);
+    const existing = found && found.id === bookingId ? found : undefined;
     if (!existing) {
       return NextResponse.json({ success: false, error: 'Booking not found' }, { status: 404 });
     }
@@ -93,16 +93,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const view = (b: Booking | undefined) => (b ? toBookingView(b, relation) : undefined);
 
     if (action === 'CHECK_IN') {
-      const result = db.updateBookingStatus(bookingId, 'CHECKED_IN', {
-        photoUrl: typeof photoUrl === 'string' ? photoUrl.slice(0, 2048) : undefined,
-      });
-      if (!result.success) return NextResponse.json({ success: false, error: result.error }, { status: 400 });
+      // The allowed-from check is repeated inside the locked transaction (no double transitions).
+      const result = await db.updateBookingStatus(
+        bookingId,
+        'CHECKED_IN',
+        { photoUrl: typeof photoUrl === 'string' ? photoUrl.slice(0, 2048) : undefined },
+        { allowedFrom: rule.fromStatuses }
+      );
+      if (!result.success) return NextResponse.json({ success: false, error: result.error }, { status: result.conflict ? 409 : 400 });
       return NextResponse.json({ success: true, booking: view(result.booking), message: 'Checked in successfully!' });
     }
 
     if (action === 'CHECK_OUT') {
-      const result = db.updateBookingStatus(bookingId, 'COMPLETED');
-      if (!result.success) return NextResponse.json({ success: false, error: result.error }, { status: 400 });
+      const result = await db.updateBookingStatus(bookingId, 'COMPLETED', undefined, { allowedFrom: rule.fromStatuses });
+      if (!result.success) return NextResponse.json({ success: false, error: result.error }, { status: result.conflict ? 409 : 400 });
       return NextResponse.json({ success: true, booking: view(result.booking), message: 'Session completed. Thank you for parking!' });
     }
 
@@ -110,11 +114,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       const resolvedCancelledBy =
         relation === 'PROVIDER' || (relation === 'ADMIN' && cancelledBy === 'PROVIDER') ? 'PROVIDER' : 'DRIVER';
       const status = resolvedCancelledBy === 'PROVIDER' ? 'CANCELLED_BY_PROVIDER' : 'CANCELLED_BY_DRIVER';
-      const result = db.updateBookingStatus(bookingId, status, {
-        reason: typeof reason === 'string' ? reason.slice(0, 500) : undefined,
-        cancelledBy: resolvedCancelledBy,
-      });
-      if (!result.success) return NextResponse.json({ success: false, error: result.error }, { status: 400 });
+      const result = await db.updateBookingStatus(
+        bookingId,
+        status,
+        { reason: typeof reason === 'string' ? reason.slice(0, 500) : undefined, cancelledBy: resolvedCancelledBy },
+        { allowedFrom: rule.fromStatuses }
+      );
+      if (!result.success) return NextResponse.json({ success: false, error: result.error }, { status: result.conflict ? 409 : 400 });
       return NextResponse.json({
         success: true,
         booking: view(result.booking),
@@ -128,7 +134,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!Number.isInteger(hours) || hours < 1 || hours > 12) {
       return NextResponse.json({ success: false, error: 'Extensions must be between 1 and 12 whole hours.' }, { status: 400 });
     }
-    const result = db.extendBooking(bookingId, hours);
+    const result = await db.extendBooking(bookingId, hours, { allowedFrom: rule.fromStatuses });
     if (!result.success) return NextResponse.json({ success: false, error: result.error }, { status: 409 });
     return NextResponse.json({
       success: true,
@@ -136,7 +142,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       message: `Booking extended by ${hours} hour(s). New end time: ${new Date(result.booking!.endTime).toLocaleTimeString()}`,
     });
   } catch (error) {
-    console.error('Update booking error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update booking' }, { status: 500 });
+    return errorResponse(error, 'Failed to update booking', 'Update booking error');
   }
 }

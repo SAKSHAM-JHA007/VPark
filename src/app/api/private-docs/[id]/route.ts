@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/db';
-import { requireSession } from '@/lib/auth';
+import { errorResponse, requireSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,14 +24,22 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (session.error) return session.error;
 
   // session.user has effective roles (ADMIN only when allowlisted).
-  const access = db.getPrivateDocumentForActor(params.id, session.user);
+  let access: Awaited<ReturnType<typeof db.getPrivateDocumentForActor>>;
+  let uploadsDir: string | null;
+  try {
+    access = await db.getPrivateDocumentForActor(params.id, session.user);
+    // Local private uploads exist only for the JSON development store.
+    uploadsDir = await db.getPrivateUploadsDir();
+  } catch (error) {
+    return errorResponse(error, 'Failed to retrieve document', 'Private document error');
+  }
   if (!access.allowed || !access.doc) {
     return NextResponse.json({ success: false, error: access.error }, { status: access.status });
   }
 
   const doc = access.doc;
-  if (doc.storageKey) {
-    const filePath = path.join(db.getPrivateUploadsDir(), path.basename(doc.storageKey));
+  if (doc.storageKey && uploadsDir) {
+    const filePath = path.join(uploadsDir, path.basename(doc.storageKey));
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath);
       const ext = path.extname(doc.storageKey).toLowerCase();

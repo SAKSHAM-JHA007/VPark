@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import type { ProviderType, UserRole } from '@/types';
-import { issueSession, requireSession, sessionUnavailableResponse } from '@/lib/auth';
+import { issueSession, requireSession, sessionUnavailableResponse, errorResponse } from '@/lib/auth';
 import { getAdminUidAllowlist, toEffectiveUser, toPublicUser } from '@/lib/security/access-policy.mjs';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
-      const result = db.grantCapability(
+      const result = await db.grantCapability(
         session.user.id,
         role,
         PROVIDER_TYPES.includes(providerType) ? (providerType as ProviderType) : undefined
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
-    const result = db.switchActiveMode(session.user.id, role as UserRole);
+    const result = await db.switchActiveMode(session.user.id, role as UserRole);
     if (!result.success || !result.user) {
       return NextResponse.json({ success: false, error: result.error }, { status: 403 });
     }
@@ -66,7 +66,6 @@ export async function POST(req: NextRequest) {
       message: `Switched active mode to ${role}`,
     });
   } catch (error) {
-    console.error('Role update error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update role' }, { status: 500 });
+    return errorResponse(error, 'Failed to update role', 'Role update error');
   }
 }

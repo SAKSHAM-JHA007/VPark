@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getSessionUser, requireCapability } from '@/lib/auth';
+import { getSessionUser, requireCapability, errorResponse } from '@/lib/auth';
 import { validatePlateNumber } from '@/lib/validation';
 import type { VehicleType } from '@/types';
 
@@ -14,11 +14,10 @@ export async function GET(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ success: true, data: [] });
     }
-    const passes = db.getMonthlyPasses().filter((p) => p.driverId === user.id);
+    const passes = await db.getMonthlyPassesForDriver(user.id);
     return NextResponse.json({ success: true, data: passes });
   } catch (error) {
-    console.error('Fetch passes error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch passes' }, { status: 500 });
+    return errorResponse(error, 'Failed to fetch passes', 'Fetch passes error');
   }
 }
 
@@ -42,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     // The price is always the listing's own monthly rate; a client-supplied price is ignored.
-    const listing = typeof listingId === 'string' ? db.getListingById(listingId) : undefined;
+    const listing = typeof listingId === 'string' ? await db.getListingById(listingId) : undefined;
     const monthlyRate = listing?.pricing.monthlyRate;
     if (!listing || listing.status !== 'VERIFIED' || !listing.isBookable || !monthlyRate || monthlyRate <= 0) {
       return NextResponse.json(
@@ -51,7 +50,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const pass = db.createMonthlyPass({
+    const pass = await db.createMonthlyPass({
       listingId: listing.id,
       driverId: user.id,
       driverName: user.name || user.phone,
@@ -67,7 +66,6 @@ export async function POST(req: NextRequest) {
       message: `Monthly Commuter Pass for ${month} issued successfully! Dedicated bay reserved.`,
     });
   } catch (error) {
-    console.error('Create monthly pass error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to issue monthly pass' }, { status: 500 });
+    return errorResponse(error, 'Failed to issue monthly pass', 'Create monthly pass error');
   }
 }

@@ -12,7 +12,7 @@ export function getRedisRestConfig(env?: Env): { config: RedisRestConfig | null;
 
 export type SessionBackend =
   | { kind: 'redis'; config: RedisRestConfig; error?: never }
-  | { kind: 'local'; config?: never; error?: never }
+  | { kind: 'database'; config?: never; error?: never }
   | { kind: null; error: string; config?: never };
 
 export function resolveSessionBackend(env?: Env): SessionBackend;

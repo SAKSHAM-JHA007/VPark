@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getClientIp, getUserAgent, requireSession, serializeUser } from '@/lib/auth';
+import { getClientIp, getUserAgent, requireSession, serializeUser, errorResponse } from '@/lib/auth';
 import { normalizeIndianPhone } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       normalizedPhone = norm;
     }
 
-    const result = db.completeOnboarding({
+    const result = await db.completeOnboarding({
       userId: session.user.id,
       fullName: String(fullName || ''),
       phone: normalizedPhone,
@@ -48,8 +48,7 @@ export async function POST(req: NextRequest) {
       message: 'Account profile & consent recorded.',
     });
   } catch (error) {
-    console.error('Onboarding error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to save onboarding details.' }, { status: 500 });
+    return errorResponse(error, 'Failed to save onboarding details.', 'Onboarding error');
   }
 }
 

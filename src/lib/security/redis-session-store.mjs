@@ -12,6 +12,8 @@
 //
 // Raw session tokens are never sent to Redis; only HMAC-SHA256 hashes of them.
 
+import { resolveDataBackend } from '../data/config.mjs';
+
 const DEFAULT_KEY_PREFIX = 'vpark:session:';
 const KEY_PREFIX_PATTERN = /^[A-Za-z0-9:_-]{1,64}$/;
 /** The per-user index outlives any single session (absolute lifetime is 7 days). */
@@ -53,28 +55,31 @@ export function getRedisRestConfig(env = process.env) {
 
 /**
  * Decide where sessions live.
- *   - Redis REST configured            -> durable shared store ("redis")
- *   - otherwise, in production         -> configuration error (fail closed; never local files)
- *   - VPARK_SESSION_STORE=redis but no -> configuration error
- *     Redis configured
- *   - otherwise (development / test)   -> local development store ("local")
+ *   - Redis REST configured              -> durable shared Redis store ("redis")
+ *   - VPARK_SESSION_STORE=redis, no Redis -> configuration error
+ *   - PostgreSQL configured (DATABASE_URL)-> the application database ("database"), durable and shared
+ *   - otherwise, in production            -> configuration error (fail closed; never local files)
+ *   - otherwise (development / test)      -> the local JSON development store ("database")
  */
 export function resolveSessionBackend(env = process.env) {
   const redis = getRedisRestConfig(env);
   if (redis.error) return { kind: null, error: redis.error };
   if (redis.config) return { kind: 'redis', config: redis.config };
+  if ((env.VPARK_SESSION_STORE || '').trim().toLowerCase() === 'redis') {
+    return { kind: null, error: 'VPARK_SESSION_STORE=redis is set but no Redis REST URL/token is configured.' };
+  }
+  const data = resolveDataBackend(env);
+  if (data.kind === 'postgres') return { kind: 'database' };
   if (env.NODE_ENV === 'production') {
     return {
       kind: null,
       error:
-        'No durable session store is configured. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN ' +
-        '(or KV_REST_API_URL and KV_REST_API_TOKEN). Local files are never used for sessions in production.',
+        'No durable session store is configured. Set DATABASE_URL (PostgreSQL) or UPSTASH_REDIS_REST_URL and ' +
+        'UPSTASH_REDIS_REST_TOKEN. Local files are never used for sessions in production.',
     };
   }
-  if ((env.VPARK_SESSION_STORE || '').trim().toLowerCase() === 'redis') {
-    return { kind: null, error: 'VPARK_SESSION_STORE=redis is set but no Redis REST URL/token is configured.' };
-  }
-  return { kind: 'local' };
+  if (data.kind === null) return { kind: null, error: data.error };
+  return { kind: 'database' };
 }
 
 function parseRecord(raw) {

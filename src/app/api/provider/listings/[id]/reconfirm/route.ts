@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCapability } from '@/lib/auth';
+import { requireCapability, errorResponse } from '@/lib/auth';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireCapability(req, 'PROVIDER');
   if (auth.error) return auth.error;
 
   try {
-    const result = db.reconfirmAvailability(params.id, auth.user.id);
+    const result = await db.reconfirmAvailability(params.id, auth.user.id);
 
     if (!result.success) {
       return NextResponse.json(
@@ -22,7 +22,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       message: 'Availability reconfirmed! Freshness indicator updated and search ranking restored.',
     });
   } catch (error) {
-    console.error('Reconfirm error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to reconfirm availability' }, { status: 500 });
+    return errorResponse(error, 'Failed to reconfirm availability', 'Reconfirm error');
   }
 }

@@ -99,7 +99,7 @@ describe('Allowlist-based administrator access', () => {
     const res = await googleSignIn('unapproved-uid', 'someone@example.com');
     assert.equal(res.status, 200);
     assert.ok(!res.json.user.roles.includes('ADMIN'));
-    const stored = db.getUsers().find((u) => u.firebaseUid === 'unapproved-uid');
+    const stored = (await db.getUsers()).find((u) => u.firebaseUid === 'unapproved-uid');
     assert.ok(!stored.roles.includes('ADMIN'));
     assert.equal((await auditLogs.GET(request('GET', '/api/admin/audit-logs', { token: res.session }))).status, 403);
   });
@@ -115,7 +115,7 @@ describe('Allowlist-based administrator access', () => {
   });
 
   it('removing a UID from the allowlist revokes admin access on the next request', async () => {
-    const admin = db.getUsers().find((u) => u.firebaseUid === ADMIN_UID);
+    const admin = (await db.getUsers()).find((u) => u.firebaseUid === ADMIN_UID);
     const token = await sessionFor(admin.id);
     assert.equal((await adminListings.GET(request('GET', '/api/admin/listings', { token }))).status, 200);
     const saved = process.env.VPARK_ADMIN_FIREBASE_UIDS;

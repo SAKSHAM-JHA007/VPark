@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/auth';
 import { db } from '@/lib/db';
 import type { ParkingCategory, SearchFilters, VehicleType } from '@/types';
 
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
     const sortParam = searchParams.get('sortBy') as SearchFilters['sortBy'] | null;
     const sortBy = sortParam && SORTS.includes(sortParam) ? sortParam : 'BEST_MATCH';
 
-    const results = db.searchListings({
+    const results = await db.searchListings({
       latitude: lat,
       longitude: lng,
       radiusKm,
@@ -68,7 +69,6 @@ export async function GET(req: NextRequest) {
       searchCenter: { lat, lng, radiusKm: radiusKm || 5 },
     });
   } catch (error) {
-    console.error('Search API error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to search listings' }, { status: 500 });
+    return errorResponse(error, 'Failed to search listings', 'Search API error');
   }
 }
