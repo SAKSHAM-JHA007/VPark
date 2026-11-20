@@ -9,6 +9,8 @@
  * Text pairs are chosen to meet WCAG AA (4.5:1) on their surfaces.
  * ------------------------------------------------------------------------- */
 :root {
+  --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --canvas-bg: #f6f7f9;
   --surface-bg: #ffffff;
   --surface-alt: #f1f3f6;
@@ -140,7 +142,7 @@
 body {
   color: var(--ink);
   background-color: var(--canvas-bg);
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-ui);
   letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
 }
