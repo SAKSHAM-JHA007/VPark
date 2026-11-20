@@ -705,6 +705,8 @@ export function VParkApp({ initialTab = 'search', initialIntent = 'driver' }: VP
                 <h2 className="text-base font-semibold text-ink" role="status" aria-live="polite">
                   {loading
                     ? t('search.loading', { place: placeLabel })
+                    : searchError
+                    ? t('search.empty.errorTitle')
                     : tn('search.results', results.length, { km: radiusKm, place: placeLabel })}
                 </h2>
                 <div className="flex items-center gap-2 text-sm">

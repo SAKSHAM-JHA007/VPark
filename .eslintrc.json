@@ -1,0 +1,11 @@
+{
+  "root": true,
+  "extends": ["next/core-web-vitals"],
+  "plugins": ["@typescript-eslint"],
+  "overrides": [
+    {
+      "files": ["**/*.mts", "**/*.d.mts", "**/*.d.ts"],
+      "parser": "@typescript-eslint/parser"
+    }
+  ]
+}

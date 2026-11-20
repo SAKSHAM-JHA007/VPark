@@ -242,6 +242,16 @@ describe('theme styles', () => {
     assert.match(reduced, /vp-theme-revealing::view-transition-new\(root\)[\s\S]*animation:\s*none/);
   });
 
+  it('stops browsers and extensions from re-colouring the designed themes', () => {
+    // Chromium/Edge forced "auto dark mode" honours `only light`; OLED declares `dark` itself.
+    const rootBlock = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')));
+    assert.match(rootBlock, /color-scheme:\s*only light;/);
+    assert.match(darkBlock, /color-scheme:\s*dark;/);
+    const layout = fs.readFileSync(new URL('../src/app/layout.tsx', import.meta.url), 'utf8');
+    assert.match(layout, /colorScheme: 'light dark'/, 'declares support for both schemes');
+    assert.match(layout, /<meta name="darkreader-lock" \/>/, 'Dark Reader opt-out for a site with a native dark theme');
+  });
+
   it('ships no theme selection menu, only the one-click toggle', () => {
     const header = fs.readFileSync(new URL('../src/components/nav/SiteHeader.tsx', import.meta.url), 'utf8');
     assert.match(header, /<ThemeToggle \/>/);

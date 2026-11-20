@@ -73,7 +73,9 @@
   --shadow-raised: 0 12px 32px -12px rgba(14, 20, 33, 0.22);
   --focus-ring: 0 0 0 3px rgba(10, 92, 255, 0.18);
 
-  color-scheme: light;
+  /* `only` stops browsers' forced/auto dark mode from algorithmically re-colouring the
+   * Light theme; OLED (below) declares `dark`, so it is left untouched as well. */
+  color-scheme: only light;
 }
 
 /* OLED (the only dark appearance): pure-black canvas and core surfaces. `.dark` is

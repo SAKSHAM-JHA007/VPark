@@ -125,6 +125,14 @@ describe('search request from a GPS centre', () => {
   });
 });
 
+describe('results heading', () => {
+  it('never reports "0 parking spaces" when the search request failed', async () => {
+    const fs = await import('node:fs');
+    const src = fs.readFileSync(new URL('../src/components/VParkApp.tsx', import.meta.url), 'utf8');
+    assert.match(src, /: searchError\s*\?\s*t\('search\.empty\.errorTitle'\)\s*:\s*tn\('search\.results'/);
+  });
+});
+
 describe('manual fallback and in-memory hand-off', () => {
   it('switches between a device location and pilot landmarks', () => {
     const seen = [];

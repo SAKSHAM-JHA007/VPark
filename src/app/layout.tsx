@@ -31,6 +31,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   themeColor: '#0A5CFF',
+  // VPark ships its own Light and OLED designs. Declaring both schemes stops browsers'
+  // forced/auto dark mode (e.g. Chrome/Edge "auto dark mode for web contents") from
+  // algorithmically re-colouring the Light theme; the stored theme still decides.
+  colorScheme: 'light dark',
 };
 
 export default function RootLayout({
@@ -46,6 +50,9 @@ export default function RootLayout({
     <html lang={lang} suppressHydrationWarning>
       <head>
         <meta name="robots" content="noindex, nofollow" />
+        {/* VPark has its own Light and OLED themes: ask the Dark Reader extension not to
+            re-colour them (its documented opt-out for sites with a native dark theme). */}
+        <meta name="darkreader-lock" />
         {/* Applies Light / Dark / OLED before first paint (see src/lib/theme.ts). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
