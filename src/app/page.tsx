@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AuthPanel } from '@/components/AuthModal';
+import { AuthModal } from '@/components/AuthModal';
 import { VParkLogo } from '@/components/VParkLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { MobileNav } from '@/components/MobileNav';
@@ -456,34 +456,13 @@ export default function RootHomePage() {
 
       {/* 4. Auth Modal Overlay when user clicks Log In or Sign Up */}
       <Presence>
-      {authModalOpen && (
-        <ModalBackdrop key="auth-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <ModalPanel className="relative w-full max-w-md bg-surface rounded-card border border-hairline p-6 shadow-raised">
-            <button
-              type="button"
-              onClick={() => setAuthModalOpen(false)}
-              aria-label="Close" className="absolute top-4 right-4 p-2 rounded-full text-ink-3 hover:text-ink hover:bg-surface-alt transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="mb-4">
-              <VParkLogo variant="stacked" className="h-14 w-auto mb-3" />
-              <h3 className="font-extrabold text-lg text-ink">
-                {authIntent === 'provider' ? 'List & Earn with VPark' : 'Access Your Parking Account'}
-              </h3>
-              <p className="text-xs text-ink-2">
-                Sign in with your email. One account works for parking and for listing a space.
-              </p>
-            </div>
-            <AuthPanel
-              embedded
-              initialIntent={authIntent}
-              onAuthenticated={handleAuthenticated}
-              onClose={() => setAuthModalOpen(false)}
-            />
-          </ModalPanel>
-        </ModalBackdrop>
-      )}
+        {authModalOpen && (
+          <AuthModal
+            initialIntent={authIntent}
+            onAuthenticated={handleAuthenticated}
+            onClose={() => setAuthModalOpen(false)}
+          />
+        )}
       </Presence>
     </div>
   );

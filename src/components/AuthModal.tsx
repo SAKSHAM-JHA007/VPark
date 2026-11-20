@@ -6,6 +6,7 @@ import { APP_CONFIG } from '@/lib/constants';
 import { signInWithGooglePopup } from '@/lib/firebase';
 import { validatePlateNumber, normalizeIndianPhone } from '@/lib/validation';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
+import { VParkLogo } from '@/components/VParkLogo';
 import {
   X,
   Phone,
@@ -119,9 +120,11 @@ export function AuthPanel({
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       if (err?.code === 'auth/popup-closed-by-user') {
-        setError('Google sign-in window was closed.');
+        setError('Google sign-in popup was closed before completing.');
       } else if (err?.code === 'auth/unauthorized-domain' || (err?.message && err.message.includes('auth/unauthorized-domain'))) {
-        setError('Domain not authorized yet in Firebase Console. Please add your domain to Firebase Authorized Domains.');
+        setError('Domain not authorized yet in Firebase Console. Please add "vpark-one.vercel.app" to Firebase Console > Authentication > Settings > Authorized domains.');
+      } else if (err?.message && err.message.includes('temporarily unavailable')) {
+        setError('Google Sign-In is temporarily unavailable on this domain. Please ensure "vpark-one.vercel.app" is added under Firebase Console > Authentication > Settings > Authorized domains.');
       } else {
         setError(err?.message || 'Google authentication encountered an error. Please try again.');
       }
@@ -218,15 +221,18 @@ export function AuthPanel({
     >
       {/* Masthead */}
       <div className="bg-[var(--surface-alt)] border-b border-[var(--hairline)] px-5 py-3.5 flex items-center justify-between">
-        <div>
-          <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ink-secondary)] block">
-            System Access Terminal
-          </span>
-          <h2 className="text-sm font-bold tracking-tight uppercase text-[var(--ink)] mt-0.5">
-            {step === 'onboarding'
-              ? 'Complete User Details'
-              : 'Sign In with Google'}
-          </h2>
+        <div className="flex items-center gap-3">
+          <VParkLogo variant="stacked" className="h-8 w-auto" />
+          <div>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ink-secondary)] block">
+              System Access Terminal
+            </span>
+            <h2 className="text-sm font-bold tracking-tight uppercase text-[var(--ink)] mt-0.5">
+              {step === 'onboarding'
+                ? 'Complete User Details'
+                : 'Sign In with Google'}
+            </h2>
+          </div>
         </div>
         {onClose && (
           <button
