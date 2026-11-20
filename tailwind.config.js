@@ -54,8 +54,8 @@ module.exports = {
         '2xl': '8px',
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        sans: ['var(--font-ui)', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['var(--font-data)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       boxShadow: {
         xs: '0 1px 2px rgba(0, 0, 0, 0.04)',
