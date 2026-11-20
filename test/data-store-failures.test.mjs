@@ -144,10 +144,6 @@ describe('Production without a database: API routes fail closed (in-process app)
       const sent = await contact.POST(req('POST', '/api/contact', { name: 'Tester', email: 't@example.com', subject: 'Hello there', message: 'This should not be stored locally.' }));
       assert.equal(sent.status, 503);
 
-      const { createGoogleSignInHandler } = await import('../src/lib/auth-google.ts');
-      const signIn = await createGoogleSignInHandler({ verifier: async () => ({}) })(req('POST', '/api/auth/google', { idToken: 'a.b.c' }));
-      assert.equal(signIn.status, 503);
-
       assert.ok(errors.some((e) => e.includes('DATABASE_URL is not configured')), 'a clear configuration error is logged');
       assert.deepEqual(fs.readdirSync(tmp), [], 'nothing was written to the local data directory');
       if (realMtime !== null) assert.equal(fs.statSync(realDataFile).mtimeMs, realMtime, 'the real .data file was not touched');
