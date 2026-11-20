@@ -23,6 +23,7 @@ import {
   User,
 } from '@/types';
 import { APP_CONFIG, YELAHANKA_ANCHORS, DemandAnchor } from '@/lib/constants';
+import { signOutFirebase } from '@/lib/firebase';
 import {
   Search,
   SlidersHorizontal,
@@ -266,6 +267,7 @@ export function VParkApp({
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
+    await signOutFirebase();
     setCurrentUser(null);
     setCurrentRole('DRIVER');
     setBookings([]);
