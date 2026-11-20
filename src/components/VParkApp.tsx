@@ -596,7 +596,7 @@ export function VParkApp({
                   <span className="text-[var(--transit-accent)]">{selectedAnchor.name}</span>
                 </h2>
 
-                <div className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--ink-secondary)]">
+                <div className="flex items-center gap-1.5 font-sans text-[11px] text-[var(--ink-secondary)]">
                   <label htmlFor="sort-by-select" className="uppercase">Sort:</label>
                   <select
                     id="sort-by-select"
@@ -712,7 +712,7 @@ export function VParkApp({
                       <span className="font-mono font-bold text-[var(--transit-accent)] text-[11px] uppercase tracking-wider">
                         PASS // {booking.referenceNumber}
                       </span>
-                      <span className="px-2 py-0.2 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/30">
+                      <span className="px-2 py-0.2 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 font-sans text-[10px] font-bold border border-emerald-500/30">
                         📍 Exact Map &amp; Navigation Unlocked
                       </span>
                     </div>
