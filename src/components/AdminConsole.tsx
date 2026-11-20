@@ -511,7 +511,7 @@ export function AdminConsole() {
                           type="number"
                           placeholder="Refund Amount (₹)"
                           onChange={(e) => setRefundAmount(parseFloat(e.target.value) || 0)}
-                          className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl px-3 py-1.5 text-xs font-mono"
+                          className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl px-3 py-1.5 text-xs tabular-nums"
                         />
                         <button
                           type="button"
@@ -564,15 +564,15 @@ export function AdminConsole() {
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-hairline overflow-x-auto">
                   {reconciliation.payments.map((pay: Payment) => (
-                    <div key={pay.id} className="p-4 flex items-center justify-between gap-4 font-mono text-[11px]">
+                    <div key={pay.id} className="p-4 flex items-center justify-between gap-4 text-[11px]">
                       <div>
-                        <span className="font-bold text-slate-900 dark:text-ink block">{pay.referenceNumber}</span>
+                        <span className="font-bold text-slate-900 dark:text-ink block font-mono">{pay.referenceNumber}</span>
                         <span className="text-slate-500 dark:text-ink-3">
-                          {pay.gatewayTransactionId} · {pay.method}
+                          <span className="font-mono">{pay.gatewayTransactionId}</span> · {pay.method}
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="font-bold text-slate-900 dark:text-ink block">₹{pay.amount.toFixed(2)}</span>
+                        <span className="font-bold text-slate-900 dark:text-ink block tabular-nums">₹{pay.amount.toFixed(2)}</span>
                         <span className="text-emerald-700 dark:text-emerald-300">
                           Host: ₹{pay.providerEarning.toFixed(2)} · Fee+Tax: ₹{pay.platformCommission.toFixed(2)}
                         </span>
