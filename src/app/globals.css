@@ -909,17 +909,15 @@ body {
 
 /* ---------------------------------------------------------------------------
  * Signature theme switch: the new theme spreads from the press point as a circle
- * with a soft, liquid leading edge (View Transition API; see nav/ThemeToggle.tsx).
- * The feather scales with the radius, so it reads as a crisp drop near the button
- * and a soft wash at the far edges. Only the new snapshot is masked; the old one
- * stays put underneath, so there is never an empty or unstyled frame.
+ * with a soft glowing rim (View Transition API; see nav/ThemeToggle.tsx).
+ *
+ * Performance: both moving parts are compositor animations started from JS with WAAPI:
+ * a `clip-path: circle()` on the new snapshot, and a small radial-gradient ring captured
+ * as its own view-transition group and scaled with `transform`. Nothing is repainted per
+ * frame. (The first version animated a registered custom property inside a full-screen
+ * mask-image, which forced style recalc + a full-viewport repaint on every frame.)
+ * The old snapshot stays put underneath, so there is never an empty or unstyled frame.
  * ------------------------------------------------------------------------- */
-@property --vp-reveal-r {
-  syntax: '<length>';
-  inherits: false;
-  initial-value: 0px;
-}
-
 html.vp-theme-revealing::view-transition-old(root),
 html.vp-theme-revealing::view-transition-new(root) {
   animation: none;
@@ -930,32 +928,40 @@ html.vp-theme-revealing::view-transition-old(root) {
 }
 html.vp-theme-revealing::view-transition-new(root) {
   z-index: 2;
-  -webkit-mask-image: radial-gradient(
-    circle at var(--vp-reveal-x, 50%) var(--vp-reveal-y, 0px),
-    #000 calc(var(--vp-reveal-r) * 0.9),
-    rgba(0, 0, 0, 0.55) calc(var(--vp-reveal-r) * 0.97),
-    transparent var(--vp-reveal-r)
-  );
-  mask-image: radial-gradient(
-    circle at var(--vp-reveal-x, 50%) var(--vp-reveal-y, 0px),
-    #000 calc(var(--vp-reveal-r) * 0.9),
-    rgba(0, 0, 0, 0.55) calc(var(--vp-reveal-r) * 0.97),
-    transparent var(--vp-reveal-r)
-  );
-  animation: vp-theme-reveal 720ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
 }
-@keyframes vp-theme-reveal {
-  0% {
-    --vp-reveal-r: 0px;
-  }
-  /* A fast initial drop, then a slower spread: the "liquid" feel. */
-  35% {
-    --vp-reveal-r: calc(var(--vp-reveal-max, 150vmax) * 0.42);
-  }
-  100% {
-    /* 1.12x so the feathered edge has fully cleared the farthest corner. */
-    --vp-reveal-r: calc(var(--vp-reveal-max, 150vmax) * 1.12);
-  }
+::view-transition-group(vp-theme-ring),
+::view-transition-image-pair(vp-theme-ring),
+::view-transition-old(vp-theme-ring),
+::view-transition-new(vp-theme-ring) {
+  animation: none;
+}
+::view-transition-group(vp-theme-ring) {
+  z-index: 3;
+}
+/* The rim: a thin luminous band (white core, VPark-blue halo) at 70 % of the radius. */
+.vp-theme-ring {
+  position: fixed;
+  width: 240px;
+  height: 240px;
+  border-radius: 9999px;
+  pointer-events: none;
+  view-transition-name: vp-theme-ring;
+  background: radial-gradient(
+    circle closest-side,
+    transparent 0 58%,
+    rgba(107, 152, 255, 0.22) 66%,
+    rgba(255, 255, 255, 0.34) 70%,
+    rgba(107, 152, 255, 0.2) 74%,
+    transparent 84%
+  );
+}
+/* Colour transitions would otherwise replay inside the live new snapshot while it is
+ * revealed (extra raster work and a smeared edge). Added in the same style recalc as the
+ * theme classes, so it costs nothing extra. */
+html.vp-theme-revealing *,
+html.vp-theme-revealing *::before,
+html.vp-theme-revealing *::after {
+  transition: none !important;
 }
 
 /* Fallback without View Transitions: a short colour cross-fade, no movement. */
@@ -997,10 +1003,12 @@ html.vp-theme-fading *::after {
   }
 
   /* No spatial reveal for the theme switch (the toggle also skips it in JS). */
-  html.vp-theme-revealing::view-transition-new(root) {
+  html.vp-theme-revealing::view-transition-new(root),
+  ::view-transition-new(vp-theme-ring) {
     animation: none !important;
-    -webkit-mask-image: none;
-    mask-image: none;
+  }
+  .vp-theme-ring {
+    display: none;
   }
 }
 

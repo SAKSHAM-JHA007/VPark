@@ -125,6 +125,41 @@ export function revealGeometry(
   return { x, y, radius };
 }
 
+/**
+ * Reveal timing. easeOutCubic on the radius gives an edge that is visibly moving within
+ * one frame, an even growth in covered area through the middle (area grows with r²) and
+ * a soft settle, with no velocity discontinuities. Chosen by measuring viewport coverage
+ * over time; the previous two-keyframe curve paused for ~200 ms at 35 % and then lurched.
+ */
+export const THEME_REVEAL_DURATION_MS = 760;
+export const THEME_REVEAL_EASING = 'cubic-bezier(0.33, 1, 0.68, 1)';
+
+/** The glow ring is a 240 px element whose brightest band sits at 84 px from its centre. */
+export const THEME_RING_SIZE_PX = 240;
+export const THEME_RING_PEAK_PX = 84;
+
+/** clip-path keyframes for `::view-transition-new(root)`: a circle growing from the origin. */
+export function revealClipKeyframes(g: RevealGeometry): Keyframe[] {
+  return [
+    { clipPath: `circle(0px at ${g.x}px ${g.y}px)` },
+    { clipPath: `circle(${g.radius}px at ${g.x}px ${g.y}px)` },
+  ];
+}
+
+/**
+ * Transform/opacity keyframes for the glow ring's snapshot. The scale is linear in the same
+ * eased progress as the clip radius, so the ring's brightest band stays on the clip edge for
+ * the whole reveal; it fades out over the last 30 % as the edge leaves the viewport.
+ */
+export function revealRingKeyframes(g: RevealGeometry): Keyframe[] {
+  const end = g.radius / THEME_RING_PEAK_PX;
+  return [
+    { transform: 'scale(0)', opacity: 1, offset: 0 },
+    { transform: `scale(${(end * 0.7).toFixed(4)})`, opacity: 1, offset: 0.7 },
+    { transform: `scale(${end.toFixed(4)})`, opacity: 0, offset: 1 },
+  ];
+}
+
 export type ThemeTransitionMode = 'reveal' | 'fade' | 'instant';
 
 /** Circular reveal needs the View Transition API; reduced motion gets no movement at all. */

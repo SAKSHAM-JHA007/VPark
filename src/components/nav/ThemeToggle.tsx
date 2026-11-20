@@ -5,48 +5,66 @@ import { flushSync } from 'react-dom';
 import { MoonStar, Sun } from 'lucide-react';
 import { useI18n } from '@/components/i18n/LanguageProvider';
 import { useTheme } from '@/components/theme/useTheme';
-import { chooseTransitionMode, nextTheme, revealGeometry } from '@/lib/theme';
+import {
+  THEME_REVEAL_DURATION_MS,
+  THEME_REVEAL_EASING,
+  THEME_RING_SIZE_PX,
+  chooseTransitionMode,
+  nextTheme,
+  revealClipKeyframes,
+  revealGeometry,
+  revealRingKeyframes,
+} from '@/lib/theme';
 
 const REVEAL_CLASS = 'vp-theme-revealing';
 const FADE_CLASS = 'vp-theme-fading';
+const RING_CLASS = 'vp-theme-ring';
 const FADE_MS = 260;
+/** Cleanup still runs if a transition's promises never settle (tab hidden, browser bug). */
+const SAFETY_MS = THEME_REVEAL_DURATION_MS + 1500;
 
-type ViewTransitionLike = { ready: Promise<void>; finished: Promise<void> };
+type ViewTransitionLike = { ready: Promise<void>; finished: Promise<void>; skipTransition?: () => void };
 type DocumentWithVT = Document & { startViewTransition?: (update: () => void) => ViewTransitionLike };
 
 /**
  * One-click Light ↔ OLED switch.
  *
- * With the View Transition API the new theme spreads from the press point as a soft-edged
- * circle (CSS in globals.css: `.vp-theme-revealing::view-transition-new(root)`). The theme
- * itself is applied synchronously inside the transition callback, so state, DOM classes and
- * contrast change together, never after the animation. Without the API the colours
- * cross-fade briefly; with `prefers-reduced-motion` the switch is instant. Clicks during a
- * running reveal are ignored, so rapid toggles cannot desynchronise state.
+ * With the View Transition API the new theme spreads from the press point as a circle with a
+ * soft glowing rim. Both moving parts run on the compositor:
+ *  - `::view-transition-new(root)` gets an animated `clip-path: circle()` (WAAPI);
+ *  - the rim is a small radial-gradient element captured as its own view-transition group
+ *    (`view-transition-name: vp-theme-ring`) and scaled with `transform`, so its brightest
+ *    band tracks the clip edge without repainting a full-screen mask every frame.
+ * The theme is applied synchronously inside the transition callback (flushSync keeps the icon
+ * and DOM classes in the same snapshot), and `vp-theme-revealing` is added in that same
+ * callback so CSS colour transitions are suppressed without an extra style recalc. Without the
+ * API the colours cross-fade briefly; with `prefers-reduced-motion` the switch is instant.
+ * Clicks during a running reveal are ignored.
  */
 export function ThemeToggle({ className = '' }: { className?: string }) {
   const { t } = useI18n();
   const { theme, setTheme, mounted } = useTheme();
   const busyRef = useRef(false);
   const fadeTimer = useRef<number | undefined>(undefined);
+  const cleanupRef = useRef<(() => void) | null>(null);
   const [swapCount, setSwapCount] = useState(0);
+  // The icon spin is skipped during the circular reveal: any main-thread animation inside the
+  // live new snapshot forces it to be re-captured every frame (measured: dropped frames 60-130 ms
+  // into the reveal). The reveal itself, spreading from this button, is the feedback.
+  const [spinIcon, setSpinIcon] = useState(false);
 
-  const cleanup = useCallback(() => {
-    const root = document.documentElement;
-    root.classList.remove(REVEAL_CLASS);
-    root.style.removeProperty('--vp-reveal-x');
-    root.style.removeProperty('--vp-reveal-y');
-    root.style.removeProperty('--vp-reveal-max');
-    busyRef.current = false;
+  const runCleanup = useCallback(() => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
   }, []);
 
   useEffect(
     () => () => {
       window.clearTimeout(fadeTimer.current);
       document.documentElement.classList.remove(FADE_CLASS);
-      cleanup();
+      runCleanup();
     },
-    [cleanup]
+    [runCleanup]
   );
 
   const onClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -54,9 +72,10 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
     const target = nextTheme(theme);
     const root = document.documentElement;
     const doc = document as DocumentWithVT;
-    const apply = () =>
+    const apply = (spin: boolean) =>
       flushSync(() => {
         setTheme(target);
+        setSpinIcon(spin);
         setSwapCount((n) => n + 1);
       });
 
@@ -66,14 +85,14 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
     });
 
     if (mode === 'instant') {
-      apply();
+      apply(true);
       return;
     }
 
     if (mode === 'fade') {
       window.clearTimeout(fadeTimer.current);
       root.classList.add(FADE_CLASS);
-      apply();
+      apply(true);
       fadeTimer.current = window.setTimeout(() => root.classList.remove(FADE_CLASS), FADE_MS + 40);
       return;
     }
@@ -85,19 +104,56 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       event.detail > 0 ? { x: event.clientX, y: event.clientY } : null
     );
     busyRef.current = true;
-    root.style.setProperty('--vp-reveal-x', `${geometry.x}px`);
-    root.style.setProperty('--vp-reveal-y', `${geometry.y}px`);
-    root.style.setProperty('--vp-reveal-max', `${geometry.radius}px`);
-    root.classList.add(REVEAL_CLASS);
+
+    let ring: HTMLDivElement | null = null;
+    let safety: number | undefined;
+    const cleanup = () => {
+      window.clearTimeout(safety);
+      ring?.remove();
+      ring = null;
+      root.classList.remove(REVEAL_CLASS);
+      busyRef.current = false;
+    };
+    cleanupRef.current = cleanup;
+    const finish = () => {
+      if (cleanupRef.current === cleanup) runCleanup();
+    };
+
+    const update = () => {
+      // One style recalc for everything: theme classes, transition suppression and the ring.
+      root.classList.add(REVEAL_CLASS);
+      apply(false);
+      ring = document.createElement('div');
+      ring.className = RING_CLASS;
+      ring.setAttribute('aria-hidden', 'true');
+      const half = THEME_RING_SIZE_PX / 2;
+      ring.style.left = `${geometry.x - half}px`;
+      ring.style.top = `${geometry.y - half}px`;
+      document.body.appendChild(ring);
+    };
 
     try {
-      const transition = doc.startViewTransition!(apply);
-      transition.ready.catch(() => {});
-      transition.finished.then(cleanup, cleanup);
+      const transition = doc.startViewTransition!(update);
+      safety = window.setTimeout(finish, SAFETY_MS);
+      transition.ready.then(
+        () => {
+          const timing: KeyframeAnimationOptions = {
+            duration: THEME_REVEAL_DURATION_MS,
+            easing: THEME_REVEAL_EASING,
+            fill: 'both',
+          };
+          root.animate(revealClipKeyframes(geometry), { ...timing, pseudoElement: '::view-transition-new(root)' });
+          root.animate(revealRingKeyframes(geometry), { ...timing, pseudoElement: '::view-transition-new(vp-theme-ring)' });
+        },
+        () => {
+          // Skipped or failed before animating: the DOM update has still run.
+        }
+      );
+      transition.finished.then(finish, finish);
     } catch {
       // The transition could not start (e.g. another one is running): still switch.
-      if (root.getAttribute('data-theme') !== target) apply();
-      cleanup();
+      if (root.getAttribute('data-theme') !== target) apply(true);
+      finish();
     }
   };
 
@@ -116,7 +172,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       {mounted ? (
         <Icon
           key={`${theme}-${swapCount}`}
-          className={`h-4 w-4 ${theme === 'light' ? 'text-amber-500' : 'text-[var(--accent-soft-ink)]'} ${swapCount > 0 ? 'animate-spin-in' : ''}`}
+          className={`h-4 w-4 ${theme === 'light' ? 'text-amber-500' : 'text-[var(--accent-soft-ink)]'} ${spinIcon && swapCount > 0 ? 'animate-spin-in' : ''}`}
           aria-hidden="true"
         />
       ) : (

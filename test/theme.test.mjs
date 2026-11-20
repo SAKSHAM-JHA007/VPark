@@ -177,6 +177,40 @@ describe('circular theme reveal', () => {
   });
 });
 
+describe('reveal timing and keyframes', () => {
+  const g = theme.revealGeometry({ left: 1300, top: 14, width: 36, height: 36 }, { width: 1440, height: 900 }, null);
+
+  it('uses one continuous ease-out curve (no multi-segment keyframes that pause and lurch)', () => {
+    assert.equal(theme.THEME_REVEAL_EASING, 'cubic-bezier(0.33, 1, 0.68, 1)');
+    assert.ok(theme.THEME_REVEAL_DURATION_MS >= 600 && theme.THEME_REVEAL_DURATION_MS <= 900);
+    const clip = theme.revealClipKeyframes(g);
+    assert.equal(clip.length, 2, 'two keyframes: the timing function alone shapes the motion');
+  });
+
+  it('grows a clip-path circle from the origin to the far corner', () => {
+    const [from, to] = theme.revealClipKeyframes(g);
+    assert.equal(from.clipPath, `circle(0px at ${g.x}px ${g.y}px)`);
+    assert.equal(to.clipPath, `circle(${g.radius}px at ${g.x}px ${g.y}px)`);
+  });
+
+  it('keeps the glow ring on the clip edge: scale is linear in the same eased progress', () => {
+    const ring = theme.revealRingKeyframes(g);
+    const scaleAt = (k) => Number(/scale\(([\d.]+)\)/.exec(k.transform)[1]);
+    assert.equal(scaleAt(ring[0]), 0);
+    for (const k of ring.slice(1)) {
+      const edgeRadius = g.radius * k.offset;
+      assert.ok(Math.abs(scaleAt(k) * theme.THEME_RING_PEAK_PX - edgeRadius) < 1, `ring off the edge at offset ${k.offset}`);
+    }
+    assert.equal(ring.at(-1).opacity, 0, 'the rim fades out as the edge leaves the viewport');
+  });
+
+  it('animates only compositor-friendly properties', () => {
+    for (const k of [...theme.revealClipKeyframes(g), ...theme.revealRingKeyframes(g)]) {
+      for (const prop of Object.keys(k)) assert.ok(['clipPath', 'transform', 'opacity', 'offset'].includes(prop), prop);
+    }
+  });
+});
+
 describe('theme styles', () => {
   const css = fs.readFileSync(new URL('../src/app/globals.css', import.meta.url), 'utf8');
   const darkBlock = css.slice(css.indexOf('\n.dark {'), css.indexOf('}', css.indexOf('\n.dark {')));
@@ -193,6 +227,15 @@ describe('theme styles', () => {
     }
   });
 
+  it('never animates a full-screen mask or a registered custom property per frame', () => {
+    const section = css
+      .slice(css.lastIndexOf('/*', css.indexOf('Signature theme switch')), css.indexOf('/* Fallback without View Transitions'))
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    assert.doesNotMatch(section, /@property|mask-image|@keyframes/);
+    assert.match(section, /view-transition-name: vp-theme-ring/);
+    assert.match(section, /html\.vp-theme-revealing \*[\s\S]*transition: none !important/);
+  });
+
   it('defines the reveal and disables it for reduced motion', () => {
     assert.match(css, /html\.vp-theme-revealing::view-transition-new\(root\)/);
     const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
@@ -205,5 +248,14 @@ describe('theme styles', () => {
     assert.doesNotMatch(header, /ThemeMenu/);
     const toggle = fs.readFileSync(new URL('../src/components/nav/ThemeToggle.tsx', import.meta.url), 'utf8');
     assert.doesNotMatch(toggle, /role="menu"/);
+  });
+
+  it('applies theme, transition suppression and ring in one update and always cleans up', () => {
+    const toggle = fs.readFileSync(new URL('../src/components/nav/ThemeToggle.tsx', import.meta.url), 'utf8');
+    const update = toggle.slice(toggle.indexOf('const update = () => {'), toggle.indexOf('try {', toggle.indexOf('const update = () => {')));
+    assert.match(update, /classList\.add\(REVEAL_CLASS\)[\s\S]*apply\(false\)[\s\S]*appendChild\(ring\)/);
+    assert.match(toggle, /transition\.finished\.then\(finish, finish\)/);
+    assert.match(toggle, /window\.setTimeout\(finish, SAFETY_MS\)/);
+    assert.match(toggle, /flushSync/);
   });
 });
