@@ -268,7 +268,7 @@ export function Header({
 
                   {/* Account Capability Mode Switcher (PRD Section 4) */}
                   <div className="py-1.5 space-y-0.5">
-                    <div className="px-3 py-1 font-mono text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wider">
+                    <div className="px-3 py-1 font-sans text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wider">
                       Account Modes
                     </div>
 
