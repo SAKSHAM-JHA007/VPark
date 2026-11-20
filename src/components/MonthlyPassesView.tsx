@@ -134,7 +134,7 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
                 <div className="grid grid-cols-2 gap-2 text-slate-600 dark:text-ink-2 text-[11px]">
                   <div className="p-2 bg-slate-50 dark:bg-surface-alt rounded-xl">
                     <span className="text-slate-400 dark:text-ink-3 block text-[10px]">Vehicle Plate</span>
-                    <span className="font-bold text-slate-900 dark:text-ink">{pass.vehiclePlateNumber}</span>
+                    <span className="font-bold text-slate-900 dark:text-ink font-mono">{pass.vehiclePlateNumber}</span>
                   </div>
                   <div className="p-2 bg-slate-50 dark:bg-surface-alt rounded-xl">
                     <span className="text-slate-400 dark:text-ink-3 block text-[10px]">Valid Until</span>
