@@ -219,7 +219,7 @@ export function AuthPanel({
       {/* Masthead */}
       <div className="bg-[var(--surface-alt)] border-b border-[var(--hairline)] px-5 py-3.5 flex items-center justify-between">
         <div>
-          <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ink-secondary)] block">
+          <span className="font-sans text-[10px] uppercase tracking-widest text-[var(--ink-secondary)] block">
             System Access Terminal
           </span>
           <h2 className="text-sm font-bold tracking-tight uppercase text-[var(--ink)] mt-0.5">
@@ -244,14 +244,14 @@ export function AuthPanel({
         {/* Two-door intent selector */}
         {step !== 'onboarding' && (
           <div>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5">
+            <span className="font-sans text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5">
               Select Operating Mode:
             </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setIntent('driver')}
-                className={`p-2.5 rounded-sm border text-left transition-colors flex items-center gap-2.5 font-mono text-xs ${
+                className={`p-2.5 rounded-sm border text-left transition-colors flex items-center gap-2.5 font-sans text-xs ${
                   intent === 'driver'
                     ? 'border-[var(--transit-accent)] bg-[var(--surface-bg)] text-[var(--transit-accent)] font-semibold'
                     : 'border-[var(--hairline)] text-[var(--ink-secondary)] hover:bg-[var(--surface-alt)]'
@@ -267,7 +267,7 @@ export function AuthPanel({
               <button
                 type="button"
                 onClick={() => setIntent('provider')}
-                className={`p-2.5 rounded-sm border text-left transition-colors flex items-center gap-2.5 font-mono text-xs ${
+                className={`p-2.5 rounded-sm border text-left transition-colors flex items-center gap-2.5 font-sans text-xs ${
                   intent === 'provider'
                     ? 'border-[var(--transit-accent)] bg-[var(--surface-bg)] text-[var(--transit-accent)] font-semibold'
                     : 'border-[var(--hairline)] text-[var(--ink-secondary)] hover:bg-[var(--surface-alt)]'
@@ -284,7 +284,7 @@ export function AuthPanel({
         )}
 
         {error && (
-          <div role="alert" className="p-2.5 rounded-sm bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 font-mono text-xs flex items-start gap-2 animate-fade-in">
+          <div role="alert" className="p-2.5 rounded-sm bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 font-sans text-xs flex items-start gap-2 animate-fade-in">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span className="flex-1">{error}</span>
           </div>
@@ -301,7 +301,7 @@ export function AuthPanel({
                     <UserCheck className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[9px] font-mono text-[var(--ink-tertiary)] uppercase tracking-wider block">
+                    <span className="text-[9px] font-sans text-[var(--ink-tertiary)] uppercase tracking-wider block">
                       Remembered Sign-In ID
                     </span>
                     <span className="text-xs font-semibold text-[var(--ink)] block truncate">
@@ -312,7 +312,7 @@ export function AuthPanel({
                 <button
                   type="button"
                   onClick={handleForgetSavedId}
-                  className="text-[10px] font-mono text-[var(--ink-tertiary)] hover:text-red-500 underline ml-2 shrink-0 cursor-pointer"
+                  className="text-[10px] font-sans text-[var(--ink-tertiary)] hover:text-red-500 underline ml-2 shrink-0 cursor-pointer"
                   title="Clear remembered sign-in ID"
                 >
                   Switch
@@ -364,7 +364,7 @@ export function AuthPanel({
                     onChange={(e) => setRememberId(e.target.checked)}
                     className="w-3.5 h-3.5 accent-[var(--transit-accent)]"
                   />
-                  <span className="text-[10px] font-mono text-[var(--ink)] leading-tight">
+                  <span className="text-[10px] font-sans text-[var(--ink)] leading-tight">
                     Remember sign-in ID on this device
                   </span>
                 </label>
@@ -377,7 +377,7 @@ export function AuthPanel({
                     onChange={(e) => setAcceptTerms(e.target.checked)}
                     className="mt-0.5 w-3.5 h-3.5 accent-[var(--transit-accent)]"
                   />
-                  <span className="text-[10px] font-mono text-[var(--ink-secondary)] leading-relaxed">
+                  <span className="text-[10px] font-sans text-[var(--ink-secondary)] leading-relaxed">
                     I agree to VPark Terms of Service &amp; DPDP Act 2023 Privacy Notice.
                   </span>
                 </label>
@@ -392,7 +392,7 @@ export function AuthPanel({
             <div>
               <label
                 htmlFor="vpark-fullname"
-                className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+                className="font-sans text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
               >
                 Full Legal Name *
               </label>
@@ -403,14 +403,14 @@ export function AuthPanel({
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="e.g. Ramesh Patel"
-                className="w-full px-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
+                className="w-full px-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] font-sans text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
               />
             </div>
 
             <div>
               <label
                 htmlFor="vpark-user-phone"
-                className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+                className="font-sans text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
               >
                 Mobile Number (User Contact Details)
               </label>
@@ -422,10 +422,10 @@ export function AuthPanel({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+91 9876543210"
-                  className="w-full pl-9 pr-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
+                  className="w-full pl-9 pr-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] font-sans text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
                 />
               </div>
-              <span className="text-[9px] font-mono text-[var(--ink-tertiary)] mt-0.5 block">
+              <span className="text-[9px] font-sans text-[var(--ink-tertiary)] mt-0.5 block">
                 Saved in your user profile for parking gate access and driver-host coordination. Not used for login.
               </span>
             </div>
@@ -435,7 +435,7 @@ export function AuthPanel({
                 <div>
                   <label
                     htmlFor="vpark-onboard-plate"
-                    className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+                    className="font-sans text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
                   >
                     Vehicle Plate (Optional)
                   </label>
@@ -451,7 +451,7 @@ export function AuthPanel({
                 <div>
                   <label
                     htmlFor="vpark-onboard-vtype"
-                    className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+                    className="font-sans text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
                   >
                     Vehicle Class
                   </label>
@@ -475,7 +475,7 @@ export function AuthPanel({
               <div>
                 <label
                   htmlFor="vpark-prov-type"
-                  className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
+                  className="font-sans text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1"
                 >
                   Host Capacity Tier
                 </label>
@@ -483,7 +483,7 @@ export function AuthPanel({
                   id="vpark-prov-type"
                   value={providerType}
                   onChange={(e) => setProviderType(e.target.value as ProviderType)}
-                  className="w-full px-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] font-mono text-xs text-[var(--ink)]"
+                  className="w-full px-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] font-sans text-xs text-[var(--ink)]"
                 >
                   <option value="OWNER">Owner (Driveway / Residential bay)</option>
                   <option value="OPERATOR">Operator (Commercial facility)</option>
@@ -499,7 +499,7 @@ export function AuthPanel({
                 onChange={(e) => setAcceptTerms(e.target.checked)}
                 className="mt-0.5 w-3.5 h-3.5 accent-[var(--transit-accent)]"
               />
-              <span className="text-[10px] font-mono text-[var(--ink-secondary)] leading-relaxed">
+              <span className="text-[10px] font-sans text-[var(--ink-secondary)] leading-relaxed">
                 Accept Terms of Service &amp; Privacy Policy ({APP_CONFIG.legalDocVersions.terms}). Stored under DPDP Act 2023 regulations.
               </span>
             </label>
@@ -507,7 +507,7 @@ export function AuthPanel({
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-sm bg-brand hover:bg-brand-hover disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
+              className="w-full py-2.5 rounded-sm bg-brand hover:bg-brand-hover disabled:opacity-50 text-white font-sans text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer"
             >
               {loading ? 'Saving Details...' : 'Confirm Registration'}
             </button>
