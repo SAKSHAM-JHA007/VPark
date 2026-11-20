@@ -523,7 +523,7 @@ export function VParkApp({
             </div>
 
             {/* FILTER STRIP & VIEW SWITCHER */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 border-b border-[var(--hairline)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 border-b border-[var(--hairline)] flex flex-wrap items-center justify-between gap-3 text-xs font-sans">
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
@@ -666,7 +666,7 @@ export function VParkApp({
 
         {/* TAB 2: Driver Bookings */}
         {activeTab === 'bookings' && (
-          <div className={`max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 font-mono ${tabEnterClass}`}>
+          <div className={`max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 font-sans ${tabEnterClass}`}>
             <div className="border-b border-[var(--hairline)] pb-2 flex items-baseline justify-between">
               <h1 className="text-base font-bold uppercase tracking-tight text-[var(--ink)]">
                 Active Parking Sessions &amp; Digital Passes
@@ -681,7 +681,7 @@ export function VParkApp({
                 <button
                   type="button"
                   onClick={() => openLoginModal('driver')}
-                  className="px-4 py-2 bg-brand hover:bg-brand-hover text-white font-mono uppercase tracking-wider transition-colors"
+                  className="px-4 py-2 bg-brand hover:bg-brand-hover text-white font-sans uppercase tracking-wider transition-colors"
                 >
                   Authenticate via OTP
                 </button>
@@ -719,7 +719,7 @@ export function VParkApp({
                     <h3 className="font-bold text-sm text-[var(--ink)] uppercase">{booking.listingTitle}</h3>
                     <p className="text-[var(--ink-secondary)] text-xs">{booking.listingAddress}</p>
                   </div>
-                  <div className="text-right font-mono">
+                  <div className="text-right tabular-nums">
                     <span className="text-sm font-bold text-[var(--ink)]">₹{booking.pricingSnapshot.totalAmount}</span>
                     <span className="block text-[var(--transit-accent)] font-semibold text-[11px] uppercase tracking-wider mt-0.5 transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
                       Open Exact Map &amp; Pass →
