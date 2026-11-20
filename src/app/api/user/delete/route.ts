@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { clearSessionCookie, requireSession } from '@/lib/auth';
+import { clearSessionCookie, requireSession, revokeAllSessionsForUser } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
   try {
@@ -11,6 +11,8 @@ export async function POST(req: NextRequest) {
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error }, { status: 400 });
     }
+    // Sign the account out everywhere, not just in this browser.
+    await revokeAllSessionsForUser(session.user.id);
 
     const response = NextResponse.json({
       success: true,
@@ -23,4 +25,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Failed to process deletion request.' }, { status: 500 });
   }
 }
-

@@ -5,7 +5,7 @@ import { requireSession } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
   try {
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
   try {
@@ -38,11 +38,12 @@ export async function POST(req: NextRequest) {
       raisedByUserId: session.user.id,
       category,
       description,
-      evidencePhotos: evidencePhotos || [],
+      evidencePhotos: Array.isArray(evidencePhotos) ? evidencePhotos.filter((p: unknown) => typeof p === 'string').slice(0, 10) : [],
     });
 
     if (!result.success) {
-      return NextResponse.json({ success: false, error: result.error }, { status: 400 });
+      const status = result.error?.startsWith('Forbidden') ? 403 : 400;
+      return NextResponse.json({ success: false, error: result.error }, { status });
     }
 
     return NextResponse.json({

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getClientIp, getUserAgent, requireSession } from '@/lib/auth';
+import { getClientIp, getUserAgent, requireSession, serializeUser } from '@/lib/auth';
 import { normalizeIndianPhone } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 
 // POST /api/auth/onboarding - Complete name, optional email, and record DPDP consent (PRD 6.2)
 export async function POST(req: NextRequest) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
   try {
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: result.user,
+      user: serializeUser(result.user),
       consents: result.consents,
       message: 'Account profile & consent recorded.',
     });

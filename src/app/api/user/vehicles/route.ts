@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireSession } from '@/lib/auth';
+import { requireSession, serializeUser } from '@/lib/auth';
 import { validatePlateNumber, formatPlateNumber } from '@/lib/validation';
 
 export async function POST(req: NextRequest) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
   try {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: updatedUser,
+      user: serializeUser(updatedUser),
       message: 'Vehicle added to your profile.',
     });
   } catch (error) {

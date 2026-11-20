@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
+import { toPublicUser } from '@/lib/security/access-policy.mjs';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const user = getSessionUser(req);
+    const user = await getSessionUser(req);
     const consents = user ? db.getUserConsents(user.id) : [];
 
     return NextResponse.json({
       success: true,
-      user,
+      user: toPublicUser(user),
       consents,
     });
   } catch (error) {

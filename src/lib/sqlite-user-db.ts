@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { User, Vehicle, ConsentRecord, OtpChallenge, UserRoleGrant } from '@/types';
+import type { User, Vehicle, ConsentRecord, OtpChallenge, UserRoleGrant } from '@/types';
 
 // Use Node's built-in synchronous SQLite engine
 // Available in Node.js 22.5+
@@ -13,7 +13,10 @@ try {
   // Fallback for environments where node:sqlite is not loaded
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data');
+// VPARK_DATA_DIR lets automated tests run against an isolated temporary directory.
+const DATA_DIR = process.env.VPARK_DATA_DIR
+  ? path.resolve(process.env.VPARK_DATA_DIR)
+  : path.join(process.cwd(), '.data');
 const USER_DB_FILE = path.join(DATA_DIR, 'user.db');
 
 export class SqliteUserDatabase {

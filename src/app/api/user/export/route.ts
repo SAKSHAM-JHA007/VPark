@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireSession } from '@/lib/auth';
+import { getBookingRelation, toBookingView } from '@/lib/security/listing-privacy.mjs';
 
 export const dynamic = 'force-dynamic';
 
 // India Digital Personal Data Protection Act, 2023 - Data Export & Consent
 export async function GET(req: NextRequest) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
   try {
     const user = session.user;
-    const bookings = db.getBookings().filter((b) => b.driverId === user.id || b.providerId === user.id);
-    const payments = db.getPayments().filter((p) => bookings.some((b) => b.id === p.bookingId));
+    const ownBookings = db.getBookings().filter((b) => b.driverId === user.id || b.providerId === user.id);
+    // Same location-privacy rules as the bookings API.
+    const bookings = ownBookings.map((b) => toBookingView(b, b.providerId === user.id ? 'PROVIDER' : getBookingRelation(b, { id: user.id, roles: [] })));
+    const payments = db.getPayments().filter((p) => ownBookings.some((b) => b.id === p.bookingId));
     const passes = db.getMonthlyPasses().filter((p) => p.driverId === user.id);
     const listings = db.getListingsByProvider(user.id);
     const consents = db.getUserConsents(user.id);

@@ -5,7 +5,7 @@ import { requireCapability } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const auth = requireCapability(req, 'ADMIN');
+  const auth = await requireCapability(req, 'ADMIN');
   if (auth.error) return auth.error;
 
   try {

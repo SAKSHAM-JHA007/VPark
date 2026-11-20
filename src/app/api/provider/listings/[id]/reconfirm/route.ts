@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { requireCapability } from '@/lib/auth';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = requireCapability(req, 'PROVIDER');
+  const auth = await requireCapability(req, 'PROVIDER');
   if (auth.error) return auth.error;
 
   try {

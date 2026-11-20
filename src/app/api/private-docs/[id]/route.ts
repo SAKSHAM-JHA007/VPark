@@ -14,12 +14,17 @@ const MIME_MAP: Record<string, string> = {
   '.webp': 'image/webp',
 };
 
+function safeFileName(name: string): string {
+  return (name || 'document').replace(/[^A-Za-z0-9._ -]/g, '_').slice(0, 120);
+}
+
 // Restricted access & audit-logged verification file retrieval (PRD Section 7.3)
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
-  const access = db.getPrivateDocumentForActor(params.id, session.user.id);
+  // session.user has effective roles (ADMIN only when allowlisted).
+  const access = db.getPrivateDocumentForActor(params.id, session.user);
   if (!access.allowed || !access.doc) {
     return NextResponse.json({ success: false, error: access.error }, { status: access.status });
   }
@@ -34,8 +39,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         status: 200,
         headers: {
           'Content-Type': MIME_MAP[ext] || 'application/octet-stream',
-          'Content-Disposition': `inline; filename="${doc.fileName}"`,
+          'Content-Disposition': `inline; filename="${safeFileName(doc.fileName)}"`,
           'Cache-Control': 'private, no-store',
+          'X-Content-Type-Options': 'nosniff',
         },
       });
     }

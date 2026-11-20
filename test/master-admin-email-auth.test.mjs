@@ -1,51 +1,32 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 
-const USER_DB = path.join(process.cwd(), '.data', 'user.db');
-
-describe('Master Admin & Email-Based Authentication', () => {
-  it('master admin account is configured with email jhasaksham.7453k@gmail.com and ADMIN role', () => {
-    const db = new DatabaseSync(USER_DB);
-    const row = db.prepare('SELECT id, full_name, email, active_role FROM users WHERE email = ?').get('jhasaksham.7453k@gmail.com');
-    assert.ok(row, 'Master admin must be present in user.db');
-    assert.equal(row.email, 'jhasaksham.7453k@gmail.com');
-    assert.equal(row.active_role, 'ADMIN');
-
-    const roleRows = db.prepare('SELECT role FROM user_roles WHERE user_id = ?').all(row.id);
-    const roles = roleRows.map((r) => r.role);
-    assert.ok(roles.includes('ADMIN'), 'Master admin must have ADMIN role granted');
-    db.close();
-  });
-
-  it('auth OTP route implements master password verification for Aduomi@1428', () => {
-    const routeCode = fs.readFileSync('src/app/api/auth/otp/route.ts', 'utf-8');
-    assert.ok(routeCode.includes('MASTER_LOGIN'), 'Route must support MASTER_LOGIN action');
-    assert.ok(routeCode.includes('verifyMasterAdmin'), 'Route must invoke verifyMasterAdmin');
-    assert.ok(routeCode.includes('jhasaksham.7453k@gmail.com'), 'Route must recognize master email');
-  });
-
-  it('login UI uses Google Sign-In as primary authentication with Remember Sign-In ID', () => {
+// Static checks on the sign-in UI and wiring. Behavioural security tests live in
+// test/security-*.test.mjs. (These assertions replace earlier ones that required a
+// hard-coded master password and a personal administrator email in the source.)
+describe('Google-only Authentication UI & Wiring', () => {
+  it('login UI uses Google Sign-In as the sole method with Remember Sign-In ID', () => {
     const authModalCode = fs.readFileSync('src/components/AuthModal.tsx', 'utf-8');
     assert.ok(authModalCode.includes('Continue with Google'), 'Login UI must include Google Sign-In as primary method');
     assert.ok(authModalCode.includes('Remember sign-in ID on this device'), 'Must have remember sign-in ID option');
     assert.ok(authModalCode.includes('vpark_remembered_email'), 'Must store remembered sign-in ID');
-    assert.ok(authModalCode.includes('jhasaksham.7453k@gmail.com'), 'Must recognize master admin email');
-    assert.ok(authModalCode.includes('master_password'), 'Must have master password state');
     assert.ok(authModalCode.includes('Mobile Number (User Contact Details)'), 'Phone number must be collected strictly in onboarding user details');
   });
 
-  it('firebase client and google auth endpoint support Google identity & master admin', () => {
+  it('the client sends a Firebase ID token, not self-asserted identity fields', () => {
+    const authModalCode = fs.readFileSync('src/components/AuthModal.tsx', 'utf-8');
+    assert.ok(authModalCode.includes('getIdToken('), 'Client must obtain a Firebase ID token');
+    assert.ok(authModalCode.includes('JSON.stringify({ idToken, intent })'), 'Client must send only the ID token and intent');
+    assert.ok(!/uid:\s*fbUser\.uid/.test(authModalCode), 'Client must not send its UID as identity');
+  });
+
+  it('firebase client exposes Google sign-in and sign-out without hardcoded API keys', () => {
     const firebaseCode = fs.readFileSync('src/lib/firebase.ts', 'utf-8');
     assert.ok(firebaseCode.includes('googleProvider'), 'Firebase client must export googleProvider');
     assert.ok(firebaseCode.includes('signInWithGooglePopup'), 'Firebase client must export signInWithGooglePopup');
+    assert.ok(firebaseCode.includes('signOutFirebase'), 'Firebase client must export signOutFirebase');
     assert.ok(!firebaseCode.includes('AIzaSy'), 'Firebase client must never contain hardcoded API keys');
-
-    const googleRouteCode = fs.readFileSync('src/app/api/auth/google/route.ts', 'utf-8');
-    assert.ok(googleRouteCode.includes('upsertGoogleUser'), 'Google route must call upsertGoogleUser');
-    assert.ok(googleRouteCode.includes('jhasaksham.7453k@gmail.com'), 'Google route must check for master admin email');
   });
 
   it('removes demo persona buttons and other manual login forms in favor of Google Sign-In', () => {
@@ -56,5 +37,8 @@ describe('Master Admin & Email-Based Authentication', () => {
 
     const headerCode = fs.readFileSync('src/components/Header.tsx', 'utf-8');
     assert.ok(!headerCode.includes('Demo Personas'), 'Demo personas must be removed from Header menu');
+
+    const appCode = fs.readFileSync('src/components/VParkApp.tsx', 'utf-8');
+    assert.ok(!appCode.includes('SWITCH_DEMO_PERSONA'), 'Unauthenticated demo persona switching must be removed');
   });
 });

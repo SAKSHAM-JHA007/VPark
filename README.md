@@ -111,10 +111,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 👥 Demo Profiles & Role Switcher
-Use the role pill in the top navigation bar to test all flows without logging out:
-- **Driver:** Rajesh Kumar (`+91 98765 43210`) — Honda City Sedan & Nexon EV.
-- **Provider:** Suresh Sharma (`+91 98888 11223`) — Independent Owner with Yelahanka driveways.
-- **Admin:** Vikram Rao (`+91 99000 00001`) — Trust & Safety Lead.
-- **OTP for Sign-In:** `123456`
+## 🔐 Sign-In & Security Configuration
+Sign-in is **Google only**, verified on the server from a Firebase ID token. The old demo OTP, email/password and master-password logins have been removed, and so has the demo persona switcher.
+
+Before running the app, copy `.env.example` to `.env.local` and set at least:
+- `NEXT_PUBLIC_FIREBASE_*` and `FIREBASE_PROJECT_ID`: your Firebase project (public values, not secrets).
+- `SESSION_SECRET`: 32+ random characters (required in production).
+- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`: the durable, shared session store (required in production; production sign-in returns `503` without it). Local development uses `.data` when these are unset.
+- `VPARK_ADMIN_FIREBASE_UIDS`: Firebase UIDs that get admin access.
+
+Without `FIREBASE_PROJECT_ID`, Google sign-in returns `503` (fails closed). See [docs/SECURITY.md](docs/SECURITY.md) for the security architecture, deployment steps and known limitations.
+
+The seeded demo records (Rajesh Kumar, Suresh Sharma, Vikram Rao) are still in a fresh database for fixtures, but nobody can sign in as them.
 

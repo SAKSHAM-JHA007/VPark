@@ -12,8 +12,6 @@ import {
   ShieldCheck,
   Car,
   Building2,
-  Lock,
-  KeyRound,
   AlertCircle,
   UserCheck,
 } from 'lucide-react';
@@ -32,7 +30,7 @@ export function AuthPanel({
   embedded = false,
 }: AuthPanelProps) {
   const [intent, setIntent] = useState<'driver' | 'provider'>(initialIntent);
-  const [step, setStep] = useState<'google_auth' | 'master_password' | 'onboarding'>('google_auth');
+  const [step, setStep] = useState<'google_auth' | 'onboarding'>('google_auth');
 
   const initialStepRef = useRef(step);
   const stepChangedRef = useRef(false);
@@ -40,7 +38,6 @@ export function AuthPanel({
   const stepEnterClass = stepChangedRef.current ? ' animate-slide-in' : '';
 
   const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [providerType, setProviderType] = useState<ProviderType>('OWNER');
@@ -92,22 +89,17 @@ export function AuthPanel({
         try {
           localStorage.setItem('vpark_remembered_email', fbUser.email);
           if (fbUser.displayName) localStorage.setItem('vpark_remembered_name', fbUser.displayName);
-          localStorage.setItem('vpark_remembered_id', fbUser.uid);
         } catch {
           // Ignore storage quota
         }
       }
 
+      // The server derives identity only from this Firebase ID token, verified server-side.
+      const idToken = await fbUser.getIdToken(true);
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid: fbUser.uid,
-          email: fbUser.email,
-          name: fbUser.displayName,
-          photoUrl: fbUser.photoURL,
-          intent,
-        }),
+        body: JSON.stringify({ idToken, intent }),
       });
 
       const data = await res.json();
@@ -135,39 +127,6 @@ export function AuthPanel({
       }
     } finally {
       setGoogleSigningIn(false);
-    }
-  };
-
-  const handleMasterLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'MASTER_LOGIN',
-          email: email.trim().toLowerCase(),
-          password,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(data.error || 'Invalid master credentials.');
-      } else {
-        if (rememberId) {
-          try {
-            localStorage.setItem('vpark_remembered_email', 'jhasaksham.7453k@gmail.com');
-            localStorage.setItem('vpark_remembered_name', 'Saksham Jha (Master Admin)');
-          } catch {}
-        }
-        onAuthenticated(data.user);
-      }
-    } catch {
-      setError('Network error during master authentication.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -261,13 +220,11 @@ export function AuthPanel({
       <div className="bg-[var(--surface-alt)] border-b border-[var(--hairline)] px-5 py-3.5 flex items-center justify-between">
         <div>
           <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ink-secondary)] block">
-            {step === 'master_password' ? 'Security Gate · Master Console' : 'System Access Terminal'}
+            System Access Terminal
           </span>
           <h2 className="text-sm font-bold tracking-tight uppercase text-[var(--ink)] mt-0.5">
             {step === 'onboarding'
               ? 'Complete User Details'
-              : step === 'master_password'
-              ? 'Master Admin Authentication'
               : 'Sign In with Google'}
           </h2>
         </div>
@@ -285,7 +242,7 @@ export function AuthPanel({
 
       <div className="p-5 space-y-4 text-xs">
         {/* Two-door intent selector */}
-        {step !== 'onboarding' && step !== 'master_password' && (
+        {step !== 'onboarding' && (
           <div>
             <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5">
               Select Operating Mode:
@@ -425,82 +382,8 @@ export function AuthPanel({
                   </span>
                 </label>
               </div>
-
-              {/* Master Admin Portal Direct Shortcut */}
-              <div className="pt-2 text-right">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('jhasaksham.7453k@gmail.com');
-                    setStep('master_password');
-                  }}
-                  className="text-[10px] text-[var(--ink-tertiary)] hover:text-[var(--transit-accent)] hover:underline inline-flex items-center gap-1 font-mono cursor-pointer"
-                  title="Master Administrator Portal"
-                >
-                  <Lock className="w-3 h-3" />
-                  <span>Master Login</span>
-                </button>
-              </div>
             </div>
           </div>
-        )}
-
-        {/* Master Admin Hidden Password Prompt */}
-        {step === 'master_password' && (
-          <form key="step-master" onSubmit={handleMasterLogin} className={`space-y-4${stepEnterClass}`}>
-            <div className="p-3 rounded-sm bg-blue-500/10 border border-blue-500/30 flex items-center gap-2.5">
-              <KeyRound className="w-5 h-5 text-[var(--transit-accent)] flex-shrink-0" />
-              <div>
-                <span className="font-bold text-[11px] uppercase tracking-wider block text-[var(--ink)]">
-                  Master Administrator Identified
-                </span>
-                <span className="text-[10px] font-mono text-[var(--ink-secondary)]">{email || 'jhasaksham.7453k@gmail.com'}</span>
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="vpark-master-pwd"
-                className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] block mb-1.5"
-              >
-                Master Security Key
-              </label>
-              <div className="relative flex items-center">
-                <Lock className="w-4 h-4 text-[var(--ink-tertiary)] absolute left-3" />
-                <input
-                  id="vpark-master-pwd"
-                  type="password"
-                  required
-                  autoFocus
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter master password"
-                  className="w-full pl-9 pr-3 py-2 rounded-sm border border-[var(--hairline-strong)] bg-[var(--canvas-bg)] focus:bg-[var(--surface-bg)] font-mono text-xs text-[var(--ink)] focus:outline-none focus:border-[var(--transit-accent)]"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !password}
-              className="w-full py-2.5 rounded-sm bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] cursor-pointer disabled:opacity-50"
-            >
-              {loading ? 'Authenticating...' : 'Access Master Console'}
-              <ShieldCheck className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setStep('google_auth');
-                setPassword('');
-                setError(null);
-              }}
-              className="text-center w-full text-[var(--ink-secondary)] hover:text-[var(--ink)] font-mono text-[10px] uppercase hover:underline cursor-pointer"
-            >
-              Back to Google Sign-In
-            </button>
-          </form>
         )}
 
         {/* Step 2: Complete User Details (Mobile Number & Vehicle Details Stored Here) */}

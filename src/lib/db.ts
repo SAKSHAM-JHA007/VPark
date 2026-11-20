@@ -1,6 +1,7 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import {
+import type {
   User,
   UserRole,
   RoleDefinition,
@@ -27,8 +28,9 @@ import {
   PriceBreakdown,
   BookingStatus,
   ProviderType,
-  ProviderSituation,
+  SessionRecord,
 } from '@/types';
+import type { SessionStore } from './security/session.mjs';
 import { APP_CONFIG, toPaise, fromPaise } from './constants';
 import { validatePlateNumber, formatPlateNumber } from './validation';
 import {
@@ -39,8 +41,7 @@ import {
   isListingStale,
   calculateRankingScore,
 } from './engine.mjs';
-import { hashOtp, verifyOtpHash } from './otp-crypto.mjs';
-import { hashPassword, verifyPassword } from './password';
+import { discoveryDistanceKm, toPublicListingSummary } from './security/listing-privacy.mjs';
 import { sqliteUserDb } from './sqlite-user-db';
 
 export interface DatabaseState {
@@ -61,9 +62,13 @@ export interface DatabaseState {
   auditLogs: AuditLog[];
   reviews: Review[];
   monthlyPasses: MonthlyPass[];
+  sessions: SessionRecord[];
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data');
+// VPARK_DATA_DIR lets automated tests run against an isolated temporary directory.
+const DATA_DIR = process.env.VPARK_DATA_DIR
+  ? path.resolve(process.env.VPARK_DATA_DIR)
+  : path.join(process.cwd(), '.data');
 const PRIVATE_UPLOADS_DIR = path.join(DATA_DIR, 'private_uploads');
 const DB_FILE = path.join(DATA_DIR, 'vpark_database.json');
 
@@ -207,22 +212,8 @@ function getSeedData(): DatabaseState {
       createdAt: past40Days,
       vehicles: [],
     },
-    {
-      id: 'usr_master_admin',
-      phone: '+919999999999',
-      name: 'Saksham Jha (Master Admin)',
-      email: 'jhasaksham.7453k@gmail.com',
-      roles: ['ADMIN', 'DRIVER', 'PROVIDER'],
-      activeRole: 'ADMIN',
-      phoneVerifiedAt: past40Days,
-      emailVerifiedAt: past40Days,
-      isPhoneVerified: true,
-      accountStatus: 'ACTIVE',
-      lastLoginAt: recentConfirmed,
-      deletedAt: null,
-      createdAt: past40Days,
-      vehicles: [],
-    },
+    // The master administrator is no longer seeded. Admin access is granted only to
+    // Google identities whose Firebase UID is listed in VPARK_ADMIN_FIREBASE_UIDS.
   ];
 
   const userRoles: UserRoleGrant[] = [
@@ -234,9 +225,6 @@ function getSeedData(): DatabaseState {
     { userId: 'usr_admin_1', roleId: 'role_admin', roleName: 'ADMIN', grantedAt: past40Days, grantedBy: 'SYSTEM_SEED' },
     { userId: 'usr_admin_1', roleId: 'role_driver', roleName: 'DRIVER', grantedAt: past40Days, grantedBy: 'SYSTEM_SEED' },
     { userId: 'usr_admin_1', roleId: 'role_provider', roleName: 'PROVIDER', grantedAt: past40Days, grantedBy: 'SYSTEM_SEED' },
-    { userId: 'usr_master_admin', roleId: 'role_admin', roleName: 'ADMIN', grantedAt: past40Days, grantedBy: 'SYSTEM_MASTER' },
-    { userId: 'usr_master_admin', roleId: 'role_driver', roleName: 'DRIVER', grantedAt: past40Days, grantedBy: 'SYSTEM_MASTER' },
-    { userId: 'usr_master_admin', roleId: 'role_provider', roleName: 'PROVIDER', grantedAt: past40Days, grantedBy: 'SYSTEM_MASTER' },
   ];
 
   const providerProfiles: ProviderProfile[] = [
@@ -287,6 +275,7 @@ function getSeedData(): DatabaseState {
     auditLogs,
     reviews,
     monthlyPasses,
+    sessions: [],
   };
 }
 
@@ -334,6 +323,17 @@ class Database {
       monthlyPasses: (Array.isArray(parsed.monthlyPasses) ? parsed.monthlyPasses : seed.monthlyPasses).filter(
         (p) => validListingIds.has(p.listingId)
       ),
+      sessions: Array.isArray(parsed.sessions)
+        ? parsed.sessions.filter(
+            (s) =>
+              s &&
+              typeof s.tokenHash === 'string' &&
+              typeof s.userId === 'string' &&
+              typeof s.expiresAt === 'string' &&
+              !s.revokedAt &&
+              s.expiresAt > new Date().toISOString()
+          )
+        : [],
     };
 
     // Normalize legacy user rows to PRD v2.2
@@ -465,546 +465,184 @@ class Database {
     });
   }
 
-  public verifyMasterAdmin(email: string, password: string): { success: boolean; user?: User; error?: string } {
-    const cleanEmail = (email || '').trim().toLowerCase();
-    if (cleanEmail !== 'jhasaksham.7453k@gmail.com' || password !== 'Aduomi@1428') {
-      return { success: false, error: 'Invalid master administrator credentials.' };
-    }
-
-    let masterUser = this.getUserById('usr_master_admin') || this.getUserByEmail('jhasaksham.7453k@gmail.com');
-    const nowIso = new Date().toISOString();
-
-    if (!masterUser) {
-      masterUser = {
-        id: 'usr_master_admin',
-        phone: '+919999999999',
-        name: 'Saksham Jha (Master Admin)',
-        email: 'jhasaksham.7453k@gmail.com',
-        roles: ['ADMIN', 'DRIVER', 'PROVIDER'],
-        activeRole: 'ADMIN',
-        phoneVerifiedAt: nowIso,
-        emailVerifiedAt: nowIso,
-        isPhoneVerified: true,
-        accountStatus: 'ACTIVE',
-        lastLoginAt: nowIso,
-        deletedAt: null,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-        vehicles: [],
-      };
-      this.state.users.push(masterUser);
-      this.state.userRoles.push(
-        { userId: 'usr_master_admin', roleId: 'role_admin', roleName: 'ADMIN', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' },
-        { userId: 'usr_master_admin', roleId: 'role_driver', roleName: 'DRIVER', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' },
-        { userId: 'usr_master_admin', roleId: 'role_provider', roleName: 'PROVIDER', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' }
-      );
-    } else {
-      masterUser.activeRole = 'ADMIN';
-      if (!masterUser.roles.includes('ADMIN')) masterUser.roles.push('ADMIN');
-      if (!masterUser.roles.includes('DRIVER')) masterUser.roles.push('DRIVER');
-      if (!masterUser.roles.includes('PROVIDER')) masterUser.roles.push('PROVIDER');
-      masterUser.lastLoginAt = nowIso;
-      masterUser.updatedAt = nowIso;
-    }
-
-    this.createAuditLog({
-      actorId: masterUser.id,
-      actorName: masterUser.name,
-      actorRole: 'ADMIN',
-      action: 'LOGIN_OTP',
-      targetType: 'USER',
-      targetId: masterUser.id,
-      details: 'Master admin authenticated with secure secret key.',
-    });
-
-    this.persist();
-    return { success: true, user: masterUser };
+  /** True if another active account already uses this email address. */
+  public isEmailInUseByOtherUser(rawEmail: string, userId: string): boolean {
+    const clean = (rawEmail || '').trim().toLowerCase();
+    if (!clean) return false;
+    return this.state.users.some(
+      (u) =>
+        u.id !== userId &&
+        !u.deletedAt &&
+        u.accountStatus !== 'DELETION_PENDING' &&
+        (u.email || '').trim().toLowerCase() === clean
+    );
   }
 
-  public checkEmailStatus(rawEmail: string): { exists: boolean; hasPassword: boolean; isMasterAdmin: boolean } {
-    const cleanEmail = (rawEmail || '').trim().toLowerCase();
-    if (!cleanEmail) return { exists: false, hasPassword: false, isMasterAdmin: false };
-    if (cleanEmail === 'jhasaksham.7453k@gmail.com') {
-      return { exists: true, hasPassword: true, isMasterAdmin: true };
-    }
-    const user = this.getUserByEmail(cleanEmail);
-    return {
-      exists: Boolean(user),
-      hasPassword: Boolean(user?.passwordHash),
-      isMasterAdmin: false,
-    };
-  }
-
-  public registerWithEmailPassword(params: {
-    email: string;
-    password: string;
-    intent?: 'driver' | 'provider';
-  }): { success: boolean; user?: User; onboardingRequired?: boolean; error?: string } {
-    const cleanEmail = (params.email || '').trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes('@') || cleanEmail.length < 5) {
-      return { success: false, error: 'A valid email address is required.' };
-    }
-    if (!params.password || params.password.length < 6) {
-      return { success: false, error: 'Password must be at least 6 characters long.' };
-    }
-
-    if (cleanEmail === 'jhasaksham.7453k@gmail.com') {
-      return { success: false, error: 'Master administrator account must use master security key.' };
-    }
-
-    const existing = this.getUserByEmail(cleanEmail);
-    const nowIso = new Date().toISOString();
-
-    if (existing) {
-      if (existing.passwordHash) {
-        return { success: false, error: 'An account with this email already exists. Please sign in instead.' };
-      }
-      // Account exists (e.g. from Google or guest booking) but has no password yet -> set password!
-      existing.passwordHash = hashPassword(params.password);
-      existing.emailVerifiedAt = existing.emailVerifiedAt || nowIso;
-      existing.lastLoginAt = nowIso;
-      existing.updatedAt = nowIso;
-      this.persist();
-      const onboardingRequired = !existing.phone || existing.vehicles.length === 0;
-      return { success: true, user: existing, onboardingRequired };
-    }
-
-    const assignedRole: UserRole = params.intent === 'provider' ? 'PROVIDER' : 'DRIVER';
-    const userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const roleId = params.intent === 'provider' ? 'role_provider' : 'role_driver';
-
-    const newUser: User = {
-      id: userId,
-      phone: '',
-      name: cleanEmail.split('@')[0],
-      email: cleanEmail,
-      passwordHash: hashPassword(params.password),
-      roles: [assignedRole],
-      activeRole: assignedRole,
-      providerType: params.intent === 'provider' ? 'OWNER' : undefined,
-      isPhoneVerified: false,
-      emailVerifiedAt: nowIso,
-      accountStatus: 'ACTIVE',
-      lastLoginAt: nowIso,
-      createdAt: nowIso,
-      updatedAt: nowIso,
-      vehicles: [],
-    };
-
-    this.state.users.push(newUser);
-    this.state.userRoles.push({
-      userId,
-      roleId,
-      roleName: assignedRole,
-      grantedAt: nowIso,
-      grantedBy: 'SELF_SIGNUP',
-    });
-
-    this.createAuditLog({
-      actorId: userId,
-      actorName: newUser.name,
-      actorRole: assignedRole,
-      action: 'LOGIN_OTP',
-      targetType: 'USER',
-      targetId: userId,
-      details: `User registered via email and password (${assignedRole}).`,
-    });
-
-    this.persist();
-    return { success: true, user: newUser, onboardingRequired: true };
-  }
-
-  public loginWithEmailPassword(params: {
-    email: string;
-    password: string;
-  }): { success: boolean; user?: User; isMasterAdmin?: boolean; error?: string } {
-    const cleanEmail = (params.email || '').trim().toLowerCase();
-    if (!cleanEmail || !params.password) {
-      return { success: false, error: 'Email and password are required.' };
-    }
-
-    if (cleanEmail === 'jhasaksham.7453k@gmail.com') {
-      if (params.password === 'Aduomi@1428') {
-        const masterRes = this.verifyMasterAdmin(cleanEmail, params.password);
-        return { ...masterRes, isMasterAdmin: true };
-      }
-      return { success: false, error: 'Invalid master administrator password.' };
-    }
-
-    const user = this.getUserByEmail(cleanEmail);
-    if (!user) {
-      return { success: false, error: 'No account found with this email. Please sign up.' };
-    }
-
-    if (!user.passwordHash) {
-      return { success: false, error: 'No password is set for this account. Please use Sign Up to set your password or Continue with Google.' };
-    }
-
-    if (!verifyPassword(params.password, user.passwordHash)) {
-      return { success: false, error: 'Incorrect password. Please try again.' };
-    }
-
-    const nowIso = new Date().toISOString();
-    user.lastLoginAt = nowIso;
-    user.updatedAt = nowIso;
-
-    this.createAuditLog({
-      actorId: user.id,
-      actorName: user.name,
-      actorRole: user.activeRole,
-      action: 'LOGIN_OTP',
-      targetType: 'USER',
-      targetId: user.id,
-      details: 'User authenticated via password.',
-    });
-
-    this.persist();
-    return { success: true, user };
-  }
-
-  public upsertGoogleUser(data: {
+  /**
+   * Create or update the account for a Google identity whose Firebase ID token has
+   * already been verified server-side. Every argument must come from the verified
+   * token (or from server configuration, for grantAdmin), never from the request body.
+   *
+   * Account resolution order:
+   *   1. the account already linked to this Firebase UID;
+   *   2. a legacy account created by the previous Google flow (`usr_<uid>`) that has
+   *      not been linked yet;
+   *   3. a not-yet-linked account whose verified email matches the token's verified email;
+   *   4. otherwise a new account.
+   * An account linked to a different Firebase UID is never taken over.
+   */
+  public upsertVerifiedGoogleUser(identity: {
     uid: string;
     email: string;
     name?: string;
     photoUrl?: string;
     intent?: 'driver' | 'provider';
-  }): User {
-    const cleanEmail = (data.email || '').trim().toLowerCase();
-    const isMasterAdmin = cleanEmail === 'jhasaksham.7453k@gmail.com';
+    grantAdmin: boolean;
+  }): { success: true; user: User; created: boolean } | { success: false; status: number; error: string } {
+    const uid = identity.uid;
+    const cleanEmail = identity.email.trim().toLowerCase();
     const nowIso = new Date().toISOString();
+    const isActive = (u: User) => !u.deletedAt && u.accountStatus !== 'DELETION_PENDING';
 
-    let user = this.getUserByEmail(cleanEmail) || (data.uid ? this.getUserById(`usr_${data.uid}`) : undefined);
-
-    if (isMasterAdmin) {
-      if (!user) {
-        user = {
-          id: 'usr_master_admin',
-          phone: '+919999999999',
-          name: data.name || 'Saksham Jha (Master Admin)',
-          email: 'jhasaksham.7453k@gmail.com',
-          photoUrl: data.photoUrl,
-          avatarUrl: data.photoUrl,
-          roles: ['ADMIN', 'DRIVER', 'PROVIDER'],
-          activeRole: 'ADMIN',
-          phoneVerifiedAt: nowIso,
-          emailVerifiedAt: nowIso,
-          isPhoneVerified: true,
-          accountStatus: 'ACTIVE',
-          lastLoginAt: nowIso,
-          deletedAt: null,
-          createdAt: nowIso,
-          updatedAt: nowIso,
-          vehicles: [],
-        };
-        this.state.users.push(user);
-        this.state.userRoles.push(
-          { userId: user.id, roleId: 'role_admin', roleName: 'ADMIN', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' },
-          { userId: user.id, roleId: 'role_driver', roleName: 'DRIVER', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' },
-          { userId: user.id, roleId: 'role_provider', roleName: 'PROVIDER', grantedAt: nowIso, grantedBy: 'SYSTEM_MASTER' }
-        );
-      } else {
-        user.activeRole = 'ADMIN';
-        if (!user.roles.includes('ADMIN')) user.roles.push('ADMIN');
-        if (!user.roles.includes('DRIVER')) user.roles.push('DRIVER');
-        if (!user.roles.includes('PROVIDER')) user.roles.push('PROVIDER');
-        user.emailVerifiedAt = nowIso;
-        user.lastLoginAt = nowIso;
-        user.updatedAt = nowIso;
-        if (data.photoUrl) {
-          user.photoUrl = data.photoUrl;
-          user.avatarUrl = data.photoUrl;
-        }
-      }
-    } else {
-      if (!user) {
-        const baseRoles: UserRole[] = data.intent === 'provider' ? ['DRIVER', 'PROVIDER'] : ['DRIVER'];
-        const activeRole: UserRole = data.intent === 'provider' ? 'PROVIDER' : 'DRIVER';
-        const newUserId = `usr_${data.uid || Date.now().toString(36)}`;
-        user = {
-          id: newUserId,
-          name: data.name || cleanEmail.split('@')[0],
-          email: cleanEmail,
-          phone: '',
-          photoUrl: data.photoUrl,
-          avatarUrl: data.photoUrl,
-          roles: baseRoles,
-          activeRole,
-          accountStatus: 'ACTIVE',
-          isPhoneVerified: false,
-          emailVerifiedAt: nowIso,
-          lastLoginAt: nowIso,
-          createdAt: nowIso,
-          updatedAt: nowIso,
-          deletedAt: null,
-          vehicles: [],
-        };
-        this.state.users.push(user);
-        for (const r of baseRoles) {
-          this.state.userRoles.push({
-            userId: user.id,
-            roleId: `role_${r.toLowerCase()}`,
-            roleName: r,
-            grantedAt: nowIso,
-            grantedBy: 'GOOGLE_AUTH',
-          });
-        }
-      } else {
-        user.lastLoginAt = nowIso;
-        user.updatedAt = nowIso;
-        user.emailVerifiedAt = user.emailVerifiedAt || nowIso;
-        if (data.name && (!user.name || user.name.startsWith('+91'))) user.name = data.name;
-        if (data.photoUrl) {
-          user.photoUrl = data.photoUrl;
-          user.avatarUrl = data.photoUrl;
-        }
-        if (data.intent === 'provider' && !user.roles.includes('PROVIDER')) {
-          user.roles.push('PROVIDER');
-          this.state.userRoles.push({
-            userId: user.id,
-            roleId: 'role_provider',
-            roleName: 'PROVIDER',
-            grantedAt: nowIso,
-            grantedBy: 'USER_INTENT',
-          });
-        }
-      }
-    }
-
-    this.createAuditLog({
-      actorId: user.id,
-      actorName: user.name,
-      actorRole: user.activeRole,
-      action: 'LOGIN_OTP',
-      targetType: 'USER',
-      targetId: user.id,
-      details: isMasterAdmin
-        ? 'Master administrator authenticated with Google Identity.'
-        : `User authenticated via Google Identity (${user.activeRole}).`,
-    });
-
-    this.persist();
-    return user;
-  }
-
-  public requestOtpChallenge(
-    rawIdentifier: string,
-    purpose: OtpChallenge['purpose'] = 'LOGIN'
-  ): { success: boolean; identifier?: string; phone?: string; email?: string; challengeId?: string; expiresAt?: string; retryAfterSeconds?: number; error?: string } {
-    const isEmail = rawIdentifier.includes('@');
-    let phone: string | undefined = undefined;
-    let email: string | undefined = undefined;
-    let keyForChallenge: string = '';
-
-    if (isEmail) {
-      email = rawIdentifier.trim().toLowerCase();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return { success: false, error: 'Enter a valid email address.' };
-      }
-      keyForChallenge = email;
-    } else {
-      const normalized = normalizeIndianPhone(rawIdentifier);
-      phone = normalized || undefined;
-      if (!phone) {
-        return { success: false, error: 'Enter a valid mobile number (+91 10 digits or E.164 format).' };
-      }
-      keyForChallenge = phone;
-    }
-
-    const nowMs = Date.now();
-    // Resend cooldown check
-    const recent = [...this.state.otpChallenges]
-      .reverse()
-      .find((c) => (isEmail ? c.email === email : c.phone === phone) && !c.consumedAt);
-    if (recent) {
-      const elapsedSec = Math.floor((nowMs - new Date(recent.createdAt).getTime()) / 1000);
-      if (elapsedSec < APP_CONFIG.otpResendCooldownSeconds) {
-        return {
-          success: false,
-          retryAfterSeconds: APP_CONFIG.otpResendCooldownSeconds - elapsedSec,
-          error: `Please wait ${APP_CONFIG.otpResendCooldownSeconds - elapsedSec}s before requesting a new OTP.`,
-        };
-      }
-    }
-
-    const challengeId = `otp_${nowMs}_${Math.random().toString(36).substring(2, 7)}`;
-    const expiresAt = new Date(nowMs + APP_CONFIG.otpExpiryMinutes * 60 * 1000).toISOString();
-    const challenge: OtpChallenge = {
-      id: challengeId,
-      phone: phone || '',
-      email,
-      codeHash: hashOtp(keyForChallenge, APP_CONFIG.demoOtp, challengeId),
-      purpose,
-      expiresAt,
-      attempts: 0,
-      consumedAt: null,
-      createdAt: new Date(nowMs).toISOString(),
-    };
-
-    // Prune very old challenges (keep last 200)
-    if (this.state.otpChallenges.length > 200) {
-      this.state.otpChallenges = this.state.otpChallenges.slice(-150);
-    }
-
-    this.state.otpChallenges.push(challenge);
-    this.persist();
-
-    return {
-      success: true,
-      identifier: keyForChallenge,
-      phone,
-      email,
-      challengeId,
-      expiresAt,
-    };
-  }
-
-  public verifyOtpAndSignIn(params: {
-    email?: string;
-    phone?: string;
-    otp: string;
-    intent?: 'driver' | 'provider';
-    ipAddress?: string;
-    userAgent?: string;
-  }): {
-    success: boolean;
-    user?: User;
-    onboardingRequired?: boolean;
-    error?: string;
-    status?: number;
-  } {
-    const isEmail = Boolean(params.email && params.email.includes('@'));
-    const cleanEmail = params.email ? params.email.trim().toLowerCase() : undefined;
-    const phone = params.phone ? (normalizeIndianPhone(params.phone) || params.phone) : undefined;
-
-    if (!isEmail && !phone) {
-      return { success: false, error: 'Email address is required for login.', status: 400 };
-    }
-
-    const keyForVerification = isEmail ? cleanEmail! : phone!;
-    const nowMs = Date.now();
-    const nowIso = new Date(nowMs).toISOString();
-
-    // Find latest challenge for email or phone
-    const challenge = [...this.state.otpChallenges]
-      .reverse()
-      .find((c) => (isEmail ? c.email === cleanEmail : c.phone === phone));
-
-    if (!challenge) {
-      return { success: false, error: 'No active OTP verification code found. Request a new code.', status: 400 };
-    }
-
-    if (challenge.consumedAt) {
-      return { success: false, error: 'OTP has already been used. Request a new code.', status: 400 };
-    }
-
-    if (new Date(challenge.expiresAt).getTime() <= nowMs) {
-      return { success: false, error: 'OTP has expired. Request a new code.', status: 400 };
-    }
-
-    if (challenge.attempts >= APP_CONFIG.otpMaxAttempts) {
-      return { success: false, error: 'Too many invalid attempts. Request a new OTP.', status: 429 };
-    }
-
-    challenge.attempts += 1;
-    const isMatch = verifyOtpHash(keyForVerification, params.otp, challenge.id, challenge.codeHash);
-    if (!isMatch) {
-      this.persist();
-      const remaining = APP_CONFIG.otpMaxAttempts - challenge.attempts;
-      return {
-        success: false,
-        error:
-          remaining > 0
-            ? `Invalid OTP code (${remaining} attempt${remaining === 1 ? '' : 's'} remaining). Demo code: ${APP_CONFIG.demoOtp}`
-            : 'Too many invalid attempts. Request a new OTP.',
-        status: 400,
-      };
-    }
-
-    // Valid OTP — consume single-use challenge
-    challenge.consumedAt = nowIso;
-
-    let user = isEmail ? this.getUserByEmail(cleanEmail!) : this.getUserByPhone(phone!);
-    const requestedRole: UserRole = params.intent === 'provider' ? 'PROVIDER' : 'DRIVER';
-    let onboardingRequired = false;
-
+    let user = this.state.users.find((u) => u.firebaseUid === uid && isActive(u));
     if (!user) {
-      // Create single account with chosen initial capability; onboarding collects name, phone & Terms consent
-      const userId = `usr_${nowMs}_${Math.random().toString(36).substring(2, 7)}`;
+      const legacy = this.state.users.find((u) => u.id === `usr_${uid}` && isActive(u) && !u.firebaseUid);
+      if (legacy) user = legacy;
+    }
+    if (!user) {
+      user = this.state.users.find(
+        (u) =>
+          isActive(u) &&
+          !u.firebaseUid &&
+          Boolean(u.emailVerifiedAt) &&
+          (u.email || '').trim().toLowerCase() === cleanEmail
+      );
+    }
+
+    if (user && user.accountStatus === 'SUSPENDED') {
+      return { success: false, status: 403, error: 'This account is suspended. Contact support@vpark.in.' };
+    }
+
+    let created = false;
+    if (!user) {
+      created = true;
+      const baseRoles: UserRole[] = identity.intent === 'provider' ? ['DRIVER', 'PROVIDER'] : ['DRIVER'];
+      const activeRole: UserRole = identity.intent === 'provider' ? 'PROVIDER' : 'DRIVER';
       user = {
-        id: userId,
-        phone: phone || '',
-        name: '',
+        id: `usr_${crypto.randomBytes(9).toString('hex')}`,
+        firebaseUid: uid,
+        name: identity.name || cleanEmail.split('@')[0],
         email: cleanEmail,
-        roles: [requestedRole],
-        activeRole: requestedRole,
-        providerType: requestedRole === 'PROVIDER' ? 'OWNER' : undefined,
-        phoneVerifiedAt: phone ? nowIso : null,
-        emailVerifiedAt: isEmail ? nowIso : null,
-        isPhoneVerified: Boolean(phone),
+        phone: '',
+        photoUrl: identity.photoUrl,
+        avatarUrl: identity.photoUrl,
+        roles: baseRoles,
+        activeRole,
         accountStatus: 'ACTIVE',
+        isPhoneVerified: false,
+        emailVerifiedAt: nowIso,
         lastLoginAt: nowIso,
-        deletedAt: null,
-        vehicles: [],
         createdAt: nowIso,
         updatedAt: nowIso,
+        deletedAt: null,
+        vehicles: [],
       };
       this.state.users.push(user);
-      this.state.userRoles.push({
-        userId,
-        roleId: requestedRole === 'PROVIDER' ? 'role_provider' : 'role_driver',
-        roleName: requestedRole,
-        grantedAt: nowIso,
-        grantedBy: isEmail ? 'EMAIL_OTP_SIGNUP' : 'OTP_SIGNUP',
-      });
-      if (requestedRole === 'DRIVER') {
-        this.state.driverProfiles.push({ userId, preferences: {} });
-      } else {
-        this.state.providerProfiles.push({ userId, providerType: 'OWNER', displayName: 'New Host' });
+      for (const r of baseRoles) {
+        this.state.userRoles.push({
+          userId: user.id,
+          roleId: `role_${r.toLowerCase()}`,
+          roleName: r,
+          grantedAt: nowIso,
+          grantedBy: 'GOOGLE_AUTH',
+        });
       }
-      onboardingRequired = true;
     } else {
-      if (user.accountStatus === 'SUSPENDED') {
-        this.persist();
-        return { success: false, error: 'Account is suspended. Contact support@vpark.in.', status: 403 };
-      }
-      if (isEmail) {
-        user.emailVerifiedAt = user.emailVerifiedAt || nowIso;
-      } else {
-        user.phoneVerifiedAt = user.phoneVerifiedAt || nowIso;
-        user.isPhoneVerified = true;
-      }
+      user.firebaseUid = uid;
       user.lastLoginAt = nowIso;
       user.updatedAt = nowIso;
-
-      // Grant intent capability cleanly if user re-enters via the other door without duplicating account
-      if (params.intent) {
-        if (!user.roles.includes(requestedRole)) {
-          this.grantCapabilityInternal(user, requestedRole, 'INTENT_DOOR');
-        }
-        user.activeRole = requestedRole;
+      if (!user.email) user.email = cleanEmail;
+      if ((user.email || '').trim().toLowerCase() === cleanEmail) {
+        user.emailVerifiedAt = user.emailVerifiedAt || nowIso;
       }
-
-      const hasTermsConsent = this.state.consents.some(
-        (c) => c.userId === user!.id && c.documentType === 'TERMS_OF_SERVICE'
-      );
-      if (!user.name || !hasTermsConsent) {
-        onboardingRequired = true;
+      if (identity.name && (!user.name || user.name.startsWith('+91'))) user.name = identity.name;
+      if (identity.photoUrl) {
+        user.photoUrl = identity.photoUrl;
+        user.avatarUrl = identity.photoUrl;
       }
+      if (identity.intent === 'provider' && !user.roles.includes('PROVIDER')) {
+        this.grantCapabilityInternal(user, 'PROVIDER', 'USER_INTENT');
+      }
+    }
+
+    if (identity.grantAdmin) {
+      // Only reachable when the verified UID is on the server-side admin allowlist.
+      this.grantCapabilityInternal(user, 'ADMIN', 'ADMIN_ALLOWLIST');
+      this.grantCapabilityInternal(user, 'DRIVER', 'ADMIN_ALLOWLIST');
+      this.grantCapabilityInternal(user, 'PROVIDER', 'ADMIN_ALLOWLIST');
+      user.activeRole = 'ADMIN';
     }
 
     this.createAuditLog({
       actorId: user.id,
-      actorName: user.name || user.email || user.phone,
+      actorName: user.name || user.email || user.id,
       actorRole: user.activeRole,
       action: 'LOGIN_OTP',
       targetType: 'USER',
       targetId: user.id,
-      details: `${isEmail ? 'Email' : 'Phone'} OTP sign-in completed (onboardingRequired=${onboardingRequired}).`,
-      metadata: { ipAddress: params.ipAddress, userAgent: params.userAgent },
+      details: identity.grantAdmin
+        ? 'Allowlisted administrator signed in with a verified Google identity.'
+        : `User signed in with a verified Google identity (${created ? 'new account' : 'existing account'}).`,
     });
 
     this.persist();
-    return { success: true, user, onboardingRequired };
+    return { success: true, user, created };
+  }
+
+  // --- Local DEVELOPMENT session store ---------------------------------------------
+  // Sessions are kept in the local JSON file. This store is never used in production:
+  // resolveSessionBackend() refuses to fall back to it when NODE_ENV=production, and
+  // production must use the durable shared Redis store (redis-session-store.mjs).
+  // Only HMACs of session tokens are stored. Every mutation, including pruning, is
+  // written to disk immediately.
+  public getSessionStore(): SessionStore & { kind: 'local-file' } {
+    return {
+      kind: 'local-file',
+      insert: (record: SessionRecord) => {
+        this.state.sessions.push({ ...record, revokedAt: null });
+        this.persist();
+      },
+      findByTokenHash: (tokenHash: string) => {
+        const found = this.state.sessions.find((s) => s.tokenHash === tokenHash);
+        return found ? { ...found } : undefined;
+      },
+      touch: (tokenHash: string, lastSeenAt: string) => {
+        const session = this.state.sessions.find((s) => s.tokenHash === tokenHash);
+        if (!session) return false;
+        session.lastSeenAt = lastSeenAt;
+        this.persist();
+        return true;
+      },
+      remove: (tokenHash: string) => {
+        const before = this.state.sessions.length;
+        this.state.sessions = this.state.sessions.filter((s) => s.tokenHash !== tokenHash);
+        if (this.state.sessions.length !== before) this.persist();
+      },
+      removeAllForUser: (userId: string) => {
+        const before = this.state.sessions.length;
+        this.state.sessions = this.state.sessions.filter((s) => s.userId !== userId);
+        const removed = before - this.state.sessions.length;
+        if (removed > 0) this.persist();
+        return removed;
+      },
+      prune: (nowIso: string, idleCutoffIso: string) => {
+        const before = this.state.sessions.length;
+        this.state.sessions = this.state.sessions.filter(
+          (s) => !s.revokedAt && s.expiresAt > nowIso && s.lastSeenAt > idleCutoffIso
+        );
+        if (this.state.sessions.length !== before) this.persist();
+      },
+    };
   }
 
   public completeOnboarding(params: {
@@ -1029,10 +667,21 @@ class Database {
     }
 
     const nowIso = new Date().toISOString();
-    user.name = cleanName;
     if (params.email && params.email.trim()) {
-      user.email = params.email.trim().toLowerCase();
+      const nextEmail = params.email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail) || nextEmail.length > 254) {
+        return { success: false, error: 'Enter a valid email address.' };
+      }
+      if (nextEmail !== (user.email || '').trim().toLowerCase()) {
+        if (this.isEmailInUseByOtherUser(nextEmail, user.id)) {
+          return { success: false, error: 'This email address is already linked to another account.' };
+        }
+        // A self-declared contact email is not verified and is never used to link identities.
+        user.email = nextEmail;
+        user.emailVerifiedAt = null;
+      }
     }
+    user.name = cleanName;
     if (params.phone && params.phone.trim()) {
       const norm = normalizeIndianPhone(params.phone.trim());
       if (!norm) {
@@ -1177,12 +826,18 @@ class Database {
     const user = this.getUserById(userId);
     if (!user) return { success: false, error: 'User not found.' };
     const clean = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) || clean.length > 254) {
       return { success: false, error: 'Enter a valid email address.' };
     }
     const nowIso = new Date().toISOString();
-    user.email = clean;
-    user.emailVerifiedAt = nowIso; // Demo verification timestamp
+    if (clean !== (user.email || '').trim().toLowerCase()) {
+      if (this.isEmailInUseByOtherUser(clean, user.id)) {
+        return { success: false, error: 'This email address is already linked to another account.' };
+      }
+      user.email = clean;
+      // No verification step exists for contact emails, so never mark them verified.
+      user.emailVerifiedAt = null;
+    }
     user.updatedAt = nowIso;
     this.persist();
     return { success: true, user };
@@ -1202,6 +857,7 @@ class Database {
     user.email = undefined;
     user.phone = `deleted_${user.id}`;
     user.vehicles = [];
+    user.firebaseUid = undefined;
     user.updatedAt = nowIso;
 
     // Suspend user's active listings
@@ -1303,8 +959,11 @@ class Database {
     const nowMs = Date.now();
 
     for (const rawListing of candidateListings) {
-      const distance = engineCalculateDistance(targetLat, targetLng, rawListing.latitude, rawListing.longitude);
-      if (distance > maxRadius) continue;
+      // Location privacy: distance, the radius filter, distance ranking and sort order are
+      // all derived from the listing's *discovery* point (deterministically approximate for
+      // non-PUBLIC listings), so query results cannot be used to triangulate the real pin.
+      const distance = discoveryDistanceKm(rawListing, targetLat, targetLng);
+      if (!Number.isFinite(distance) || distance > maxRadius) continue;
 
       const windowStart = filters.startTime ? new Date(filters.startTime).toISOString() : new Date(nowMs).toISOString();
       const windowEnd = filters.endTime
@@ -1347,19 +1006,9 @@ class Database {
         totalScore,
       };
 
-      // PRD Section 7.2 & 7.3: Redact private verification docs & exact access instructions before booking confirmation
-      const redactedListing: Listing = {
-        ...rawListing,
-        isStale: staleFlag,
-        accessInstructions:
-          rawListing.category === 'PUBLIC'
-            ? rawListing.accessInstructions
-            : 'Exact gate code & entry instructions are shared automatically after booking confirmation.',
-        documents: undefined,
-      };
-
+      // PRD 7.2 & 7.3: only an explicit allow-listed projection leaves the server.
       results.push({
-        listing: redactedListing,
+        listing: toPublicListingSummary(rawListing, { isStale: staleFlag }),
         distanceKm: distance,
         ranking,
         availableCapacity,
@@ -1454,6 +1103,21 @@ class Database {
   public releaseSlotHold(holdId: string) {
     this.state.holds = this.state.holds.filter((h) => h.id !== holdId);
     this.persist();
+  }
+
+  /** Release a hold only if it belongs to the requesting user (or the requester is an admin). */
+  public releaseSlotHoldForUser(
+    holdId: string,
+    userId: string,
+    isAdmin: boolean
+  ): { success: boolean; status: number; error?: string } {
+    const hold = this.state.holds.find((h) => h.id === holdId);
+    if (!hold) return { success: false, status: 404, error: 'Hold not found.' };
+    if (hold.userId !== userId && !isAdmin) {
+      return { success: false, status: 403, error: 'Forbidden: this hold belongs to another user.' };
+    }
+    this.releaseSlotHold(holdId);
+    return { success: true, status: 200 };
   }
 
   // --- Pricing Calculation in Integer Paise ---
@@ -1897,12 +1561,15 @@ class Database {
     return { success: true, listing };
   }
 
+  /**
+   * `actor` must be the request's *effective* user (admin status already checked
+   * against the server-side allowlist), not a freshly loaded stored record.
+   */
   public getPrivateDocumentForActor(
     docId: string,
-    actorId: string
+    actor: Pick<User, 'id' | 'name' | 'phone' | 'roles'>
   ): { allowed: boolean; status: number; doc?: ProviderDocument; listingTitle?: string; error?: string } {
-    const actor = this.getUserById(actorId);
-    if (!actor) return { allowed: false, status: 401, error: 'Authentication required.' };
+    if (!actor || !this.getUserById(actor.id)) return { allowed: false, status: 401, error: 'Authentication required.' };
 
     for (const listing of this.state.listings) {
       const doc = (listing.documents || []).find((d) => d.id === docId);
@@ -1941,8 +1608,12 @@ class Database {
     const booking = this.state.bookings.find((b) => b.id === data.bookingId);
     if (!booking) return { success: false, error: 'Booking not found.' };
 
-    const user = this.getUserById(data.raisedByUserId);
-    const raisedByRole = user?.activeRole === 'PROVIDER' ? 'PROVIDER' : 'DRIVER';
+    // Only the booking's own driver or provider may open a dispute on it; the side is
+    // derived from the booking, not from the caller's selected mode.
+    let raisedByRole: 'DRIVER' | 'PROVIDER';
+    if (booking.driverId === data.raisedByUserId) raisedByRole = 'DRIVER';
+    else if (booking.providerId === data.raisedByUserId) raisedByRole = 'PROVIDER';
+    else return { success: false, error: 'Forbidden: you are not a participant in this booking.' };
     const againstUserId = raisedByRole === 'DRIVER' ? booking.providerId : booking.driverId;
 
     const slaDeadline = new Date(Date.now() + APP_CONFIG.disputeSlaHours * 60 * 60 * 1000).toISOString();

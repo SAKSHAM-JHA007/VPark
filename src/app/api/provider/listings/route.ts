@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireCapability } from '@/lib/auth';
+import type { ParkingCategory } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
+const PROVIDER_CATEGORIES: ParkingCategory[] = ['PRIVATE', 'COMMERCIAL', 'OTHER'];
+
 export async function GET(req: NextRequest) {
-  const auth = requireCapability(req, 'PROVIDER');
+  const auth = await requireCapability(req, 'PROVIDER');
   if (auth.error) return auth.error;
 
   try {
@@ -40,7 +43,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = requireCapability(req, 'PROVIDER');
+  const auth = await requireCapability(req, 'PROVIDER');
   if (auth.error) return auth.error;
 
   try {
@@ -82,6 +85,22 @@ export async function POST(req: NextRequest) {
         { success: false, error: 'Title, complete address, and a valid hourly rate (₹) are required.' },
         { status: 400 }
       );
+    }
+
+    // Providers list private / commercial / other spaces only. PUBLIC entries are
+    // VPark-surveyed public parking whose exact location is published, so a provider
+    // must not be able to opt their own (private) space into that treatment.
+    if (category !== undefined && !PROVIDER_CATEGORIES.includes(category)) {
+      return NextResponse.json(
+        { success: false, error: 'Space type must be PRIVATE, COMMERCIAL or OTHER.' },
+        { status: 400 }
+      );
+    }
+    if (
+      (latitude !== undefined && (typeof latitude !== 'number' || !Number.isFinite(latitude) || Math.abs(latitude) > 90)) ||
+      (longitude !== undefined && (typeof longitude !== 'number' || !Number.isFinite(longitude) || Math.abs(longitude) > 180))
+    ) {
+      return NextResponse.json({ success: false, error: 'Invalid map coordinates.' }, { status: 400 });
     }
 
     const cap = Number(totalCapacity);
@@ -157,7 +176,7 @@ export async function POST(req: NextRequest) {
       operatingHours: operatingHours || { is24x7: true, daysOfWeek: [0, 1, 2, 3, 4, 5, 6] },
       availabilityConfidence: 'PROVIDER_MANAGED',
       lastConfirmedAt: new Date().toISOString(),
-      isBookable: category !== 'PUBLIC',
+      isBookable: true,
       initialStatus: isDraft ? 'DRAFT' : 'PENDING_REVIEW',
       documents: document?.fileName
         ? [
@@ -168,7 +187,9 @@ export async function POST(req: NextRequest) {
               docType: document.docType || 'SALE_DEED',
               fileName: document.fileName,
               fileUrl: `/api/private-docs/${docId}`,
-              storageKey: document.storageKey,
+              // A client-chosen storage key could point at another provider's private
+              // upload. Storage keys must be assigned server-side by an upload handler.
+              storageKey: undefined,
               status: 'PENDING',
               uploadedAt: new Date().toISOString(),
             },
@@ -190,7 +211,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = requireCapability(req, 'PROVIDER');
+  const auth = await requireCapability(req, 'PROVIDER');
   if (auth.error) return auth.error;
 
   try {

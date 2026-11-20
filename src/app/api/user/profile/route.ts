@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireSession } from '@/lib/auth';
+import { requireSession, serializeUser } from '@/lib/auth';
 
 export async function PATCH(req: NextRequest) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
   try {
@@ -21,8 +21,8 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: result.user,
-      message: 'Email address saved and verified.',
+      user: serializeUser(result.user),
+      message: 'Email address saved.',
     });
   } catch (error) {
     console.error('Update profile error:', error);

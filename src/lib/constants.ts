@@ -1,5 +1,3 @@
-export const MASTER_ADMIN_EMAIL = 'jhasaksham.7453k@gmail.com';
-
 export interface DemandAnchor {
   id: string;
   name: string;
@@ -86,7 +84,6 @@ export const APP_CONFIG = {
   otpExpiryMinutes: 5,
   otpMaxAttempts: 5,
   otpResendCooldownSeconds: 30,
-  demoOtp: '123456',
   legalDocVersions: {
     terms: 'v2.2-2026-11-11',
     privacy: 'v2.2-2026-11-11',
