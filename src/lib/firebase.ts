@@ -7,6 +7,7 @@ import {
   Auth,
   UserCredential,
 } from 'firebase/auth';
+import { getAnalytics, isSupported, Analytics } from 'firebase/analytics';
 
 const getClientKey = (): string => {
   if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -34,6 +35,7 @@ export const firebaseConfig = {
 // Initialize Firebase (SSR Safe)
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
+let analytics: Analytics | undefined;
 
 if (typeof window !== 'undefined') {
   try {
@@ -42,13 +44,20 @@ if (typeof window !== 'undefined') {
       firebaseConfig.apiKey = key;
       app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
       auth = getAuth(app);
+      isSupported()
+        .then((supported) => {
+          if (supported && app) {
+            analytics = getAnalytics(app);
+          }
+        })
+        .catch(() => {});
     }
   } catch (err) {
     console.warn('[Firebase] Client initialization warning:', err);
   }
 }
 
-export { app, auth };
+export { app, auth, analytics };
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
