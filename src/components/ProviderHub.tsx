@@ -735,7 +735,7 @@ export function ProviderHub({
                               Unconfirmed &gt;30d (Demoted)
                             </span>
                           )}
-                          <span className="text-slate-400 dark:text-ink-3 font-mono text-[11px]">
+                          <span className="text-slate-400 dark:text-ink-3 tabular-nums text-[11px]">
                             {l.photos.length} photos · {l.totalCapacity} {l.totalCapacity === 1 ? 'slot' : 'slots'}
                           </span>
                         </div>
@@ -837,7 +837,7 @@ export function ProviderHub({
           <ModalPanel className="w-full max-w-2xl bg-white dark:bg-surface rounded-2xl shadow-2xl border border-slate-200 dark:border-hairline overflow-hidden my-auto max-h-[92vh] flex flex-col">
             <div className="bg-slate-900 dark:bg-surface-alt dark:border-b dark:border-hairline text-white dark:text-ink px-6 py-4 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-mono uppercase text-blue-400 font-bold block">
+                <span className="text-[11px] font-sans uppercase text-blue-400 font-bold block">
                   Step {wizardStep} of 4 · {editingListingId ? 'Edit Listing' : 'Add your parking space'}
                 </span>
                 <h2 className="font-black text-lg">Space Details &amp; Verification</h2>
@@ -1021,7 +1021,7 @@ export function ProviderHub({
                         onChange={(e) =>
                           setFormData({ ...formData, totalCapacity: Math.max(1, parseInt(e.target.value, 10) || 1) })
                         }
-                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold font-mono"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold tabular-nums"
                       />
                     </div>
                     <div>
@@ -1089,7 +1089,7 @@ export function ProviderHub({
                         placeholder="e.g. 2.2"
                         value={formData.heightClearanceMeters}
                         onChange={(e) => setFormData({ ...formData, heightClearanceMeters: e.target.value })}
-                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-mono"
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 tabular-nums"
                       />
                     </div>
                   </div>
@@ -1115,7 +1115,7 @@ export function ProviderHub({
                 <div key="wizard-step-3" className={`${wizardStepEnter} space-y-4`}>
                   <h3 className="font-black text-slate-900 dark:text-ink text-sm">3. Pricing (₹) &amp; Access Instructions</h3>
 
-                  <div className="grid grid-cols-3 gap-2 font-mono">
+                  <div className="grid grid-cols-3 gap-2 tabular-nums">
                     <div>
                       <label htmlFor="rate-hourly" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
                         Hourly (₹) *
@@ -1325,7 +1325,7 @@ export function ProviderHub({
                     </div>
 
                     {formData.docFileName ? (
-                      <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-300 flex items-center gap-2 font-mono text-[11px]">
+                      <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-300 flex items-center gap-2 font-sans text-[11px]">
                         <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         <span>Uploaded to private storage: {formData.docFileName}</span>
                       </div>
