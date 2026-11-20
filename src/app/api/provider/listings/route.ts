@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCapability } from '@/lib/auth';
+import { requireCapability, errorResponse } from '@/lib/auth';
+import type { ParkingCategory } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
+const PROVIDER_CATEGORIES: ParkingCategory[] = ['PRIVATE', 'COMMERCIAL', 'OTHER'];
+
 export async function GET(req: NextRequest) {
-  const auth = requireCapability(req, 'PROVIDER');
+  const auth = await requireCapability(req, 'PROVIDER');
   if (auth.error) return auth.error;
 
   try {
     const userId = auth.user.id;
-    const listings = db.getListingsByProvider(userId);
-    const allBookings = db.getBookings().filter((b) => b.providerId === userId);
+    const [listings, allBookings] = await Promise.all([db.getListingsByProvider(userId), db.getBookingsForProvider(userId)]);
 
     const activeBookings = allBookings.filter((b) => b.status === 'CONFIRMED' || b.status === 'CHECKED_IN');
     const totalEarnings = allBookings.reduce(
@@ -34,13 +36,12 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Provider listings error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch provider listings' }, { status: 500 });
+    return errorResponse(error, 'Failed to fetch provider listings', 'Provider listings error');
   }
 }
 
 export async function POST(req: NextRequest) {
-  const auth = requireCapability(req, 'PROVIDER');
+  const auth = await requireCapability(req, 'PROVIDER');
   if (auth.error) return auth.error;
 
   try {
@@ -84,6 +85,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Providers list private / commercial / other spaces only. PUBLIC entries are
+    // VPark-surveyed public parking whose exact location is published, so a provider
+    // must not be able to opt their own (private) space into that treatment.
+    if (category !== undefined && !PROVIDER_CATEGORIES.includes(category)) {
+      return NextResponse.json(
+        { success: false, error: 'Space type must be PRIVATE, COMMERCIAL or OTHER.' },
+        { status: 400 }
+      );
+    }
+    if (
+      (latitude !== undefined && (typeof latitude !== 'number' || !Number.isFinite(latitude) || Math.abs(latitude) > 90)) ||
+      (longitude !== undefined && (typeof longitude !== 'number' || !Number.isFinite(longitude) || Math.abs(longitude) > 180))
+    ) {
+      return NextResponse.json({ success: false, error: 'Invalid map coordinates.' }, { status: 400 });
+    }
+
     const cap = Number(totalCapacity);
     if (!Number.isInteger(cap) || cap < 1) {
       return NextResponse.json(
@@ -122,7 +139,7 @@ export async function POST(req: NextRequest) {
 
     const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
-    const newListing = db.createListing({
+    const newListing = await db.createListing({
       title: String(title).trim(),
       description: String(description || 'Verified private parking space in Bengaluru.').trim(),
       providerId: user.id,
@@ -157,7 +174,7 @@ export async function POST(req: NextRequest) {
       operatingHours: operatingHours || { is24x7: true, daysOfWeek: [0, 1, 2, 3, 4, 5, 6] },
       availabilityConfidence: 'PROVIDER_MANAGED',
       lastConfirmedAt: new Date().toISOString(),
-      isBookable: category !== 'PUBLIC',
+      isBookable: true,
       initialStatus: isDraft ? 'DRAFT' : 'PENDING_REVIEW',
       documents: document?.fileName
         ? [
@@ -168,7 +185,9 @@ export async function POST(req: NextRequest) {
               docType: document.docType || 'SALE_DEED',
               fileName: document.fileName,
               fileUrl: `/api/private-docs/${docId}`,
-              storageKey: document.storageKey,
+              // A client-chosen storage key could point at another provider's private
+              // upload. Storage keys must be assigned server-side by an upload handler.
+              storageKey: undefined,
               status: 'PENDING',
               uploadedAt: new Date().toISOString(),
             },
@@ -184,13 +203,12 @@ export async function POST(req: NextRequest) {
         : 'Listing submitted for Admin verification. Invisible to drivers until approved.',
     });
   } catch (error) {
-    console.error('Create listing error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create listing' }, { status: 500 });
+    return errorResponse(error, 'Failed to create listing', 'Create listing error');
   }
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = requireCapability(req, 'PROVIDER');
+  const auth = await requireCapability(req, 'PROVIDER');
   if (auth.error) return auth.error;
 
   try {
@@ -200,7 +218,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Listing ID is required.' }, { status: 400 });
     }
 
-    const existing = db.getListingById(id);
+    const existing = await db.getListingById(id);
     if (!existing || existing.providerId !== auth.user.id) {
       return NextResponse.json({ success: false, error: 'Listing not found or unauthorized.' }, { status: 403 });
     }
@@ -213,7 +231,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const result = db.updateProviderListing(id, auth.user.id, { ...updates, submitForReview });
+    const result = await db.updateProviderListing(id, auth.user.id, { ...updates, submitForReview });
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error }, { status: 400 });
     }
@@ -224,7 +242,6 @@ export async function PATCH(req: NextRequest) {
       message: submitForReview ? 'Listing submitted for Admin review!' : 'Draft updated.',
     });
   } catch (error) {
-    console.error('Update listing error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update listing' }, { status: 500 });
+    return errorResponse(error, 'Failed to update listing', 'Update listing error');
   }
 }

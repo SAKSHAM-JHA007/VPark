@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, Auth, UserCredential } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth, UserCredential } from 'firebase/auth';
 
 const getClientKey = () => {
   if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -62,4 +62,13 @@ export async function signInWithGooglePopup(): Promise<UserCredential> {
   }
 
   return signInWithPopup(auth, googleProvider);
+}
+
+/** End the browser-side Firebase session too, so the next sign-in starts fresh. */
+export async function signOutFirebase(): Promise<void> {
+  try {
+    if (auth) await signOut(auth);
+  } catch {
+    // Non-fatal: the VPark server session has already been revoked.
+  }
 }

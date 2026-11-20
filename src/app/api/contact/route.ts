@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { getClientIp, verifySameOrigin } from '@/lib/auth';
+import { errorResponse, getClientIp, verifySameOrigin } from '@/lib/auth';
+import { db, isDataStoreUnavailable } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,45 +84,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const messageRecord = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    // Stored in the application data store (PostgreSQL in production), not a local file.
+    const messageRecord = await db.createContactMessage({
       name: cleanName,
       email: cleanEmail,
       subject: cleanSubject,
       message: cleanMessage,
       ip,
-      userAgent: req.headers.get('user-agent') || 'unknown',
-      createdAt: new Date().toISOString(),
-      status: 'UNREAD',
-    };
-
-    // Save to persistent file storage in .data
-    const dataDir = path.resolve(process.cwd(), '.data');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    const messagesFile = path.join(dataDir, 'contact_messages.json');
-
-    let existingMessages: any[] = [];
-    if (fs.existsSync(messagesFile)) {
-      try {
-        const fileContent = fs.readFileSync(messagesFile, 'utf-8');
-        existingMessages = JSON.parse(fileContent);
-        if (!Array.isArray(existingMessages)) existingMessages = [];
-      } catch {
-        existingMessages = [];
-      }
-    }
-
-    existingMessages.push(messageRecord);
-    fs.writeFileSync(messagesFile, JSON.stringify(existingMessages, null, 2), 'utf-8');
+      userAgent: (req.headers.get('user-agent') || 'unknown').slice(0, 300),
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Thank you for reaching out. We have received your inquiry and will reply within 24 hours.',
       id: messageRecord.id,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    if (isDataStoreUnavailable(err)) return errorResponse(err, 'Unable to send your message right now.', 'Contact message store');
     return NextResponse.json(
       { success: false, error: 'Invalid request payload.' },
       { status: 400 }

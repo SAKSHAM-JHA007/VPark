@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireSession } from '@/lib/auth';
+import { requireSession, serializeUser, errorResponse } from '@/lib/auth';
 import { validatePlateNumber, formatPlateNumber } from '@/lib/validation';
 
 export async function POST(req: NextRequest) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
   try {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     const formattedPlate = formatPlateNumber(String(plateNumber)) || String(plateNumber).toUpperCase().trim();
 
-    const updatedUser = db.addVehicle(session.user.id, {
+    const updatedUser = await db.addVehicle(session.user.id, {
       type,
       makeModel,
       plateNumber: formattedPlate,
@@ -41,11 +41,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: updatedUser,
+      user: serializeUser(updatedUser),
       message: 'Vehicle added to your profile.',
     });
   } catch (error) {
-    console.error('Add vehicle error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to add vehicle' }, { status: 500 });
+    return errorResponse(error, 'Failed to add vehicle', 'Add vehicle error');
   }
 }

@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from './db';
-import { User, UserRole } from '@/types';
+import { db, isDataStoreUnavailable } from './db';
+import type { SessionRecord, User, UserRole } from '@/types';
 import { hasCapability } from './engine.mjs';
+import {
+  createSessionManager,
+  getSessionCookieName,
+  LEGACY_SESSION_COOKIE_NAME,
+  resolveSessionSecret,
+  type SessionManager,
+  type SessionStore,
+} from './security/session.mjs';
+import { createRedisRestSessionStore, resolveSessionBackend } from './security/redis-session-store.mjs';
+import { getAdminUidAllowlist, toEffectiveUser, toPublicUser, type PublicUser } from './security/access-policy.mjs';
 
-export const SESSION_COOKIE_NAME = 'vpark_user_id';
+/** Browser-safe view of a stored user: effective roles only, no server-only fields. */
+export function serializeUser(user: User): PublicUser;
+export function serializeUser(user: User | null | undefined): PublicUser | null;
+export function serializeUser(user: User | null | undefined): PublicUser | null {
+  return toPublicUser(toEffectiveUser(user, getAdminUidAllowlist()));
+}
 
-// ponytail: Single-process in-memory OTP rate limit; replace with Redis/Upstash sliding window in multi-instance production.
-const otpIpBuckets = new Map<string, { count: number; resetAt: number }>();
+// ponytail: Single-process in-memory rate limit; replace with Redis/Upstash sliding window in multi-instance production.
+const authIpBuckets = new Map<string, { count: number; resetAt: number }>();
 
 export function getClientIp(req: NextRequest): string {
   const forwarded = req.headers.get('x-forwarded-for');
@@ -20,11 +35,11 @@ export function getUserAgent(req: NextRequest): string {
   return req.headers.get('user-agent') || 'unknown';
 }
 
-export function checkOtpIpRateLimit(ip: string, limit = 25, windowMs = 15 * 60 * 1000): boolean {
+export function checkAuthIpRateLimit(ip: string, limit = 25, windowMs = 15 * 60 * 1000): boolean {
   const now = Date.now();
-  const bucket = otpIpBuckets.get(ip);
+  const bucket = authIpBuckets.get(ip);
   if (!bucket || bucket.resetAt <= now) {
-    otpIpBuckets.set(ip, { count: 1, resetAt: now + windowMs });
+    authIpBuckets.set(ip, { count: 1, resetAt: now + windowMs });
     return true;
   }
   if (bucket.count >= limit) {
@@ -34,40 +49,178 @@ export function checkOtpIpRateLimit(ip: string, limit = 25, windowMs = 15 * 60 *
   return true;
 }
 
+/**
+ * CSRF defence for state-changing requests (in addition to SameSite=Lax cookies):
+ * reject a browser request whose Origin is a different host, or that the browser
+ * itself labels as cross-site via Fetch Metadata.
+ */
 export function verifySameOrigin(req: NextRequest): NextResponse | null {
+  const forbidden = (error: string) => NextResponse.json({ success: false, error }, { status: 403 });
   const origin = req.headers.get('origin');
   const host = req.headers.get('host');
   if (origin && host) {
     try {
       const originHost = new URL(origin).host;
       if (originHost !== host) {
-        return NextResponse.json({ success: false, error: 'Cross-origin state-changing request rejected.' }, { status: 403 });
+        return forbidden('Cross-origin state-changing request rejected.');
       }
     } catch {
-      return NextResponse.json({ success: false, error: 'Invalid Origin header.' }, { status: 403 });
+      return forbidden('Invalid Origin header.');
     }
+  }
+  if (req.headers.get('sec-fetch-site') === 'cross-site') {
+    return forbidden('Cross-site state-changing request rejected.');
   }
   return null;
 }
 
-export function getSessionUser(req: NextRequest): User | null {
-  const userId = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!userId) return null;
-  const user = db.getUserById(userId);
-  return user || null;
+// --- Sessions ---------------------------------------------------------------------
+
+let warnedSessionConfig = '';
+let warnedLocalStore = false;
+// Module-scoped (not global) so the manager is always bound to the same `db`
+// instance that this module imported.
+let cachedSessionManager: { key: string; manager: SessionManager } | null = null;
+
+function reportSessionConfigError(message: string) {
+  if (warnedSessionConfig !== message) {
+    warnedSessionConfig = message;
+    console.error(`[auth] Sessions disabled (fail closed): ${message}`);
+  }
 }
 
-export function requireSession(req: NextRequest): { user: User; error?: never } | { user?: never; error: NextResponse } {
-  const csrfError = verifySameOrigin(req);
-  if (csrfError && req.method !== 'GET' && req.method !== 'HEAD') {
-    return { error: csrfError };
+/**
+ * Returns null (fail closed) when the session secret or the session backend is
+ * missing or invalid. Production requires the durable shared Redis store; it never
+ * falls back to local files.
+ */
+export function getSessionManager(): SessionManager | null {
+  const resolved = resolveSessionSecret();
+  if (!resolved.secret) {
+    reportSessionConfigError(resolved.error ?? 'SESSION_SECRET is invalid.');
+    return null;
+  }
+  const backend = resolveSessionBackend();
+  if (!backend.kind) {
+    reportSessionConfigError(backend.error);
+    return null;
   }
 
-  const user = getSessionUser(req);
+  const key =
+    backend.kind === 'redis'
+      ? `redis|${backend.config.url}|${backend.config.keyPrefix}|${resolved.secret}`
+      : `database|${resolved.secret}`;
+  if (cachedSessionManager && cachedSessionManager.key === key) return cachedSessionManager.manager;
+
+  let store: SessionStore;
+  if (backend.kind === 'redis') {
+    store = createRedisRestSessionStore(backend.config);
+  } else {
+    if (!warnedLocalStore && process.env.NODE_ENV !== 'test') {
+      warnedLocalStore = true;
+      console.warn('[auth] Sessions are stored in the application database (no Redis configured).');
+    }
+    store = db.getSessionStore();
+  }
+  const manager = createSessionManager({ store, secret: resolved.secret });
+  cachedSessionManager = { key, manager };
+  return manager;
+}
+
+/** 503 for a data store that is unconfigured, unreachable or not migrated (fail closed). */
+export function serviceUnavailableResponse(): NextResponse {
+  return NextResponse.json(
+    { success: false, error: 'The service is temporarily unavailable. Please try again later.' },
+    { status: 503 }
+  );
+}
+
+/**
+ * Response for an unexpected error in a route handler: 503 when the data store is
+ * unavailable (never a silent fallback), otherwise a generic 500. Details are logged
+ * server-side only.
+ */
+export function errorResponse(error: unknown, message: string, logLabel?: string): NextResponse {
+  if (isDataStoreUnavailable(error)) {
+    console.error(`[api] ${logLabel || message}: ${(error as Error).message}`);
+    return serviceUnavailableResponse();
+  }
+  console.error(`[api] ${logLabel || message}:`, error);
+  return NextResponse.json({ success: false, error: message }, { status: 500 });
+}
+
+export class SessionConfigurationError extends Error {
+  constructor() {
+    super('Session configuration is missing or invalid.');
+    this.name = 'SessionConfigurationError';
+  }
+}
+
+export function sessionUnavailableResponse(): NextResponse {
+  return NextResponse.json(
+    { success: false, error: 'Sign-in is temporarily unavailable. Please try again later.' },
+    { status: 503 }
+  );
+}
+
+export function getSessionCookieValue(req: NextRequest): string | undefined {
+  return req.cookies.get(getSessionCookieName())?.value;
+}
+
+export interface SessionContext {
+  /** The stored user with roles reduced to what the account is currently allowed to use. */
+  user: User;
+  session: SessionRecord;
+}
+
+/**
+ * Resolve and fully revalidate the caller's session: the token must be one this
+ * server issued, unexpired, not idle and not revoked, and the account must still
+ * exist and be ACTIVE. ADMIN is re-derived from the server-side allowlist on every call.
+ */
+export async function getSessionContext(req: NextRequest): Promise<SessionContext | null> {
+  const token = getSessionCookieValue(req);
+  if (!token) return null;
+  const manager = getSessionManager();
+  if (!manager) return null;
+  const session = await manager.validateSession(token);
+  if (!session) return null;
+  const stored = await db.getUserById(session.userId);
+  if (!stored) {
+    // The account is unknown to this instance's user store. Do not revoke the shared
+    // session from here; just refuse the request.
+    return null;
+  }
+  if (stored.accountStatus !== 'ACTIVE') {
+    await manager.revokeSession(token).catch(() => undefined);
+    return null;
+  }
+  return { user: toEffectiveUser(stored, getAdminUidAllowlist()), session };
+}
+
+export async function getSessionUser(req: NextRequest): Promise<User | null> {
+  return (await getSessionContext(req))?.user ?? null;
+}
+
+export async function requireSession(
+  req: NextRequest
+): Promise<{ user: User; error?: never } | { user?: never; error: NextResponse }> {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    const csrfError = verifySameOrigin(req);
+    if (csrfError) return { error: csrfError };
+  }
+
+  let user: User | null;
+  try {
+    user = await getSessionUser(req);
+  } catch (error) {
+    if (isDataStoreUnavailable(error)) return { error: serviceUnavailableResponse() };
+    throw error;
+  }
   if (!user) {
     return {
       error: NextResponse.json(
-        { success: false, error: 'Authentication required. Please log in with your phone number.' },
+        { success: false, error: 'Authentication required. Please sign in.' },
         { status: 401 }
       ),
     };
@@ -75,11 +228,11 @@ export function requireSession(req: NextRequest): { user: User; error?: never } 
   return { user };
 }
 
-export function requireCapability(
+export async function requireCapability(
   req: NextRequest,
   requiredRole: UserRole
-): { user: User; error?: never } | { user?: never; error: NextResponse } {
-  const session = requireSession(req);
+): Promise<{ user: User; error?: never } | { user?: never; error: NextResponse }> {
+  const session = await requireSession(req);
   if (session.error) return session;
 
   if (!hasCapability(session.user, requiredRole)) {
@@ -97,23 +250,47 @@ export function requireCapability(
   return { user: session.user };
 }
 
-export function setSessionCookie(response: NextResponse, userId: string) {
-  response.cookies.set(SESSION_COOKIE_NAME, userId, {
+function sessionCookieOptions(maxAgeSeconds: number) {
+  return {
     path: '/',
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60,
+    sameSite: 'lax' as const,
+    maxAge: maxAgeSeconds,
+  };
+}
+
+/**
+ * Start a new session for `userId` on `response`. Any session presented with the
+ * request is revoked first (rotation on every sign-in / privilege change, which also
+ * defeats session fixation). Throws SessionConfigurationError if sessions are
+ * disabled, or the store's error if the session backend is unreachable.
+ */
+export async function issueSession(response: NextResponse, req: NextRequest, userId: string): Promise<void> {
+  const manager = getSessionManager();
+  if (!manager) throw new SessionConfigurationError();
+  const { token } = await manager.rotateSession(getSessionCookieValue(req), {
+    userId,
+    userAgent: getUserAgent(req),
   });
+  response.cookies.set(getSessionCookieName(), token, sessionCookieOptions(Math.floor(manager.config.absoluteTtlMs / 1000)));
+  // The pre-hardening cookie carried a raw user ID; make sure it is gone.
+  response.cookies.set(LEGACY_SESSION_COOKIE_NAME, '', sessionCookieOptions(0));
+}
+
+/** Revoke the session presented with this request (server-side). */
+export async function revokeRequestSession(req: NextRequest): Promise<void> {
+  const token = getSessionCookieValue(req);
+  if (!token) return;
+  await getSessionManager()?.revokeSession(token);
+}
+
+/** Revoke every session belonging to a user (e.g. account deletion). */
+export async function revokeAllSessionsForUser(userId: string): Promise<void> {
+  await getSessionManager()?.revokeAllForUser(userId);
 }
 
 export function clearSessionCookie(response: NextResponse) {
-  response.cookies.set(SESSION_COOKIE_NAME, '', {
-    path: '/',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 0,
-  });
+  response.cookies.set(getSessionCookieName(), '', sessionCookieOptions(0));
+  response.cookies.set(LEGACY_SESSION_COOKIE_NAME, '', sessionCookieOptions(0));
 }
-

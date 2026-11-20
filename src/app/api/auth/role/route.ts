@@ -1,85 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { ProviderType, UserRole } from '@/types';
-import { requireSession, setSessionCookie, verifySameOrigin } from '@/lib/auth';
+import type { ProviderType, UserRole } from '@/types';
+import { issueSession, requireSession, sessionUnavailableResponse, errorResponse } from '@/lib/auth';
+import { getAdminUidAllowlist, toEffectiveUser, toPublicUser } from '@/lib/security/access-policy.mjs';
 
 export const dynamic = 'force-dynamic';
 
+const PROVIDER_TYPES: ProviderType[] = ['OWNER', 'OPERATOR', 'MANAGER'];
+const ROLES: UserRole[] = ['DRIVER', 'PROVIDER', 'ADMIN'];
+
 export async function POST(req: NextRequest) {
-  const csrfError = verifySameOrigin(req);
-  if (csrfError) return csrfError;
+  // requireSession also enforces the same-origin check for this POST.
+  const session = await requireSession(req);
+  if (session.error) return session.error;
 
   try {
     const body = await req.json();
-    const { action, role, switchDemoUser, providerType } = body;
-
-    // Explicit demo evaluation mode switcher (cycles seeded personas without cross-account privilege escalation)
-    if (switchDemoUser || action === 'SWITCH_DEMO_PERSONA') {
-      if (process.env.NODE_ENV === 'production') {
-        return NextResponse.json(
-          { success: false, error: 'Demo persona switching is disabled in production environments.' },
-          { status: 403 }
-        );
-      }
-      const targetUserId =
-        role === 'ADMIN' ? 'usr_admin_1' : role === 'PROVIDER' ? 'usr_owner_1' : 'usr_driver_1';
-      const demoUser = db.getUserById(targetUserId);
-      if (!demoUser) {
-        return NextResponse.json({ success: false, error: 'Demo user not found' }, { status: 404 });
-      }
-      if (role === 'DRIVER' || role === 'PROVIDER' || role === 'ADMIN') {
-        if (demoUser.roles.includes(role)) {
-          demoUser.activeRole = role;
-        }
-      }
-      const response = NextResponse.json({
-        success: true,
-        user: demoUser,
-        message: `Switched to demo profile: ${demoUser.name} (${demoUser.activeRole})`,
-      });
-      setSessionCookie(response, demoUser.id);
-      return response;
-    }
-
-    // Authenticated capability / mode actions for real signed-in users
-    const session = requireSession(req);
-    if (session.error) return session.error;
+    const { action, role, providerType } = body ?? {};
 
     if (action === 'ADD_CAPABILITY') {
+      // ADMIN can never be self-granted; it comes only from the server-side allowlist.
       if (role !== 'DRIVER' && role !== 'PROVIDER') {
         return NextResponse.json(
           { success: false, error: 'Only DRIVER or PROVIDER capabilities can be self-added.' },
           { status: 403 }
         );
       }
-      const result = db.grantCapability(
+      const result = await db.grantCapability(
         session.user.id,
         role,
-        providerType as ProviderType | undefined
+        PROVIDER_TYPES.includes(providerType) ? (providerType as ProviderType) : undefined
       );
-      if (!result.success) {
+      if (!result.success || !result.user) {
         return NextResponse.json({ success: false, error: result.error }, { status: 400 });
       }
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
-        user: result.user,
+        user: toPublicUser(toEffectiveUser(result.user, getAdminUidAllowlist())),
         message: `${role} mode enabled on your account.`,
       });
+      // Capabilities changed: rotate the session token.
+      try {
+        await issueSession(response, req, session.user.id);
+      } catch {
+        return sessionUnavailableResponse();
+      }
+      return response;
     }
 
-    // Default: SWITCH_MODE among capabilities user already holds
-    const result = db.switchActiveMode(session.user.id, role as UserRole);
-    if (!result.success) {
+    // Default: SWITCH_MODE among capabilities the account is *currently* allowed to use.
+    if (!ROLES.includes(role) || !session.user.roles.includes(role)) {
+      return NextResponse.json(
+        { success: false, error: `Capability ${String(role)} is not enabled on this account.` },
+        { status: 403 }
+      );
+    }
+    const result = await db.switchActiveMode(session.user.id, role as UserRole);
+    if (!result.success || !result.user) {
       return NextResponse.json({ success: false, error: result.error }, { status: 403 });
     }
 
     return NextResponse.json({
       success: true,
-      user: result.user,
+      user: toPublicUser(toEffectiveUser(result.user, getAdminUidAllowlist())),
       message: `Switched active mode to ${role}`,
     });
   } catch (error) {
-    console.error('Role update error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update role' }, { status: 500 });
+    return errorResponse(error, 'Failed to update role', 'Role update error');
   }
 }

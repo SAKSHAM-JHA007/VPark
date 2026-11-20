@@ -219,9 +219,19 @@ export function DigitalPassModal({
           {/* Booking Summary */}
           <div className="space-y-3 text-xs">
             {/* Precise Exact Location Map (Unlocked After Payment) */}
-            {(() => {
-              const exactLat = booking.listingLatitude || 13.1007;
-              const exactLng = booking.listingLongitude || 77.5963;
+            {(booking.locationRevealed === false ||
+              booking.listingLatitude === undefined ||
+              booking.listingLongitude === undefined) ? (
+              <div className="p-3 bg-slate-50 dark:bg-surface-alt rounded-xl border border-slate-200 dark:border-hairline flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-slate-400 dark:text-ink-3 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-ink uppercase">{booking.listingTitle}</h4>
+                  <p className="text-xs text-slate-600 dark:text-ink-2 mt-0.5">{booking.listingAddress}</p>
+                </div>
+              </div>
+            ) : (() => {
+              const exactLat = booking.listingLatitude;
+              const exactLng = booking.listingLongitude;
               const googleMapsNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${exactLat},${exactLng}`;
 
               return (

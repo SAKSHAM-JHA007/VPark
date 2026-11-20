@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCapability, requireSession } from '@/lib/auth';
+import { requireCapability, requireSession, errorResponse } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
-  const auth = requireCapability(req, 'DRIVER');
+  const auth = await requireCapability(req, 'DRIVER');
   if (auth.error) return auth.error;
 
   try {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing required fields for slot hold' }, { status: 400 });
     }
 
-    const result = db.createSlotHold({
+    const result = await db.createSlotHold({
       listingId,
       userId: auth.user.id,
       vehicleType,
@@ -32,13 +32,12 @@ export async function POST(req: NextRequest) {
       message: '10-minute reservation hold secured.',
     });
   } catch (error) {
-    console.error('Hold error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create slot hold' }, { status: 500 });
+    return errorResponse(error, 'Failed to create slot hold', 'Hold error');
   }
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = requireSession(req);
+  const session = await requireSession(req);
   if (session.error) return session.error;
 
   try {
@@ -49,10 +48,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Hold ID is required' }, { status: 400 });
     }
 
-    db.releaseSlotHold(holdId);
+    // A user may only release their own hold.
+    const result = await db.releaseSlotHoldForUser(holdId, session.user.id, session.user.roles.includes('ADMIN'));
+    if (!result.success) {
+      return NextResponse.json({ success: false, error: result.error }, { status: result.status });
+    }
     return NextResponse.json({ success: true, message: 'Hold released' });
   } catch (error) {
-    console.error('Release hold error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to release hold' }, { status: 500 });
+    return errorResponse(error, 'Failed to release hold', 'Release hold error');
   }
 }

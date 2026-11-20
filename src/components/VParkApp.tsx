@@ -23,6 +23,7 @@ import {
   User,
 } from '@/types';
 import { APP_CONFIG, YELAHANKA_ANCHORS, DemandAnchor } from '@/lib/constants';
+import { signOutFirebase } from '@/lib/firebase';
 import {
   Search,
   SlidersHorizontal,
@@ -264,22 +265,9 @@ export function VParkApp({
     }
   };
 
-  const handleSwitchDemoPersona = async (role: UserRole) => {
-    const res = await fetch('/api/auth/role', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'SWITCH_DEMO_PERSONA', role, switchDemoUser: true }),
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      setCurrentUser(data.user);
-      setCurrentRole(role);
-      fetchInitialData();
-    }
-  };
-
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
+    await signOutFirebase();
     setCurrentUser(null);
     setCurrentRole('DRIVER');
     setBookings([]);
@@ -299,7 +287,7 @@ export function VParkApp({
       if (res.ok && data.success) {
         setCurrentUser(data.user);
         setEmailInput('');
-        setEmailStatus('Email verified and saved.');
+        setEmailStatus('Email saved.');
       } else {
         setEmailStatus(data.error || 'Enter a valid email address.');
       }

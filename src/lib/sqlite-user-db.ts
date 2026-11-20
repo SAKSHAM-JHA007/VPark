@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { User, Vehicle, ConsentRecord, OtpChallenge, UserRoleGrant } from '@/types';
+import type { User, Vehicle, ConsentRecord, OtpChallenge, UserRoleGrant } from '@/types';
 
 // Use Node's built-in synchronous SQLite engine
 // Available in Node.js 22.5+
@@ -13,13 +13,17 @@ try {
   // Fallback for environments where node:sqlite is not loaded
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data');
-const USER_DB_FILE = path.join(DATA_DIR, 'user.db');
 
+// Local-development mirror of users/consents into <dataDir>/user.db. Only the local
+// JSON development store uses it; the PostgreSQL backend never touches local files.
 export class SqliteUserDatabase {
   private db: any = null;
+  private readonly dataDir: string;
+  private readonly userDbFile: string;
 
-  constructor() {
+  constructor(dataDir: string) {
+    this.dataDir = dataDir;
+    this.userDbFile = path.join(dataDir, 'user.db');
     this.init();
   }
 
@@ -27,23 +31,23 @@ export class SqliteUserDatabase {
     if (!DatabaseSync) return;
 
     try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
       }
 
       // If user.db exists but is plain text (e.g. "create database user;"), clean it up
-      if (fs.existsSync(USER_DB_FILE)) {
+      if (fs.existsSync(this.userDbFile)) {
         const header = Buffer.alloc(16);
-        const fd = fs.openSync(USER_DB_FILE, 'r');
+        const fd = fs.openSync(this.userDbFile, 'r');
         fs.readSync(fd, header, 0, 16, 0);
         fs.closeSync(fd);
         // Valid SQLite header starts with "SQLite format 3\0"
         if (!header.toString('utf-8').startsWith('SQLite format 3')) {
-          fs.unlinkSync(USER_DB_FILE);
+          fs.unlinkSync(this.userDbFile);
         }
       }
 
-      this.db = new DatabaseSync(USER_DB_FILE);
+      this.db = new DatabaseSync(this.userDbFile);
       this.db.exec('PRAGMA foreign_keys = ON;');
       this.createTables();
     } catch (err) {
@@ -379,4 +383,14 @@ export class SqliteUserDatabase {
   }
 }
 
-export const sqliteUserDb = new SqliteUserDatabase();
+const instances = new Map<string, SqliteUserDatabase>();
+
+/** Lazily open the mirror for a data directory (nothing is created at import time). */
+export function getSqliteUserDb(dataDir: string): SqliteUserDatabase {
+  let db = instances.get(dataDir);
+  if (!db) {
+    db = new SqliteUserDatabase(dataDir);
+    instances.set(dataDir, db);
+  }
+  return db;
+}

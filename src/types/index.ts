@@ -117,7 +117,10 @@ export interface User {
   roles: UserRole[]; // Derived from user_roles join records
   activeRole: UserRole;
   providerType?: ProviderType;
+  /** Legacy field from the removed email/password flow. Never sent to clients. */
   passwordHash?: string;
+  /** Firebase UID from a server-verified ID token. Never sent to clients. */
+  firebaseUid?: string;
   // Timestamps instead of booleans per PRD v2.2 Section 9.1
   phoneVerifiedAt?: string | null;
   emailVerifiedAt?: string | null;
@@ -311,6 +314,9 @@ export interface Booking {
   isDisputed?: boolean;
   disputeId?: string;
 
+  /** Set on API responses: false when the exact location was withheld from this viewer. */
+  locationRevealed?: boolean;
+
   createdAt: string;
   updatedAt: string;
 }
@@ -455,8 +461,67 @@ export interface RankingBreakdown {
   totalScore: number;
 }
 
+/**
+ * The public discovery projection of a listing. Built field-by-field on the server
+ * (src/lib/security/listing-privacy.mjs); never a spread of the stored Listing.
+ * For non-PUBLIC listings latitude/longitude are a deterministic approximation and
+ * address, landmark and real access instructions are absent.
+ */
+export interface PublicListingSummary {
+  id: string;
+  title: string;
+  category: ParkingCategory;
+  status: ListingStatus;
+  providerName: string;
+  providerType: ProviderType;
+  locality: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  locationPrecision: 'EXACT' | 'APPROXIMATE';
+  approximateRadiusMeters?: number;
+  /** PUBLIC listings only. */
+  address?: string;
+  /** PUBLIC listings only. */
+  landmark?: string;
+  totalCapacity: number;
+  vehicleTypes?: VehicleType[];
+  capacityBreakdown: SlotCapacity;
+  isCovered: boolean;
+  heightClearanceMeters?: number;
+  dimensionsNotes?: string;
+  hasEvCharging: boolean;
+  evChargerType?: string;
+  pricing: PricingRule;
+  accessMethod: AccessMethod;
+  accessInstructions: string;
+  houseRules: string[];
+  photos: string[];
+  operatingHours: OperatingHours;
+  availabilityConfidence: AvailabilityConfidence;
+  lastConfirmedAt: string;
+  isStale: boolean;
+  surveyDate?: string;
+  isBookable: boolean;
+  rating: number;
+  reviewCount: number;
+}
+
+export interface SessionRecord {
+  id: string;
+  /** HMAC-SHA256(SESSION_SECRET, token). The raw token is never stored. */
+  tokenHash: string;
+  userId: string;
+  createdAt: string;
+  expiresAt: string;
+  lastSeenAt: string;
+  revokedAt: string | null;
+  userAgent?: string;
+}
+
 export interface SearchResultItem {
-  listing: Listing;
+  listing: PublicListingSummary;
+  /** Distance to the listing's discovery point (approximate for non-PUBLIC listings), 0.1 km precision. */
   distanceKm: number;
   ranking: RankingBreakdown;
   availableCapacity: number;

@@ -5,39 +5,46 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { VParkLogo } from '@/components/VParkLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { ShieldCheck, Lock, Mail, ArrowRight, ArrowLeft, Loader2, KeyRound } from 'lucide-react';
+import { signInWithGooglePopup, signOutFirebase } from '@/lib/firebase';
+import { ShieldCheck, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 
+// Admin access is granted only to Google accounts whose Firebase UID is on the
+// server-side VPARK_ADMIN_FIREBASE_UIDS allowlist. There is no admin password.
 export default function MasterAdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('jhasaksham.7453k@gmail.com');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleAdminSignIn = async () => {
     setError(null);
     setLoading(true);
-
     try {
-      const res = await fetch('/api/auth/otp', {
+      const cred = await signInWithGooglePopup();
+      const idToken = await cred.user.getIdToken(true);
+      const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'MASTER_LOGIN',
-          email: email.trim().toLowerCase(),
-          password,
-        }),
+        body: JSON.stringify({ idToken, intent: 'driver' }),
       });
-
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error || 'Invalid master credentials.');
-      } else {
-        router.push(data.redirectTo || '/driver/home?tab=admin');
+        setError(data.error || 'Google sign-in could not be verified.');
+        return;
       }
-    } catch {
-      setError('Connection failure during master authentication.');
+      if (!data.isMasterAdmin) {
+        // Not an administrator: do not leave a session behind from the admin page.
+        await fetch('/api/auth/logout', { method: 'POST' });
+        await signOutFirebase();
+        setError('This Google account is not authorized for the admin console.');
+        return;
+      }
+      router.push('/driver/home?tab=admin');
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') {
+        setError('Google sign-in window was closed.');
+      } else {
+        setError('Google sign-in is unavailable right now. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -86,62 +93,28 @@ export default function MasterAdminLoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label htmlFor="admin_email" className="block text-[10px] uppercase tracking-wider text-ink-2">
-                Administrator Email ID
-              </label>
-              <div className="relative flex items-center">
-                <Mail className="w-4 h-4 absolute left-3 text-ink-3" />
-                <input
-                  id="admin_email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jhasaksham.7453k@gmail.com"
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-control border border-hairline-strong bg-canvas text-ink text-xs focus:outline-none focus:border-[var(--transit-accent)] transition-all"
-                />
-              </div>
-            </div>
+          <button
+            type="button"
+            onClick={handleGoogleAdminSignIn}
+            disabled={loading}
+            className="w-full py-3 rounded-control bg-brand hover:bg-brand-hover text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] shadow-lg shadow-blue-500/20 disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Verifying Google identity...</span>
+              </>
+            ) : (
+              <>
+                <span>Continue with Google</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
 
-            <div className="space-y-1.5">
-              <label htmlFor="admin_pwd" className="block text-[10px] uppercase tracking-wider text-ink-2">
-                Master Secret Password
-              </label>
-              <div className="relative flex items-center">
-                <Lock className="w-4 h-4 absolute left-3 text-ink-3" />
-                <input
-                  id="admin_pwd"
-                  type="password"
-                  required
-                  autoFocus
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter master password"
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-control border border-hairline-strong bg-canvas text-ink text-xs focus:outline-none focus:border-[var(--transit-accent)] transition-all"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !password}
-              className="w-full py-3 rounded-control bg-brand hover:bg-brand-hover text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] shadow-lg shadow-blue-500/20 disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Verifying Credentials...</span>
-                </>
-              ) : (
-                <>
-                  <span>Authenticate Master Console</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
+          <p className="text-[11px] text-ink-3 text-center">
+            Sign in with an authorized administrator Google account. Access is verified on the server.
+          </p>
 
           <div className="pt-2 border-t border-hairline text-center">
             <Link href="/login" className="text-[11px] text-ink-3 hover:text-ink transition-colors">
