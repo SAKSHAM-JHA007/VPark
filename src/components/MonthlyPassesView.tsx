@@ -128,10 +128,10 @@ export function MonthlyPassesView({ onRequireAuth }: MonthlyPassesViewProps = {}
                     </span>
                     <h3 className="font-bold text-base text-slate-900 dark:text-ink mt-1">{pass.listingTitle}</h3>
                   </div>
-                  <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">₹{pass.price}/mo</span>
+                  <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 tabular-nums">₹{pass.price}/mo</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-slate-600 dark:text-ink-2 font-mono text-[11px]">
+                <div className="grid grid-cols-2 gap-2 text-slate-600 dark:text-ink-2 text-[11px]">
                   <div className="p-2 bg-slate-50 dark:bg-surface-alt rounded-xl">
                     <span className="text-slate-400 dark:text-ink-3 block text-[10px]">Vehicle Plate</span>
                     <span className="font-bold text-slate-900 dark:text-ink">{pass.vehiclePlateNumber}</span>
