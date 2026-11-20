@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useId, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { HowItWorks } from '@/components/HowItWorks';
 import { ListingCard } from '@/components/ListingCard';
@@ -12,37 +12,49 @@ import { AdminConsole } from '@/components/AdminConsole';
 import { MonthlyPassesView } from '@/components/MonthlyPassesView';
 import { DpdpExportModal } from '@/components/DpdpExportModal';
 import { AuthModal } from '@/components/AuthModal';
+import { SiteFooter } from '@/components/nav/SiteFooter';
 import { Presence } from '@/components/motion/Presence';
 import { ListingCardSkeleton } from '@/components/motion/Skeleton';
 import { staggerStyle } from '@/components/motion/tokens';
-import { Language, getT } from '@/lib/i18n';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 import {
-  UserRole,
-  SearchResultItem,
-  Booking,
-  User,
-} from '@/types';
-import { APP_CONFIG, YELAHANKA_ANCHORS, DemandAnchor } from '@/lib/constants';
+  fullLocationLabel,
+  geolocationErrorKey,
+  shortLocationLabel,
+  useDeviceLocation,
+  useSearchLocation,
+} from '@/components/location/useSearchLocation';
+import { searchLocationStore, centerOf } from '@/lib/location/searchLocationStore';
+import {
+  DEFAULT_FILTERS,
+  DEFAULT_SEARCH_RADIUS_KM,
+  MAX_SEARCH_RADIUS_KM,
+  SEARCH_RADIUS_OPTIONS_KM,
+  buildSearchQuery,
+  classifyEmptyResults,
+  hasActiveFilters,
+  type SearchFiltersState,
+} from '@/lib/location/geo';
+import { bookingStatusInfo, badgeClass } from '@/components/ui/status';
+import { UserRole, SearchResultItem, Booking, User } from '@/types';
+import { YELAHANKA_ANCHORS } from '@/lib/constants';
 import { signOutFirebase } from '@/lib/firebase';
 import {
-  Search,
-  SlidersHorizontal,
   MapPin,
   Calendar,
   Clock,
-  ChevronDown,
-  Map as MapIcon,
-  List,
-  ShieldCheck,
-  Building2,
   Car,
   Store,
-  Mail,
-  Phone,
   ArrowRight,
-  LocateFixed,
   Lock,
+  Crosshair,
+  Loader2,
+  RotateCcw,
+  SearchX,
+  WifiOff,
+  Ticket,
   Navigation,
+  Info,
 } from 'lucide-react';
 
 export type VParkTab = 'search' | 'bookings' | 'monthly' | 'provider' | 'admin';
@@ -52,59 +64,61 @@ interface VParkAppProps {
   initialIntent?: 'driver' | 'provider';
 }
 
-export function VParkApp({
-  initialTab = 'search',
-  initialIntent = 'driver',
-}: VParkAppProps) {
-  const [currentRole, setCurrentRole] = useState<UserRole>(
-    initialIntent === 'provider' ? 'PROVIDER' : 'DRIVER'
-  );
+const DEVICE_OPTION = '__device__';
+
+export function VParkApp({ initialTab = 'search', initialIntent = 'driver' }: VParkAppProps) {
+  const i18n = useI18n();
+  const { t, tn, inr } = i18n;
+  const [currentRole, setCurrentRole] = useState<UserRole>(initialIntent === 'provider' ? 'PROVIDER' : 'DRIVER');
   const [activeTab, setActiveTab] = useState<VParkTab>(initialTab);
-  const [currentLang, setCurrentLang] = useState<Language>('en');
   const [showDpdpModal, setShowDpdpModal] = useState<boolean>(false);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [authIntent, setAuthIntent] = useState<'driver' | 'provider'>(initialIntent);
 
-  // Search & Filters
-  const [selectedAnchor, setSelectedAnchor] = useState<DemandAnchor>(YELAHANKA_ANCHORS[0]);
-  const [selectedDate, setSelectedDate] = useState<string>('Today');
-  const [selectedTimeRange, setSelectedTimeRange] = useState<string>('2:00 PM – 6:00 PM');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('All');
-  const [selectedPriceFilter, setSelectedPriceFilter] = useState<string>('All');
-  const [selectedVehicleFilter, setSelectedVehicleFilter] = useState<string>('All');
-  const [selectedCoveredFilter, setSelectedCoveredFilter] = useState<string>('All');
-  const [selectedAvailabilityFilter, setSelectedAvailabilityFilter] = useState<string>('All');
-  const [sortBy, setSortBy] = useState<'Nearest' | 'Lowest Price' | 'Highest Rated'>('Nearest');
+  // Search location (shared, in-memory) and filters
+  const searchLocation = useSearchLocation();
+  const { status: locateStatus, error: locateError, locate } = useDeviceLocation();
+  const [reloadNotice, setReloadNotice] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>('today');
+  const [selectedTime, setSelectedTime] = useState<string>('afternoon');
+  const [filters, setFilters] = useState<SearchFiltersState>(DEFAULT_FILTERS);
+  const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_SEARCH_RADIUS_KM);
 
   // Data state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<boolean>(false);
   const [selectedResult, setSelectedResult] = useState<SearchResultItem | undefined>(undefined);
   const [bookingModalItem, setBookingModalItem] = useState<SearchResultItem | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [activePassBooking, setActivePassBooking] = useState<Booking | null>(null);
   const [disputeBooking, setDisputeBooking] = useState<Booking | null>(null);
 
-  // Optional post-signup Email verification banner
+  // Optional post-signup email banner
   const [emailInput, setEmailInput] = useState<string>('');
-  const [emailStatus, setEmailStatus] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<{ ok: boolean; text: string } | null>(null);
 
+  const resultsRef = useRef<HTMLDivElement>(null);
   const searchSectionRef = useRef<HTMLDivElement>(null);
   const howItWorksRef = useRef<HTMLElement>(null);
+  const requestIdRef = useRef(0);
+  const ids = { location: useId(), date: useId(), time: useId(), email: useId(), sort: useId() };
 
-  const t = getT(currentLang);
+  const center = centerOf(searchLocation);
+  const isDevice = searchLocation.kind === 'device';
+  const placeLabel = fullLocationLabel(searchLocation, t);
+  const locationKey = isDevice ? `device:${center.lat}:${center.lng}` : `anchor:${searchLocation.anchorId}`;
 
-  // Tab content fades in only after the user (or a URL param) switches tabs,
-  // never on the initial page render.
+  // Tab content fades in only after the user (or a URL param) switches tabs.
   const initialTabRef = useRef<VParkTab>(activeTab);
   const tabSwitchedRef = useRef(false);
   if (activeTab !== initialTabRef.current) tabSwitchedRef.current = true;
   const tabEnterClass = tabSwitchedRef.current ? 'animate-fade-in' : '';
 
-  // Sync optional query string params client-side without requiring Suspense boundaries
+  // Query string hand-off from other pages: ?tab=, ?intent=, ?anchor=<landmark id>,
+  // ?near=me (device location kept in memory by the page that requested it).
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     const sp = new URLSearchParams(window.location.search);
     const tabParam = sp.get('tab') as VParkTab | null;
     if (tabParam && ['search', 'bookings', 'monthly', 'provider', 'admin'].includes(tabParam)) {
@@ -115,14 +129,23 @@ export function VParkApp({
       setAuthIntent(intentParam);
       if (intentParam === 'provider' && !tabParam) setActiveTab('provider');
     }
+    const anchorParam = sp.get('anchor');
+    if (anchorParam && YELAHANKA_ANCHORS.some((a) => a.id === anchorParam)) {
+      searchLocationStore.setAnchor(anchorParam);
+    }
+    if (sp.get('near') === 'me') {
+      // The fix never travels in the URL. After a reload it is gone, so say so
+      // rather than silently searching somewhere else or re-prompting on load.
+      if (searchLocationStore.get().kind !== 'device') setReloadNotice(true);
+      sp.delete('near');
+      const qs = sp.toString();
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+    }
   }, []);
 
   const fetchInitialData = async () => {
     try {
-      const [userRes, bookingsRes] = await Promise.all([
-        fetch('/api/auth/me'),
-        fetch('/api/bookings'),
-      ]);
+      const [userRes, bookingsRes] = await Promise.all([fetch('/api/auth/me'), fetch('/api/bookings')]);
       const userData = await userRes.json();
       const bookingsData = await bookingsRes.json();
 
@@ -140,79 +163,52 @@ export function VParkApp({
     }
   };
 
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
+    setSearchError(false);
     try {
-      const params = new URLSearchParams();
-      params.set('lat', selectedAnchor.latitude.toString());
-      params.set('lng', selectedAnchor.longitude.toString());
-      params.set('radius', '5');
-
-      if (selectedCategoryFilter === 'Private') params.set('category', 'PRIVATE');
-      else if (selectedCategoryFilter === 'Commercial') params.set('category', 'COMMERCIAL');
-      else if (selectedCategoryFilter === 'Public') params.set('category', 'PUBLIC');
-
-      if (selectedPriceFilter === 'Under ₹40') params.set('maxPrice', '40');
-      else if (selectedPriceFilter === 'Under ₹60') params.set('maxPrice', '60');
-
-      if (selectedVehicleFilter !== 'All') {
-        const vtMap: Record<string, string> = {
-          Sedan: 'SEDAN',
-          SUV: 'SUV',
-          EV: 'EV',
-          '2-Wheeler': 'TWO_WHEELER',
-        };
-        if (vtMap[selectedVehicleFilter]) params.set('vehicleType', vtMap[selectedVehicleFilter]);
-      }
-
-      if (selectedCoveredFilter === 'Covered') params.set('isCovered', 'true');
-      else if (selectedCoveredFilter === 'Open') params.set('isCovered', 'false');
-
-      if (selectedAvailabilityFilter === 'Instant') params.set('bookableNow', 'true');
-
-      if (sortBy === 'Lowest Price') params.set('sortBy', 'PRICE_LOW');
-      else if (sortBy === 'Nearest') params.set('sortBy', 'DISTANCE_NEAR');
-      else if (sortBy === 'Highest Rated') params.set('sortBy', 'RATING_HIGH');
-
-      const res = await fetch(`/api/search?${params.toString()}`);
+      const res = await fetch(`/api/search?${buildSearchQuery(center, radiusKm, filters)}`);
       const data = await res.json();
-      if (data.success) {
-        setResults(data.data);
-        if (data.data.length > 0) {
-          setSelectedResult((prev) =>
-            prev && data.data.some((d: SearchResultItem) => d.listing.id === prev.listing.id)
-              ? prev
-              : data.data[0]
-          );
-        } else {
-          setSelectedResult(undefined);
-        }
+      if (requestId !== requestIdRef.current) return; // a newer search superseded this one
+      if (!res.ok || !data.success) {
+        setSearchError(true);
+        setResults([]);
+        setSelectedResult(undefined);
+        return;
       }
+      setResults(data.data);
+      setSelectedResult((prev) =>
+        data.data.length === 0
+          ? undefined
+          : prev && data.data.some((d: SearchResultItem) => d.listing.id === prev.listing.id)
+          ? prev
+          : data.data[0]
+      );
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       console.error('Failed to load listings:', err);
+      setSearchError(true);
+      setResults([]);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  };
+    // center is derived from searchLocation; depend on its coordinates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center.lat, center.lng, radiusKm, filters]);
 
   useEffect(() => {
     fetchInitialData();
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'search') {
-      fetchListings();
-    }
-  }, [
-    activeTab,
-    selectedAnchor,
-    selectedCategoryFilter,
-    selectedPriceFilter,
-    selectedVehicleFilter,
-    selectedCoveredFilter,
-    selectedAvailabilityFilter,
-    sortBy,
-  ]);
+    if (activeTab === 'search') fetchListings();
+  }, [activeTab, fetchListings]);
+
+  // A new location clears the "location lost after reload" notice.
+  useEffect(() => {
+    if (searchLocation.kind === 'device') setReloadNotice(false);
+  }, [searchLocation]);
 
   const openLoginModal = (intent: 'driver' | 'provider' = 'driver') => {
     setAuthIntent(intent);
@@ -287,26 +283,122 @@ export function VParkApp({
       if (res.ok && data.success) {
         setCurrentUser(data.user);
         setEmailInput('');
-        setEmailStatus('Email saved.');
+        setEmailStatus({ ok: true, text: t('search.emailSaved') });
       } else {
-        setEmailStatus(data.error || 'Enter a valid email address.');
+        setEmailStatus({ ok: false, text: data.error || t('search.emailInvalid') });
       }
     } catch {
-      setEmailStatus('Could not save email.');
+      setEmailStatus({ ok: false, text: t('search.emailFailed') });
     }
   };
 
-  const resetFilters = () => {
-    setSelectedCategoryFilter('All');
-    setSelectedPriceFilter('All');
-    setSelectedVehicleFilter('All');
-    setSelectedCoveredFilter('All');
-    setSelectedAvailabilityFilter('All');
-    setSortBy('Nearest');
+  const resetFilters = () => setFilters(DEFAULT_FILTERS);
+  const setFilter = <K extends keyof SearchFiltersState>(key: K, value: SearchFiltersState[K]) =>
+    setFilters((prev) => ({ ...prev, [key]: value }));
+
+  const goToProvider = () => {
+    if (!currentUser) openLoginModal('provider');
+    else if (!currentUser.roles.includes('PROVIDER')) handleAddCapability('PROVIDER').then(() => setActiveTab('provider'));
+    else setActiveTab('provider');
+  };
+
+  const chooseAnchor = (anchorId: string) => {
+    searchLocationStore.setAnchor(anchorId);
+    setReloadNotice(false);
+  };
+
+  const handleLocationSelected = () => {
+    setActiveTab('search');
+    requestAnimationFrame(() => {
+      const top = resultsRef.current?.getBoundingClientRect().top ?? 0;
+      if (top > window.innerHeight * 0.75) resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const fieldClass =
+    'relative flex min-h-[3.5rem] items-center gap-3 rounded-control border border-hairline bg-surface-alt px-3.5 py-2 transition-[border-color,box-shadow] duration-200 hover:border-hairline-strong focus-within:border-[var(--transit-accent)] focus-within:shadow-[var(--focus-ring)]';
+  const fieldLabel = 'block text-[11px] font-semibold uppercase tracking-wider text-ink-3';
+  const fieldSelect = 'w-full cursor-pointer appearance-none truncate bg-transparent pr-1 text-sm font-semibold text-ink focus:outline-none';
+  const filterSelect =
+    'min-h-[2.25rem] cursor-pointer rounded-full border border-hairline-strong bg-surface px-3 text-[13px] font-medium text-ink transition-colors hover:border-ink-3 focus:border-[var(--transit-accent)] focus:outline-none focus:shadow-[var(--focus-ring)]';
+
+  const emptyKind = classifyEmptyResults({ center, filters, isDeviceLocation: isDevice });
+
+  const anchorChips = (
+    <div className="flex flex-wrap justify-center gap-2">
+      {YELAHANKA_ANCHORS.map((anchor) => (
+        <button key={anchor.id} type="button" onClick={() => chooseAnchor(anchor.id)} className="vp-btn vp-btn-secondary vp-btn-sm">
+          <MapPin className="h-3.5 w-3.5 text-[var(--transit-accent)]" aria-hidden="true" />
+          {anchor.locality}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderEmptyState = () => {
+    if (searchError) {
+      return (
+        <EmptyState icon={<WifiOff className="h-6 w-6" />} title={t('search.empty.errorTitle')} body={t('search.empty.errorBody')}>
+          <button type="button" onClick={fetchListings} className="vp-btn vp-btn-primary">
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            {t('common.retry')}
+          </button>
+        </EmptyState>
+      );
+    }
+    if (emptyKind === 'outsideCoverage') {
+      return (
+        <EmptyState
+          icon={<EmptyBayIllustration />}
+          bare
+          title={t('search.empty.outsideTitle')}
+          body={t('search.empty.outsideBody', { km: radiusKm })}
+        >
+          {radiusKm < MAX_SEARCH_RADIUS_KM && (
+            <button type="button" onClick={() => setRadiusKm(MAX_SEARCH_RADIUS_KM)} className="vp-btn vp-btn-secondary">
+              {t('search.empty.widen')}
+            </button>
+          )}
+          <p className="pt-2 text-sm font-semibold text-ink">{t('search.empty.tryLandmark')}</p>
+          {anchorChips}
+        </EmptyState>
+      );
+    }
+    if (emptyKind === 'filters') {
+      return (
+        <EmptyState icon={<SearchX className="h-6 w-6" />} title={t('search.empty.filtersTitle')} body={t('search.empty.filtersBody')}>
+          <button type="button" onClick={resetFilters} className="vp-btn vp-btn-primary">
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            {t('search.filters.reset')}
+          </button>
+          {radiusKm < MAX_SEARCH_RADIUS_KM && (
+            <button type="button" onClick={() => setRadiusKm(MAX_SEARCH_RADIUS_KM)} className="vp-btn vp-btn-secondary">
+              {t('search.empty.widen')}
+            </button>
+          )}
+        </EmptyState>
+      );
+    }
+    return (
+      <EmptyState
+        icon={<EmptyBayIllustration />}
+        bare
+        title={t('search.empty.nearbyTitle', { km: radiusKm })}
+        body={t('search.empty.nearbyBody')}
+      >
+        {radiusKm < MAX_SEARCH_RADIUS_KM && (
+          <button type="button" onClick={() => setRadiusKm(MAX_SEARCH_RADIUS_KM)} className="vp-btn vp-btn-secondary">
+            {t('search.empty.widen')}
+          </button>
+        )}
+        <p className="pt-2 text-sm font-semibold text-ink">{t('search.empty.tryLandmark')}</p>
+        {anchorChips}
+      </EmptyState>
+    );
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-canvas text-ink transition-colors">
+    <div className="flex min-h-screen flex-col bg-canvas text-ink">
       <Header
         currentUser={currentUser}
         currentRole={currentRole}
@@ -317,322 +409,326 @@ export function VParkApp({
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onOpenDpdp={() => setShowDpdpModal(true)}
-        onScrollHowItWorks={() =>
-          howItWorksRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
-        currentLang={currentLang}
-        onLangChange={setCurrentLang}
+        onScrollHowItWorks={() => howItWorksRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        onLocationSelected={handleLocationSelected}
         bookingsCount={bookings.length}
       />
 
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {activeTab === 'search' && (
           <div className={tabEnterClass}>
-            {/* Signed-in Driver Welcome & Optional Email Banner (PRD 6.2 & 8.1) */}
+            {/* Signed-in welcome and optional email */}
             {currentUser && (
-              <div className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-700/80 px-4 sm:px-6 lg:px-8 py-2.5 text-xs animate-fade-in">
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="text-slate-700 dark:text-slate-300">
-                    <span className="font-bold text-slate-900 dark:text-white">
-                      Welcome, {currentUser.name || currentUser.phone}
-                    </span>
-                    <span className="text-slate-500 dark:text-slate-400 ml-2">Where would you like to park today?</span>
-                  </div>
-
+              <div className="border-b border-hairline bg-surface px-4 py-3 sm:px-6 lg:px-8 animate-fade-in">
+                <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-sm sm:flex-row sm:items-center">
+                  <p className="text-ink-2">
+                    <span className="font-semibold text-ink">{t('search.welcome', { name: currentUser.name || currentUser.phone })}</span>
+                    <span className="ml-2">{t('search.welcomeHint')}</span>
+                  </p>
                   {!currentUser.email && (
                     <form onSubmit={handleSaveOptionalEmail} className="flex items-center gap-2">
+                      <label htmlFor={ids.email} className="sr-only">
+                        {t('search.emailLabel')}
+                      </label>
                       <input
+                        id={ids.email}
                         type="email"
-                        aria-label="Add email for receipts and payouts"
+                        autoComplete="email"
                         value={emailInput}
                         onChange={(e) => setEmailInput(e.target.value)}
-                        placeholder="Add email for receipts & payouts"
-                        className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs w-56"
+                        placeholder={t('search.emailLabel')}
+                        aria-invalid={emailStatus && !emailStatus.ok ? true : undefined}
+                        aria-describedby={emailStatus ? `${ids.email}-status` : undefined}
+                        className="vp-input min-h-[2.25rem] w-full py-1.5 sm:w-64"
                       />
-                      <button
-                        type="submit"
-                        className="px-3 py-1.5 rounded-lg bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-xs transition-[background-color,transform] duration-150 active:scale-[0.96]"
-                      >
-                        Verify Email
+                      <button type="submit" className="vp-btn vp-btn-primary vp-btn-sm whitespace-nowrap">
+                        {t('search.emailSave')}
                       </button>
                     </form>
                   )}
                   {emailStatus && (
-                    <span key={emailStatus} role="status" className="text-emerald-700 dark:text-emerald-400 font-semibold animate-fade-in">
-                      {emailStatus}
+                    <span
+                      id={`${ids.email}-status`}
+                      key={emailStatus.text}
+                      role={emailStatus.ok ? 'status' : 'alert'}
+                      className={`text-sm font-semibold animate-fade-in ${emailStatus.ok ? 'text-[var(--success-ink)]' : 'text-[var(--danger-ink)]'}`}
+                    >
+                      {emailStatus.text}
                     </span>
                   )}
                 </div>
               </div>
             )}
 
-            {/* PLAN YOUR PARKING SEARCH CONSOLE */}
-            <div
-              id="vpark-search"
-              ref={searchSectionRef}
-              className="w-full bg-[var(--canvas-bg)] border-b border-[var(--hairline)] py-6 sm:py-8 px-4 sm:px-6 lg:px-8"
-            >
-              <div className="max-w-7xl mx-auto space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--ink)] leading-none animate-fade-up">
-                      Plan your parking
-                    </h1>
-                    <p className="text-xs sm:text-sm text-[var(--ink-secondary)] mt-1.5">
-                      Find reviewed parking spaces near landmarks in the Yelahanka pilot area.
-                    </p>
-                  </div>
+            {/* Search console */}
+            <div id="vpark-search" ref={searchSectionRef} className="border-b border-hairline px-4 py-7 sm:px-6 sm:py-9 lg:px-8">
+              <div className="mx-auto max-w-7xl space-y-5">
+                <div className="max-w-3xl">
+                  <h1 className="vp-h1 animate-fade-up">{t('planner.title')}</h1>
+                  <p className="vp-lead mt-2">{t('search.subtitle')}</p>
                 </div>
 
-                {/* Unified Rounded Search Card */}
-                <div className="bg-[var(--surface-bg)] rounded-card border border-[var(--hairline)] p-4 sm:p-5 shadow-card space-y-4 animate-fade-up [animation-delay:80ms]">
-                  {/* Mode Tabs */}
-                  <div className="flex items-center gap-2">
+                <div className="vp-card space-y-4 p-4 sm:p-5 animate-fade-up [animation-delay:80ms]">
+                  <div role="group" aria-label={t('planner.modeLabel')} className="inline-flex gap-1 rounded-full bg-surface-alt p-1">
                     <button
                       type="button"
-                      onClick={() => setActiveTab('search')}
-                      className="px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 bg-blue-50 text-[#0A5CFF] dark:bg-blue-950/60 dark:text-blue-400"
+                      aria-pressed="true"
+                      className="inline-flex min-h-[2.25rem] items-center gap-2 rounded-full bg-surface px-4 text-sm font-semibold text-[var(--transit-accent)] shadow-card ring-1 ring-[var(--hairline)]"
                     >
-                      <Car className="w-3.5 h-3.5" />
-                      <span>Find Parking</span>
+                      <Car className="h-4 w-4" aria-hidden="true" />
+                      {t('planner.modeFind')}
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!currentUser) openLoginModal('provider');
-                        else setActiveTab('provider');
-                      }}
-                      className="px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 text-[var(--ink-secondary)] hover:text-[var(--ink)] transition-colors"
+                      aria-pressed="false"
+                      onClick={goToProvider}
+                      className="inline-flex min-h-[2.25rem] items-center gap-2 rounded-full px-4 text-sm font-semibold text-ink-2 transition-colors hover:text-ink"
                     >
-                      <Store className="w-3.5 h-3.5" />
-                      <span>Rent Your Space</span>
+                      <Store className="h-4 w-4" aria-hidden="true" />
+                      {t('planner.modeRent')}
                     </button>
                   </div>
 
-                  {/* Horizontal Inputs Bar */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                    {/* Location */}
-                    <div className="md:col-span-4 p-3 rounded-control bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
-                      <MapPin className="w-4 h-4 text-[#0A5CFF] flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
-                          Location
-                        </span>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      fetchListings();
+                      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className="grid grid-cols-1 gap-3 md:grid-cols-12"
+                  >
+                    <div className={`md:col-span-5 ${fieldClass}`}>
+                      <MapPin className="h-4 w-4 flex-shrink-0 text-[var(--transit-accent)]" aria-hidden="true" />
+                      <div className="min-w-0 flex-1">
+                        <label htmlFor={ids.location} className={fieldLabel}>
+                          {t('planner.location')}
+                        </label>
                         <select
-                          aria-label="Destination location in Yelahanka"
-                          value={selectedAnchor.id}
+                          id={ids.location}
+                          value={isDevice ? DEVICE_OPTION : searchLocation.anchorId}
                           onChange={(e) => {
-                            const a = YELAHANKA_ANCHORS.find((item) => item.id === e.target.value);
-                            if (a) setSelectedAnchor(a);
+                            if (e.target.value !== DEVICE_OPTION) chooseAnchor(e.target.value);
                           }}
-                          className="w-full appearance-none bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
+                          className={fieldSelect}
                         >
+                          {isDevice && <option value={DEVICE_OPTION}>{shortLocationLabel(searchLocation, t)}</option>}
                           {YELAHANKA_ANCHORS.map((anchor) => (
-                            <option key={anchor.id} value={anchor.id} className="dark:bg-slate-900">
+                            <option key={anchor.id} value={anchor.id}>
                               {anchor.name}
                             </option>
                           ))}
                         </select>
                       </div>
-                      <ChevronDown className="w-3.5 h-3.5 text-[var(--ink-tertiary)]" />
-                    </div>
-
-                    {/* Date */}
-                    <div className="md:col-span-3 p-3 rounded-control bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
-                      <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
-                          Date
-                        </span>
-                        <select
-                          aria-label="Select parking date"
-                          value={selectedDate}
-                          onChange={(e) => setSelectedDate(e.target.value)}
-                          className="w-full appearance-none bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
-                        >
-                          <option value="Today" className="dark:bg-slate-900">Today</option>
-                          <option value="Tomorrow" className="dark:bg-slate-900">Tomorrow</option>
-                          <option value="This Weekend" className="dark:bg-slate-900">This Weekend</option>
-                        </select>
-                      </div>
-                      <ChevronDown className="w-3.5 h-3.5 text-[var(--ink-tertiary)]" />
-                    </div>
-
-                    {/* Time */}
-                    <div className="md:col-span-3 p-3 rounded-control bg-[var(--surface-alt)] border border-[var(--hairline)] flex items-center gap-3 transition-[border-color,box-shadow] duration-200 hover:border-[var(--hairline-strong)] focus-within:border-[var(--transit-accent)] focus-within:shadow-[0_0_0_3px_rgba(10,92,255,0.12)]">
-                      <Clock className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <span className="block text-[9px] font-bold uppercase tracking-wider text-[var(--ink-tertiary)]">
-                          Time
-                        </span>
-                        <select
-                          aria-label="Select parking time range"
-                          value={selectedTimeRange}
-                          onChange={(e) => setSelectedTimeRange(e.target.value)}
-                          className="w-full appearance-none bg-transparent font-bold text-xs text-[var(--ink)] focus:outline-none cursor-pointer truncate"
-                        >
-                          <option value="2:00 PM – 6:00 PM" className="dark:bg-slate-900">14:00 – 18:00 (Standard)</option>
-                          <option value="9:00 AM – 1:00 PM" className="dark:bg-slate-900">09:00 – 13:00 (Morning)</option>
-                          <option value="6:00 PM – 10:00 PM" className="dark:bg-slate-900">18:00 – 22:00 (Evening)</option>
-                          <option value="All Day (24 hrs)" className="dark:bg-slate-900">24-Hour Pass</option>
-                        </select>
-                      </div>
-                      <ChevronDown className="w-3.5 h-3.5 text-[var(--ink-tertiary)]" />
-                    </div>
-
-                    {/* Action Button */}
-                    <div className="md:col-span-2">
                       <button
                         type="button"
-                        onClick={fetchListings}
-                        className="group/cta w-full py-3.5 px-4 rounded-control bg-brand hover:bg-brand-hover text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-[background-color,transform] duration-150 active:scale-[0.97]"
+                        onClick={() => {
+                          if (locateStatus !== 'locating') locate();
+                        }}
+                        aria-label={t('location.useCurrent')}
+                        title={t('location.useCurrent')}
+                        className="vp-btn vp-btn-ghost vp-btn-sm -mr-1.5 flex-shrink-0 px-2.5 text-[var(--transit-accent)]"
                       >
-                        <span>Search Parking</span>
-                        <ArrowRight className="w-4 h-4 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" />
+                        {locateStatus === 'locating' ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Crosshair className="h-4 w-4" aria-hidden="true" />
+                        )}
+                        <span className="hidden lg:inline">{t('planner.useLocation')}</span>
                       </button>
                     </div>
-                  </div>
+
+                    <div className={`md:col-span-2 ${fieldClass}`}>
+                      <Calendar className="h-4 w-4 flex-shrink-0 text-ink-3" aria-hidden="true" />
+                      <div className="min-w-0 flex-1">
+                        <label htmlFor={ids.date} className={fieldLabel}>
+                          {t('planner.date')}
+                        </label>
+                        <select id={ids.date} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className={fieldSelect}>
+                          <option value="today">{t('planner.dates.today')}</option>
+                          <option value="tomorrow">{t('planner.dates.tomorrow')}</option>
+                          <option value="weekend">{t('planner.dates.weekend')}</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className={`md:col-span-3 ${fieldClass}`}>
+                      <Clock className="h-4 w-4 flex-shrink-0 text-ink-3" aria-hidden="true" />
+                      <div className="min-w-0 flex-1">
+                        <label htmlFor={ids.time} className={fieldLabel}>
+                          {t('planner.time')}
+                        </label>
+                        <select id={ids.time} value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} className={fieldSelect}>
+                          <option value="afternoon">{t('planner.times.afternoon')}</option>
+                          <option value="morning">{t('planner.times.morning')}</option>
+                          <option value="evening">{t('planner.times.evening')}</option>
+                          <option value="fullDay">{t('planner.times.fullDay')}</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <button type="submit" className="group/cta vp-btn vp-btn-primary vp-btn-lg h-full min-h-[3.5rem] w-full rounded-control">
+                        {t('planner.search')}
+                        <ArrowRight className="h-4 w-4 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </form>
+
+                  {locateError && (
+                    <p role="alert" className="vp-alert vp-alert-warning">
+                      <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                      <span>{t(geolocationErrorKey(locateError))}</span>
+                    </p>
+                  )}
+                  {reloadNotice && (
+                    <p role="status" className="vp-alert vp-alert-info">
+                      <Info className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                      <span>{t('location.reloadNotice')}</span>
+                    </p>
+                  )}
                 </div>
 
-                {/* Secondary Telemetry Strip */}
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--ink-secondary)] pt-1">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedAnchor(YELAHANKA_ANCHORS[0])}
-                      className="hover:text-[var(--transit-accent)] flex items-center gap-1 underline underline-offset-4"
-                    >
-                      <LocateFixed className="w-3 h-3 text-[var(--transit-accent)]" />
-                      Reset location
+                {/* Active search centre */}
+                <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                  <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-ink-2">
+                    {/* Re-keyed on every new centre: the pin drops and one locator ripple spreads. */}
+                    <span key={locationKey} className="vp-pin-drop relative inline-flex flex-shrink-0" aria-hidden="true">
+                      <span className="vp-locator-ripple" />
+                      {isDevice ? (
+                        <Navigation className="h-4 w-4 text-[var(--transit-accent)]" />
+                      ) : (
+                        <MapPin className="h-4 w-4 text-[var(--transit-accent)]" />
+                      )}
+                    </span>
+                    <span className="whitespace-nowrap">{t('search.searchingFrom')}</span>
+                    <span className="min-w-0 max-w-full truncate font-semibold text-ink">{placeLabel}</span>
+                    {isDevice && searchLocation.accuracyM !== null && searchLocation.accuracyM > 0 && (
+                      <span className="hidden text-xs text-ink-3 sm:inline">
+                        · {t('location.accuracy', { meters: i18n.number(searchLocation.accuracyM) })}
+                      </span>
+                    )}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    {isDevice && (
+                      <button type="button" onClick={() => chooseAnchor(YELAHANKA_ANCHORS[0].id)} className="vp-link text-sm">
+                        {t('search.resetLocation')}
+                      </button>
+                    )}
+                    <button type="button" onClick={goToProvider} className="vp-link text-sm">
+                      {t('search.haveSpace')} →
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!currentUser) openLoginModal('provider');
-                      else if (!currentUser.roles.includes('PROVIDER')) handleAddCapability('PROVIDER').then(() => setActiveTab('provider'));
-                      else setActiveTab('provider');
-                    }}
-                    className="hover:text-[var(--transit-accent)] underline underline-offset-4"
-                  >
-                    Have a space to rent out? →
-                  </button>
                 </div>
               </div>
             </div>
 
-            {/* FILTER STRIP & VIEW SWITCHER */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 border-b border-[var(--hairline)] flex flex-wrap items-center justify-between gap-3 text-xs font-sans">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="px-3 py-1 rounded-full border border-[var(--hairline-strong)] hover:bg-[var(--surface-alt)] uppercase text-[11px] text-[var(--ink-secondary)] flex items-center gap-1 transition-colors"
-                >
-                  <SlidersHorizontal className="w-3 h-3" />
-                  Reset
-                </button>
+            {/* Filter strip (the scanning sweep along its lower edge runs only while a search is in flight) */}
+            <div className="relative border-b border-hairline bg-surface">
+              {loading && <div className="vp-scan-bar" aria-hidden="true" />}
+              <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+                <div role="group" aria-label={t('search.filters.label')} className="flex flex-wrap items-center gap-2">
+                  <label className="sr-only" htmlFor="flt-type">
+                    {t('search.filters.type')}
+                  </label>
+                  <select id="flt-type" value={filters.category} onChange={(e) => setFilter('category', e.target.value as SearchFiltersState['category'])} className={filterSelect}>
+                    <option value="All">{t('search.filters.typeAll')}</option>
+                    <option value="Commercial">{t('search.filters.typeCommercial')}</option>
+                    <option value="Private">{t('search.filters.typePrivate')}</option>
+                    <option value="Public">{t('search.filters.typePublic')}</option>
+                  </select>
 
-                <select
-                  aria-label="Filter by space type"
-                  value={selectedCategoryFilter}
-                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                  className="bg-[var(--surface-bg)] rounded-full border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-3 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
-                >
-                  <option value="All" className="dark:bg-slate-900">Type: All</option>
-                  <option value="Commercial" className="dark:bg-slate-900">Type: Commercial</option>
-                  <option value="Private" className="dark:bg-slate-900">Type: Residential</option>
-                  <option value="Public" className="dark:bg-slate-900">Type: Public</option>
-                </select>
+                  <label className="sr-only" htmlFor="flt-price">
+                    {t('search.filters.price')}
+                  </label>
+                  <select id="flt-price" value={filters.price} onChange={(e) => setFilter('price', e.target.value as SearchFiltersState['price'])} className={filterSelect}>
+                    <option value="All">{t('search.filters.priceAll')}</option>
+                    <option value="Under40">{t('search.filters.price40')}</option>
+                    <option value="Under60">{t('search.filters.price60')}</option>
+                  </select>
 
-                <select
-                  aria-label="Filter by hourly price"
-                  value={selectedPriceFilter}
-                  onChange={(e) => setSelectedPriceFilter(e.target.value)}
-                  className="bg-[var(--surface-bg)] rounded-full border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-3 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
-                >
-                  <option value="All" className="dark:bg-slate-900">Rate: All</option>
-                  <option value="Under ₹40" className="dark:bg-slate-900">Rate: &lt;₹40/hr</option>
-                  <option value="Under ₹60" className="dark:bg-slate-900">Rate: &lt;₹60/hr</option>
-                </select>
+                  <label className="sr-only" htmlFor="flt-vehicle">
+                    {t('search.filters.vehicle')}
+                  </label>
+                  <select id="flt-vehicle" value={filters.vehicle} onChange={(e) => setFilter('vehicle', e.target.value as SearchFiltersState['vehicle'])} className={filterSelect}>
+                    <option value="All">{t('search.filters.vehicleAny')}</option>
+                    <option value="SEDAN">{t('vehicles.SEDAN')}</option>
+                    <option value="SUV">{t('vehicles.SUV')}</option>
+                    <option value="EV">{t('listing.evReady')}</option>
+                    <option value="TWO_WHEELER">{t('vehicles.TWO_WHEELER')}</option>
+                  </select>
 
-                <select
-                  aria-label="Filter by vehicle size"
-                  value={selectedVehicleFilter}
-                  onChange={(e) => setSelectedVehicleFilter(e.target.value)}
-                  className="bg-[var(--surface-bg)] rounded-full border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-3 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
-                >
-                  <option value="All" className="dark:bg-slate-900">Vehicle: Any</option>
-                  <option value="Sedan" className="dark:bg-slate-900">Vehicle: Sedan</option>
-                  <option value="SUV" className="dark:bg-slate-900">Vehicle: SUV</option>
-                  <option value="EV" className="dark:bg-slate-900">Vehicle: EV Ready</option>
-                  <option value="2-Wheeler" className="dark:bg-slate-900">Vehicle: 2-Wheeler</option>
-                </select>
+                  <label className="sr-only" htmlFor="flt-cover">
+                    {t('search.filters.cover')}
+                  </label>
+                  <select id="flt-cover" value={filters.cover} onChange={(e) => setFilter('cover', e.target.value as SearchFiltersState['cover'])} className={filterSelect}>
+                    <option value="All">{t('search.filters.coverAny')}</option>
+                    <option value="Covered">{t('search.filters.covered')}</option>
+                    <option value="Open">{t('search.filters.open')}</option>
+                  </select>
 
-                <select
-                  aria-label="Filter by covered or open"
-                  value={selectedCoveredFilter}
-                  onChange={(e) => setSelectedCoveredFilter(e.target.value)}
-                  className="bg-[var(--surface-bg)] rounded-full border border-[var(--hairline)] hover:border-[var(--hairline-strong)] px-3 py-1 text-[11px] uppercase text-[var(--ink)] focus:outline-none cursor-pointer"
-                >
-                  <option value="All" className="dark:bg-slate-900">Cover: Any</option>
-                  <option value="Covered" className="dark:bg-slate-900">Cover: Basement/Covered</option>
-                  <option value="Open" className="dark:bg-slate-900">Cover: Open Surface</option>
-                </select>
-              </div>
+                  <label className="sr-only" htmlFor="flt-radius">
+                    {t('search.filters.radius')}
+                  </label>
+                  <select id="flt-radius" value={radiusKm} onChange={(e) => setRadiusKm(Number(e.target.value))} className={filterSelect}>
+                    {SEARCH_RADIUS_OPTIONS_KM.map((km) => (
+                      <option key={km} value={km}>
+                        {t('search.filters.radiusOption', { km })}
+                      </option>
+                    ))}
+                  </select>
 
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--surface-alt)] border border-[var(--hairline)] text-[11px] text-[var(--ink-secondary)]">
-                <Lock className="w-3 h-3 text-[var(--transit-accent)]" />
-                <span>Exact location and directions are shared after booking</span>
+                  {(hasActiveFilters(filters) || radiusKm !== DEFAULT_SEARCH_RADIUS_KM) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetFilters();
+                        setRadiusKm(DEFAULT_SEARCH_RADIUS_KM);
+                      }}
+                      className="vp-btn vp-btn-ghost vp-btn-sm"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                      {t('search.filters.reset')}
+                    </button>
+                  )}
+                </div>
+
+                <p className="flex items-center gap-1.5 text-xs text-ink-2">
+                  <Lock className="h-3.5 w-3.5 text-[var(--transit-accent)]" aria-hidden="true" />
+                  {t('search.filters.privacyNote')}
+                </p>
               </div>
             </div>
 
-            {/* MAIN CONTENT: Verified Listings Grid (Map preview removed prior to payment) */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-              <div className="flex items-baseline justify-between pb-3 border-b border-[var(--hairline)] mb-4">
-                <h2 className="text-sm font-bold text-[var(--ink)] tracking-tight">
-                  {results.length} {results.length === 1 ? 'parking space' : 'parking spaces'} near{' '}
-                  <span className="text-[var(--transit-accent)]">{selectedAnchor.name}</span>
+            {/* Results: real VPark listings from /api/search */}
+            <div ref={resultsRef} className="mx-auto max-w-7xl scroll-mt-20 px-4 py-6 sm:px-6 lg:px-8">
+              <div className="mb-4 flex flex-col gap-2 border-b border-hairline pb-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-base font-semibold text-ink" role="status" aria-live="polite">
+                  {loading
+                    ? t('search.loading', { place: placeLabel })
+                    : tn('search.results', results.length, { km: radiusKm, place: placeLabel })}
                 </h2>
-
-                <div className="flex items-center gap-1.5 font-sans text-[11px] text-[var(--ink-secondary)]">
-                  <label htmlFor="sort-by-select" className="uppercase">Sort:</label>
+                <div className="flex items-center gap-2 text-sm">
+                  <label htmlFor={ids.sort} className="text-ink-2">
+                    {t('search.sort.label')}
+                  </label>
                   <select
-                    id="sort-by-select"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'Nearest' | 'Lowest Price' | 'Highest Rated')}
-                    className="font-bold text-[var(--ink)] uppercase bg-transparent focus:outline-none cursor-pointer"
+                    id={ids.sort}
+                    value={filters.sort}
+                    onChange={(e) => setFilter('sort', e.target.value as SearchFiltersState['sort'])}
+                    className={filterSelect}
                   >
-                    <option value="Nearest" className="dark:bg-slate-900">Nearest Distance</option>
-                    <option value="Lowest Price" className="dark:bg-slate-900">Lowest Hourly Rate</option>
-                    <option value="Highest Rated" className="dark:bg-slate-900">Highest Host Rating</option>
+                    <option value="Nearest">{t('search.sort.nearest')}</option>
+                    <option value="LowestPrice">{t('search.sort.lowestPrice')}</option>
+                    <option value="HighestRated">{t('search.sort.highestRated')}</option>
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2" aria-busy={loading}>
                 {loading ? (
-                  <>
-                    <div role="status" className="md:col-span-2 py-2 text-xs text-[var(--ink-secondary)] animate-fade-in">
-                      Finding parking near {selectedAnchor.name}…
-                    </div>
-                    {[0, 1, 2, 3].map((i) => (
-                      <ListingCardSkeleton key={i} style={staggerStyle(i, 70)} />
-                    ))}
-                  </>
+                  [0, 1, 2, 3].map((i) => <ListingCardSkeleton key={i} style={staggerStyle(i, 70)} />)
                 ) : results.length === 0 ? (
-                  <div className="md:col-span-2 p-8 text-center bg-[var(--surface-bg)] rounded-card border border-[var(--hairline)] text-[var(--ink-secondary)] text-xs space-y-3 animate-fade-in">
-                    <p className="text-sm font-bold text-[var(--ink)]">No parking spaces match these filters</p>
-                    <p>Try removing a filter or choosing a different landmark.</p>
-                    <button
-                      type="button"
-                      onClick={resetFilters}
-                      className="px-4 py-2 rounded-full bg-[var(--surface-alt)] border border-[var(--hairline-strong)] text-[var(--ink)] font-semibold text-xs hover:bg-[var(--surface-bg)] transition-colors"
-                    >
-                      Reset filters
-                    </button>
-                  </div>
+                  <div className="lg:col-span-2">{renderEmptyState()}</div>
                 ) : (
                   results.map((item, index) => (
                     <div key={item.listing.id} className="animate-fade-up" style={staggerStyle(index)}>
@@ -648,85 +744,79 @@ export function VParkApp({
               </div>
             </div>
 
-            {/* BELOW THE FOLD: How VPark works (driver and space-owner journeys) */}
-            <div className="bg-[var(--surface-bg)] border-t border-[var(--hairline)] py-12 px-4 sm:px-6 lg:px-8">
+            {/* How VPark works */}
+            <div className="border-t border-hairline bg-surface px-4 py-14 sm:px-6 lg:px-8 oled:bg-black">
               <HowItWorks
-                className="max-w-7xl mx-auto"
+                className="mx-auto max-w-7xl"
                 sectionRef={howItWorksRef}
                 onBrowse={() => searchSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                onSetUpHost={() => {
-                  if (!currentUser) openLoginModal('provider');
-                  else if (!currentUser.roles.includes('PROVIDER')) handleAddCapability('PROVIDER').then(() => setActiveTab('provider'));
-                  else setActiveTab('provider');
-                }}
+                onSetUpHost={goToProvider}
               />
             </div>
           </div>
         )}
 
-        {/* TAB 2: Driver Bookings */}
+        {/* Driver bookings */}
         {activeTab === 'bookings' && (
-          <div className={`max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5 font-sans ${tabEnterClass}`}>
-            <div className="border-b border-[var(--hairline)] pb-2 flex items-baseline justify-between">
-              <h1 className="text-base font-bold uppercase tracking-tight text-[var(--ink)]">
-                Active Parking Sessions &amp; Digital Passes
-              </h1>
-              <span className="text-xs text-[var(--ink-tertiary)]">{bookings.length} TOTAL SESSIONS</span>
+          <div className={`mx-auto max-w-4xl space-y-5 px-4 py-8 sm:px-6 lg:px-8 ${tabEnterClass}`}>
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b border-hairline pb-4">
+              <div>
+                <h1 className="vp-h2">{t('bookings.title')}</h1>
+                <p className="mt-1 text-sm text-ink-2">{t('bookings.subtitle')}</p>
+              </div>
+              {currentUser && <span className="vp-badge">{tn('bookings.count', bookings.length)}</span>}
             </div>
 
             {!currentUser ? (
-              <div className="p-8 text-center bg-[var(--surface-bg)] border border-[var(--hairline-strong)] space-y-3 text-xs">
-                <p className="font-bold uppercase text-[var(--ink)]">Authentication Required</p>
-                <p className="text-[var(--ink-secondary)]">Sign in with your email to see your bookings and passes.</p>
-                <button
-                  type="button"
-                  onClick={() => openLoginModal('driver')}
-                  className="px-4 py-2 bg-brand hover:bg-brand-hover text-white font-sans uppercase tracking-wider transition-colors"
-                >
-                  Authenticate via OTP
+              <EmptyState icon={<Lock className="h-6 w-6" />} title={t('bookings.signInTitle')} body={t('bookings.signInBody')}>
+                <button type="button" onClick={() => openLoginModal('driver')} className="vp-btn vp-btn-primary">
+                  {t('bookings.signIn')}
                 </button>
-              </div>
+              </EmptyState>
             ) : bookings.length === 0 ? (
-              <div className="p-8 text-center bg-[var(--surface-bg)] border border-[var(--hairline-strong)] text-[var(--ink-secondary)] text-xs space-y-1">
-                <p className="font-bold uppercase text-[var(--ink)]">No Active Reservations</p>
-                <p className="text-[var(--ink-tertiary)]">Search verified bays in Yelahanka to hold a slot and receive your digital pass.</p>
-              </div>
+              <EmptyState icon={<Ticket className="h-6 w-6" />} title={t('bookings.emptyTitle')} body={t('bookings.emptyBody')}>
+                <button type="button" onClick={() => setActiveTab('search')} className="vp-btn vp-btn-primary">
+                  {t('bookings.emptyCta')}
+                </button>
+              </EmptyState>
             ) : (
-              bookings.map((booking, index) => (
-                <div
-                  key={booking.id}
-                  style={staggerStyle(index)}
-                  onClick={() => setActivePassBooking(booking)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setActivePassBooking(booking);
-                    }
-                  }}
-                  className="group p-4 bg-[var(--surface-bg)] border border-[var(--hairline)] hover:border-[var(--hairline-strong)] hover:shadow-md cursor-pointer flex justify-between items-center text-xs transition-[border-color,box-shadow,transform] duration-200 ease-out-quart motion-safe:hover:-translate-y-0.5 animate-fade-up"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-[var(--transit-accent)] text-[11px] uppercase tracking-wider">
-                        PASS // {booking.referenceNumber}
-                      </span>
-                      <span className="px-2 py-0.2 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 font-sans text-[10px] font-bold border border-emerald-500/30">
-                        📍 Exact Map &amp; Navigation Unlocked
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-sm text-[var(--ink)] uppercase">{booking.listingTitle}</h3>
-                    <p className="text-[var(--ink-secondary)] text-xs">{booking.listingAddress}</p>
-                  </div>
-                  <div className="text-right tabular-nums">
-                    <span className="text-sm font-bold text-[var(--ink)]">₹{booking.pricingSnapshot.totalAmount}</span>
-                    <span className="block text-[var(--transit-accent)] font-semibold text-[11px] uppercase tracking-wider mt-0.5 transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
-                      Open Exact Map &amp; Pass →
-                    </span>
-                  </div>
-                </div>
-              ))
+              <ul className="space-y-3">
+                {bookings.map((booking, index) => {
+                  const status = bookingStatusInfo(booking.status);
+                  return (
+                    <li key={booking.id} style={staggerStyle(index)} className="animate-fade-up">
+                      <button
+                        type="button"
+                        onClick={() => setActivePassBooking(booking)}
+                        aria-label={t('bookings.passFor', { ref: booking.referenceNumber })}
+                        className="vp-card group flex w-full flex-col gap-3 p-4 text-left transition-[border-color,box-shadow,transform] duration-200 ease-out-quart hover:border-hairline-strong hover:shadow-raised motion-safe:hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                      >
+                        <span className="min-w-0 space-y-1.5">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs font-semibold text-[var(--transit-accent)]">{booking.referenceNumber}</span>
+                            <span className={badgeClass(status.tone)}>{t(status.key)}</span>
+                            {booking.locationRevealed !== false && (
+                              <span className="vp-badge vp-badge-success">{t('bookings.unlocked')}</span>
+                            )}
+                          </span>
+                          <span className="block text-[15px] font-semibold text-ink">{booking.listingTitle}</span>
+                          <span className="block text-sm text-ink-2">{booking.listingAddress}</span>
+                          <span className="block text-xs text-ink-3">
+                            {i18n.date(booking.startTime, { day: 'numeric', month: 'short', year: 'numeric' })} · {i18n.time(booking.startTime)} → {i18n.time(booking.endTime)}
+                          </span>
+                        </span>
+                        <span className="flex items-center justify-between gap-4 sm:flex-col sm:items-end">
+                          <span className="text-base font-bold tabular-nums text-ink">{inr(booking.pricingSnapshot.totalAmount, { decimals: true })}</span>
+                          <span className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--transit-accent)]">
+                            {t('bookings.openPass')}
+                            <ArrowRight className="h-4 w-4 transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5" aria-hidden="true" />
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         )}
@@ -754,107 +844,131 @@ export function VParkApp({
         )}
       </main>
 
-      {/* Clean Footer */}
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-5 px-4 sm:px-6 lg:px-8 text-xs text-slate-500 dark:text-slate-400">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <span>
-            © {new Date().getFullYear()} {APP_CONFIG.appName} Technologies · Yelahanka Pilot, Bengaluru
-          </span>
-
-          <div className="flex flex-wrap items-center gap-4 font-medium text-xs">
-            <a href="/login" className="text-slate-600 dark:text-slate-400 hover:text-[#0A5CFF] dark:hover:text-blue-400 transition-colors">Sign in</a>
-            <a href="/driver/home" className="text-slate-600 dark:text-slate-400 hover:text-[#0A5CFF] dark:hover:text-blue-400 transition-colors">Driver Home</a>
-            <a href="/owner/dashboard" className="text-slate-600 dark:text-slate-400 hover:text-[#0A5CFF] dark:hover:text-blue-400 transition-colors">Host Dashboard</a>
-            <button
-              type="button"
-              onClick={() => setShowDpdpModal(true)}
-              className="text-slate-600 dark:text-slate-400 hover:text-[#0A5CFF] dark:hover:text-blue-400 transition-colors"
-            >
-              DPDP Privacy &amp; Rights
-            </button>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter onOpenDataRights={currentUser ? () => setShowDpdpModal(true) : undefined} />
 
       {/* Modals */}
       <Presence>
-      {authModalOpen && (
-        <AuthModal
-          key="auth-modal"
-          initialIntent={authIntent}
-          onAuthenticated={handleAuthenticated}
-          onClose={() => setAuthModalOpen(false)}
-        />
-      )}
+        {authModalOpen && (
+          <AuthModal key="auth-modal" initialIntent={authIntent} onAuthenticated={handleAuthenticated} onClose={() => setAuthModalOpen(false)} />
+        )}
       </Presence>
 
       <Presence>
-      {bookingModalItem && (
-        <ListingDetailModal
-          key={`listing-${bookingModalItem.listing.id}`}
-          item={bookingModalItem}
-          userVehicles={currentUser?.vehicles || []}
-          isAuthenticated={Boolean(currentUser)}
-          onRequireAuth={() => {
-            setBookingModalItem(null);
-            openLoginModal('driver');
-          }}
-          onClose={() => setBookingModalItem(null)}
-          onBookingSuccess={() => {
-            setBookingModalItem(null);
-            fetchInitialData();
-            setActiveTab('bookings');
-          }}
-        />
-      )}
+        {bookingModalItem && (
+          <ListingDetailModal
+            key={`listing-${bookingModalItem.listing.id}`}
+            item={bookingModalItem}
+            userVehicles={currentUser?.vehicles || []}
+            isAuthenticated={Boolean(currentUser)}
+            onRequireAuth={() => {
+              setBookingModalItem(null);
+              openLoginModal('driver');
+            }}
+            onClose={() => setBookingModalItem(null)}
+            onBookingSuccess={() => {
+              setBookingModalItem(null);
+              fetchInitialData();
+              setActiveTab('bookings');
+            }}
+          />
+        )}
       </Presence>
 
       <Presence>
-      {activePassBooking && (
-        <DigitalPassModal
-          key={`pass-${activePassBooking.id}`}
-          booking={activePassBooking}
-          onClose={() => setActivePassBooking(null)}
-          onRefresh={() => {
-            fetchInitialData();
-            fetch(`/api/bookings/${activePassBooking.id}`)
-              .then((r) => r.json())
-              .then((d) => {
-                if (d.success) setActivePassBooking(d.booking);
-              });
-          }}
-          onOpenDispute={(b) => setDisputeBooking(b)}
-        />
-      )}
+        {activePassBooking && (
+          <DigitalPassModal
+            key={`pass-${activePassBooking.id}`}
+            booking={activePassBooking}
+            onClose={() => setActivePassBooking(null)}
+            onRefresh={() => {
+              fetchInitialData();
+              fetch(`/api/bookings/${activePassBooking.id}`)
+                .then((r) => r.json())
+                .then((d) => {
+                  if (d.success) setActivePassBooking(d.booking);
+                });
+            }}
+            onOpenDispute={(b) => setDisputeBooking(b)}
+          />
+        )}
       </Presence>
 
       <Presence>
-      {disputeBooking && (
-        <DisputeModal
-          key={`dispute-${disputeBooking.id}`}
-          booking={disputeBooking}
-          onClose={() => setDisputeBooking(null)}
-          onDisputeCreated={() => {
-            setDisputeBooking(null);
-            fetchInitialData();
-          }}
-        />
-      )}
+        {disputeBooking && (
+          <DisputeModal
+            key={`dispute-${disputeBooking.id}`}
+            booking={disputeBooking}
+            onClose={() => setDisputeBooking(null)}
+            onDisputeCreated={() => {
+              setDisputeBooking(null);
+              fetchInitialData();
+            }}
+          />
+        )}
       </Presence>
 
       <Presence>
-      {showDpdpModal && (
-        <DpdpExportModal
-          key="dpdp-modal"
-          onClose={() => setShowDpdpModal(false)}
-          onDeleted={() => {
-            setShowDpdpModal(false);
-            handleLogout();
-          }}
-        />
-      )}
+        {showDpdpModal && (
+          <DpdpExportModal
+            key="dpdp-modal"
+            onClose={() => setShowDpdpModal(false)}
+            onDeleted={() => {
+              setShowDpdpModal(false);
+              handleLogout();
+            }}
+          />
+        )}
       </Presence>
     </div>
   );
 }
 
+/** An empty parking bay with a locator: drawn in once, the locator pulses twice. */
+function EmptyBayIllustration() {
+  return (
+    <svg viewBox="0 0 120 72" className="h-16 w-28" fill="none">
+      <path
+        d="M14 60 L36 14 M106 60 L84 14 M30 44 L90 44"
+        pathLength={1}
+        stroke="var(--hairline-strong)"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        className="vp-empty-bay"
+      />
+      <circle cx="60" cy="30" r="13" stroke="var(--transit-accent)" strokeWidth="1.5" className="vp-empty-pulse" />
+      <path
+        d="M60 16c-5 0-9 3.9-9 8.8 0 6.4 9 15.2 9 15.2s9-8.8 9-15.2C69 19.9 65 16 60 16Z"
+        fill="var(--accent-soft)"
+        stroke="var(--transit-accent)"
+        strokeWidth="1.8"
+      />
+      <circle cx="60" cy="25" r="3" fill="var(--transit-accent)" />
+    </svg>
+  );
+}
+
+function EmptyState({
+  icon,
+  bare = false,
+  title,
+  body,
+  children,
+}: {
+  icon: React.ReactNode;
+  /** Render the icon without the round tile (for illustrations). */
+  bare?: boolean;
+  title: string;
+  body: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="vp-card flex flex-col items-center gap-3 px-6 py-10 text-center animate-fade-in">
+      <span className={bare ? 'inline-flex' : 'vp-icon-tile h-12 w-12 rounded-full'} aria-hidden="true">
+        {icon}
+      </span>
+      <h3 className="text-lg font-semibold text-ink">{title}</h3>
+      <p className="max-w-md text-sm leading-relaxed text-ink-2">{body}</p>
+      {children && <div className="flex flex-col items-center gap-3 pt-2">{children}</div>}
+    </div>
+  );
+}

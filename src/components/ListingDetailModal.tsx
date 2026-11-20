@@ -1,22 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
+import { useDialog } from '@/components/motion/useDialog';
+import { useI18n } from '@/components/i18n/LanguageProvider';
 import { SearchResultItem, Vehicle, VehicleType } from '@/types';
-import { APP_CONFIG } from '@/lib/constants';
 import { calculatePricingPaise } from '@/lib/engine.mjs';
 import { toPaise } from '@/lib/constants';
-import { validatePlateNumber, formatPlateNumber } from '@/lib/validation';
-import {
-  X,
-  ShieldCheck,
-  MapPin,
-  AlertTriangle,
-  Lock,
-  ChevronRight,
-  ExternalLink,
-  CheckCircle2,
-} from 'lucide-react';
+import { validatePlateNumber } from '@/lib/validation';
+import { X, ShieldCheck, AlertTriangle, Lock, ChevronRight, ExternalLink, CheckCircle2, MapPin, Loader2, ImageOff } from 'lucide-react';
 
 interface ListingDetailModalProps {
   item: SearchResultItem;
@@ -27,6 +19,9 @@ interface ListingDetailModalProps {
   onBookingSuccess: (bookingId: string) => void;
 }
 
+const VEHICLE_ORDER: VehicleType[] = ['SEDAN', 'HATCHBACK', 'SUV', 'EV', 'TWO_WHEELER'];
+const PAYMENT_METHODS = ['UPI', 'CARD', 'NETBANKING'] as const;
+
 export function ListingDetailModal({
   item,
   userVehicles,
@@ -35,14 +30,12 @@ export function ListingDetailModal({
   onClose,
   onBookingSuccess,
 }: ListingDetailModalProps) {
+  const { t, tn, inr, date, time } = useI18n();
   const { listing } = item;
+  const ids = { title: useId(), vehicle: useId(), plate: useId(), plateMsg: useId(), duration: useId(), error: useId(), payTitle: useId() };
 
-  const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleType>(
-    userVehicles[0]?.type || 'SEDAN'
-  );
-  const [plateNumber, setPlateNumber] = useState<string>(
-    userVehicles[0]?.plateNumber || 'KA-04-MB-1234'
-  );
+  const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleType>(userVehicles[0]?.type || 'SEDAN');
+  const [plateNumber, setPlateNumber] = useState<string>(userVehicles[0]?.plateNumber || 'KA-04-MB-1234');
 
   const [durationHours, setDurationHours] = useState<number>(2);
   const [startTime] = useState<string>(() => {
@@ -60,9 +53,14 @@ export function ListingDetailModal({
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'UPI' | 'CARD' | 'NETBANKING'>('UPI');
 
+  const dialogRef = useDialog<HTMLDivElement>(showPaymentModal ? undefined : onClose, true);
+  const paymentRef = useDialog<HTMLDivElement>(() => setShowPaymentModal(false), showPaymentModal);
+
   const endTimeIso = new Date(new Date(startTime).getTime() + durationHours * 60 * 60 * 1000).toISOString();
   const hourlyPaise = listing.pricing.hourlyRatePaise ?? toPaise(listing.pricing.hourlyRate);
   const pricing = calculatePricingPaise(hourlyPaise, startTime, endTimeIso);
+  const total = inr(pricing.totalAmount, { decimals: true });
+  const plateInvalid = plateNumber.trim() !== '' && !validatePlateNumber(plateNumber);
 
   useEffect(() => {
     if (!activeHold) return;
@@ -74,13 +72,13 @@ export function ListingDetailModal({
 
       if (secs <= 0) {
         setActiveHold(null);
-        setErrorMessage('Your 10-minute slot hold has expired. Please lock the slot again.');
+        setErrorMessage(t('detail.holdExpired'));
         clearInterval(timer);
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [activeHold]);
+  }, [activeHold, t]);
 
   const handleSecureHold = async () => {
     if (!isAuthenticated) {
@@ -89,7 +87,7 @@ export function ListingDetailModal({
     }
 
     if (!validatePlateNumber(plateNumber)) {
-      setErrorMessage('Please enter a valid Indian vehicle registration plate (e.g. KA-04-MB-1234 or 22-BH-1234-AA).');
+      setErrorMessage(t('detail.plateInvalid'));
       return;
     }
 
@@ -115,14 +113,14 @@ export function ListingDetailModal({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setErrorMessage(data.error || 'Failed to lock slot hold');
+        setErrorMessage(data.error || t('detail.holdFailed'));
       } else {
         setActiveHold({ id: data.hold.id, expiresAt: data.hold.expiresAt });
         setSecondsRemaining(600);
         setShowPaymentModal(true);
       }
     } catch {
-      setErrorMessage('Network error securing hold');
+      setErrorMessage(t('detail.holdNetwork'));
     } finally {
       setIsHolding(false);
     }
@@ -130,7 +128,7 @@ export function ListingDetailModal({
 
   const handleConfirmPayment = async () => {
     if (!validatePlateNumber(plateNumber)) {
-      setErrorMessage('Please enter a valid Indian vehicle registration plate (e.g. KA-04-MB-1234).');
+      setErrorMessage(t('detail.plateInvalid'));
       return;
     }
 
@@ -154,414 +152,410 @@ export function ListingDetailModal({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setErrorMessage(data.error || 'Payment failed');
+        setErrorMessage(data.error || t('detail.paymentFailed'));
+        setShowPaymentModal(false);
       } else {
         onBookingSuccess(data.booking.id);
       }
     } catch {
-      setErrorMessage('Failed to complete booking');
+      setErrorMessage(t('detail.bookingFailed'));
+      setShowPaymentModal(false);
     } finally {
       setIsBooking(false);
     }
   };
 
+  const spec = (label: string, value: React.ReactNode) => (
+    <div className="vp-panel p-3">
+      <span className="block text-xs text-ink-3">{label}</span>
+      <span className="mt-0.5 block text-sm font-semibold text-ink">{value}</span>
+    </div>
+  );
+
+  const accessLabel = t(`accessMethods.${listing.accessMethod}` as 'accessMethods.GATE_GUARD');
+
   return (
     <ModalBackdrop
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 overflow-y-auto"
-      role="dialog"
-      aria-modal="true"
-      aria-label={listing.title}
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !showPaymentModal) onClose();
+      }}
     >
-      <ModalPanel className="relative w-full max-w-3xl bg-[var(--surface-bg)] rounded-sm border border-[var(--hairline-strong)] shadow-sm overflow-hidden my-auto max-h-[92vh] flex flex-col text-[var(--ink)]">
-        {/* Header bar */}
-        <div className="px-5 py-3.5 border-b border-[var(--hairline)] flex items-center justify-between bg-[var(--surface-alt)]">
-          <div className="flex items-center gap-2">
-            <span
-              className={`px-2 py-0.5 rounded-none font-sans text-[10px] font-bold uppercase tracking-wider border ${
-                listing.category === 'PRIVATE'
-                  ? 'border-purple-600/40 text-purple-700 dark:text-purple-400 bg-[var(--surface-bg)]'
-                  : listing.category === 'COMMERCIAL'
-                  ? 'border-[var(--transit-accent)] text-[var(--transit-accent)] bg-[var(--surface-bg)]'
-                  : 'border-[var(--hairline-strong)] text-[var(--ink-secondary)] bg-[var(--surface-bg)]'
-              }`}
-            >
-              {listing.category}
-            </span>
-            {listing.status === 'VERIFIED' && (
-              <span className="flex items-center gap-1 font-sans text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 bg-[var(--surface-bg)] px-2 py-0.5 border border-emerald-600/40">
-                <ShieldCheck className="w-3 h-3" />
-                Verified Deed
-              </span>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close listing details"
-            className="p-1 rounded-sm text-[var(--ink-tertiary)] hover:text-[var(--ink)] hover:bg-[var(--surface-bg)] border border-transparent hover:border-[var(--hairline)] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Scrollable Content */}
-        <div className="overflow-y-auto p-5 sm:p-6 space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {listing.photos.map((photo, i) => (
-              <div key={i} className="h-36 sm:h-40 rounded-xs overflow-hidden bg-[var(--surface-alt)] border border-[var(--hairline)]">
-                <img
-                  src={photo}
-                  alt={`${listing.title} view ${i + 1}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-[var(--ink)] leading-tight">{listing.title}</h2>
-              <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-secondary)] mt-1">
-                <span className="font-semibold text-[var(--ink)]">{listing.locality || 'Yelahanka'}</span>
-                {listing.landmark && (
-                  <>
-                    <span className="text-[var(--hairline-strong)]">·</span>
-                    <span className="font-sans text-[11px]">Near {listing.landmark}</span>
-                  </>
-                )}
-                {listing.locationPrecision === 'APPROXIMATE' && (
-                  <>
-                    <span className="text-[var(--hairline-strong)]">·</span>
-                    <span className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-sans">
-                      <Lock className="w-3 h-3" />
-                      Exact street address &amp; precise map pin unlocked after payment
-                    </span>
-                  </>
-                )}
-              </div>
-              {listing.dimensionsNotes && (
-                <p className="text-xs font-sans text-[var(--ink-tertiary)] mt-1">{listing.dimensionsNotes}</p>
-              )}
-            </div>
-
-            <div className="text-right flex-shrink-0 tabular-nums">
-              <span className="text-2xl font-bold text-slate-900">₹{listing.pricing.hourlyRate}</span>
-              <span className="text-xs text-slate-500 block">per hour</span>
-            </div>
-          </div>
-
-          {listing.category === 'PUBLIC' && (
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm space-y-1">
-              <div className="font-bold flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                Public Parking Discovery Context (Not Reservable)
-              </div>
-              <p className="text-xs text-amber-800">
-                {listing.surveyDate || 'Surveyed recently'}. Public parking is shown for discovery only. VPark does not control or reserve these spaces.
-              </p>
-            </div>
-          )}
-
-          {/* Specs Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <span className="text-slate-400 block font-medium">Cover Type</span>
-              <span className="font-bold text-slate-800 text-sm">{listing.isCovered ? 'Covered / Basement' : 'Open Ground'}</span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <span className="text-slate-400 block font-medium">Height Clearance</span>
-              <span className="font-bold text-slate-800 text-sm">{listing.heightClearanceMeters || '2.2'} meters</span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <span className="text-slate-400 block font-medium">EV Charging</span>
-              <span className="font-bold text-slate-800 text-sm">
-                {listing.hasEvCharging ? listing.evChargerType || 'Available' : 'No Charger'}
-              </span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <span className="text-slate-400 block font-medium">Access Method</span>
-              <span className="font-bold text-slate-800 text-sm">{listing.accessMethod.replace('_', ' ')}</span>
-            </div>
-          </div>
-
-          {/* Access Instructions Privacy Protection (PRD 7.2) & House Rules */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
-              <span className="font-bold text-slate-900 flex items-center gap-1.5 text-sm">
-                <Lock className="w-3.5 h-3.5 text-[#0A5CFF]" />
-                Access Instructions
-              </span>
-              {listing.category === 'PUBLIC' ? (
-                <p className="text-slate-600">{listing.accessInstructions}</p>
-              ) : (
-                <p className="text-slate-600">
-                  Entry via <span className="font-semibold text-slate-800">{listing.accessMethod.replace('_', ' ')}</span>. Exact gate instructions, codes, and masked host relay unlock immediately after booking confirmation.
-                </p>
-              )}
-            </div>
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
-              <span className="font-bold text-slate-900 block text-sm">House Rules</span>
-              <ul className="list-disc pl-4 text-slate-600 space-y-0.5">
-                {listing.houseRules.map((rule, idx) => (
-                  <li key={idx}>{rule}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Provider & Trust Info */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-700">
-                {listing.providerName[0]}
-              </div>
-              <div>
-                <span className="font-bold text-slate-900 text-sm">{listing.providerName}</span>
-                <span className="text-slate-500 block text-[11px]">
-                  {listing.providerType} · Verified Proof on File · Last confirmed {new Date(listing.lastConfirmedAt).toLocaleDateString('en-IN')}
-                </span>
-              </div>
-            </div>
-            <div className="text-right text-[11px] text-slate-500 hidden sm:block">
-              <span className="font-semibold text-slate-700">Privacy Relay</span>
-              <p>Contact masked until confirmed</p>
-            </div>
-          </div>
-
-          {activeHold && (
-            <div className="relative overflow-hidden p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-950 flex items-center justify-between gap-4 animate-fade-up">
-              {/* Visual mirror of the real hold countdown (600s window); decorative, the timer text is authoritative. */}
+      <ModalPanel className="my-auto w-full max-w-3xl">
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={ids.title}
+          className="vp-card flex max-h-[92vh] flex-col overflow-hidden text-ink shadow-raised"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-3.5">
+            <div className="flex flex-wrap items-center gap-2">
               <span
-                aria-hidden="true"
-                className="absolute left-0 bottom-0 h-1 w-full origin-left bg-amber-500/60 transition-transform duration-1000 ease-linear"
-                style={{ transform: `scaleX(${Math.max(0, Math.min(1, secondsRemaining / 600))})` }}
-              />
-              <div className="flex items-center gap-2">
-                <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                <div>
-                  <span className="font-bold text-sm block">Slot Temporarily Locked (10 min hold)</span>
-                  <span className="text-xs text-amber-800">Complete payment before the timer reaches zero.</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-xl font-black font-mono text-amber-700">
-                  {Math.floor(secondsRemaining / 60)}:{(secondsRemaining % 60).toString().padStart(2, '0')}
+                className={
+                  listing.category === 'PRIVATE'
+                    ? 'vp-badge vp-badge-host'
+                    : listing.category === 'COMMERCIAL'
+                    ? 'vp-badge vp-badge-info'
+                    : 'vp-badge'
+                }
+              >
+                {t(`categories.${listing.category}`)}
+              </span>
+              {listing.status === 'VERIFIED' && (
+                <span className="vp-badge vp-badge-success">
+                  <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                  {t('listing.verified')}
                 </span>
-                <span className="text-[10px] text-amber-700 block uppercase font-bold tracking-wider">Remaining</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('detail.close')}
+              className="rounded-full p-2 text-ink-3 transition-colors hover:bg-surface-alt hover:text-ink"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="space-y-5 overflow-y-auto p-5 sm:p-6">
+            {listing.photos.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {listing.photos.map((photo, i) => (
+                  <div key={i} className="h-40 overflow-hidden rounded-control border border-hairline bg-surface-alt">
+                    <img src={photo} alt={`${listing.title} (${i + 1})`} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="vp-panel flex h-28 items-center justify-center gap-2 text-sm text-ink-3">
+                <ImageOff className="h-5 w-5" aria-hidden="true" />
+                {t('listing.noPhoto')}
+              </div>
+            )}
+
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2 id={ids.title} className="text-xl font-bold leading-tight text-ink sm:text-2xl">
+                  {listing.title}
+                </h2>
+                <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
+                  <span className="inline-flex items-center gap-1 font-medium text-ink">
+                    <MapPin className="h-3.5 w-3.5 text-ink-3" aria-hidden="true" />
+                    {listing.locality || 'Yelahanka'}
+                  </span>
+                  {listing.landmark && <span>· {t('listing.near', { landmark: listing.landmark })}</span>}
+                </p>
+                {listing.locationPrecision === 'APPROXIMATE' && (
+                  <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--info-ink)]">
+                    <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t('detail.exactAfterBooking')}
+                  </p>
+                )}
+                {listing.dimensionsNotes && <p className="mt-1.5 text-sm text-ink-3">{listing.dimensionsNotes}</p>}
+              </div>
+              <div className="flex-shrink-0 text-right tabular-nums">
+                <span className="block text-2xl font-bold text-ink">{inr(listing.pricing.hourlyRate)}</span>
+                <span className="block text-xs text-ink-3">{t('detail.perHour')}</span>
               </div>
             </div>
-          )}
 
-          {listing.isBookable ? (
-            <div className="p-5 rounded-2xl bg-blue-50/50 border border-blue-200 space-y-4">
-              <div className="flex items-center justify-between font-bold text-slate-900">
-                <span className="text-base">Reserve Your Slot</span>
-                <span className="text-xs text-[#0A5CFF] font-semibold bg-blue-100 px-2.5 py-0.5 rounded-full">
-                  Test-mode booking
+            {listing.category === 'PUBLIC' && (
+              <div role="note" className="vp-alert vp-alert-warning">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                <div>
+                  <p className="font-semibold">{t('detail.publicTitle')}</p>
+                  <p className="mt-0.5">
+                    {listing.surveyDate || t('detail.surveyedRecently')}. {t('detail.publicBody')}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {spec(t('detail.specCover'), listing.isCovered ? t('detail.specCovered') : t('detail.specOpen'))}
+              {spec(t('detail.specHeight'), t('detail.specHeightValue', { meters: listing.heightClearanceMeters || '2.2' }))}
+              {spec(t('detail.specEv'), listing.hasEvCharging ? listing.evChargerType || t('detail.specEvAvailable') : t('detail.specEvNone'))}
+              {spec(t('detail.specAccess'), accessLabel)}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="vp-panel space-y-1.5 p-4 text-sm">
+                <h3 className="flex items-center gap-1.5 font-semibold text-ink">
+                  <Lock className="h-4 w-4 text-[var(--transit-accent)]" aria-hidden="true" />
+                  {t('detail.accessTitle')}
+                </h3>
+                <p className="leading-relaxed text-ink-2">
+                  {listing.category === 'PUBLIC' ? listing.accessInstructions : t('detail.accessPrivate', { method: accessLabel })}
+                </p>
+              </div>
+              <div className="vp-panel space-y-1.5 p-4 text-sm">
+                <h3 className="font-semibold text-ink">{t('detail.houseRules')}</h3>
+                <ul className="list-disc space-y-0.5 pl-4 text-ink-2">
+                  {listing.houseRules.map((rule, idx) => (
+                    <li key={idx}>{rule}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="vp-panel flex items-center justify-between gap-3 p-4 text-sm">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-surface font-bold text-ink ring-1 ring-[var(--hairline)]" aria-hidden="true">
+                  {listing.providerName[0]}
                 </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div>
-                  <label htmlFor="booking-vehicle-type" className="font-bold text-slate-700 block mb-1">
-                    Vehicle Type
-                  </label>
-                  <select
-                    id="booking-vehicle-type"
-                    value={selectedVehicleType}
-                    onChange={(e) => setSelectedVehicleType(e.target.value as VehicleType)}
-                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold"
-                  >
-                    <option value="SEDAN">Sedan (Honda City, Verna, Dzire)</option>
-                    <option value="HATCHBACK">Hatchback (Swift, i20, Baleno)</option>
-                    <option value="SUV">SUV / MUV (Creta, Nexon, Innova)</option>
-                    <option value="EV">Electric Vehicle (EV Charging Socket)</option>
-                    <option value="TWO_WHEELER">2-Wheeler (Motorcycle / Scooter)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="booking-plate-input" className="font-bold text-slate-700 block mb-1">
-                    Vehicle Registration Plate
-                  </label>
-                  <input
-                    id="booking-plate-input"
-                    type="text"
-                    value={plateNumber}
-                    onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
-                    placeholder="e.g. KA-04-MB-1234"
-                    className={`w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold ${
-                      plateNumber.trim() && !validatePlateNumber(plateNumber)
-                        ? 'border-red-400 focus:border-red-500'
-                        : 'border-slate-300'
-                    }`}
-                  />
-                  {plateNumber.trim() && !validatePlateNumber(plateNumber) && (
-                    <span className="text-[10px] text-red-600 block mt-1 font-sans">
-                      Invalid plate. Format: KA-04-MB-1234 or 22-BH-1234-AA
-                    </span>
-                  )}
-                  {plateNumber.trim() && validatePlateNumber(plateNumber) && (
-                    <span className="text-[10px] text-emerald-600 block mt-1 font-sans">
-                      ✓ Valid Indian registration plate
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between font-bold text-slate-700">
-                  <label htmlFor="booking-duration">Duration: {durationHours} Hours</label>
-                  <span className="text-slate-500 font-normal">
-                    {new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} →{' '}
-                    {new Date(endTimeIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <div className="min-w-0">
+                  <span className="block font-semibold text-ink">{listing.providerName}</span>
+                  <span className="block text-xs text-ink-3">
+                    {t('detail.hostMeta', {
+                      type: t(`providerTypes.${listing.providerType}`),
+                      date: date(listing.lastConfirmedAt),
+                    })}
                   </span>
                 </div>
-                <input
-                  id="booking-duration"
-                  type="range"
-                  min="1"
-                  max="12"
-                  value={durationHours}
-                  onChange={(e) => setDurationHours(parseInt(e.target.value, 10))}
-                  className="w-full accent-[#0A5CFF] cursor-pointer"
+              </div>
+              <div className="hidden text-right text-xs text-ink-3 sm:block">
+                <span className="block font-semibold text-ink-2">{t('detail.relayTitle')}</span>
+                <span>{t('detail.relayBody')}</span>
+              </div>
+            </div>
+
+            {activeHold && (
+              <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-control border border-[var(--warning-border)] bg-[var(--warning-bg)] p-4 text-[var(--warning-ink)] animate-fade-up">
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-0 left-0 h-1 w-full origin-left bg-amber-500/60 transition-transform duration-1000 ease-linear"
+                  style={{ transform: `scaleX(${Math.max(0, Math.min(1, secondsRemaining / 600))})` }}
                 />
-              </div>
-
-              <div className="p-3.5 bg-white rounded-xl border border-slate-200 text-xs space-y-1.5">
-                <div className="flex justify-between text-slate-600">
-                  <span>Parking Fee ({durationHours} hrs × ₹{listing.pricing.hourlyRate})</span>
-                  <span>₹{pricing.parkingFee.toFixed(2)}</span>
+                <div className="flex items-center gap-2.5">
+                  <Lock className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                  <div>
+                    <span className="block text-sm font-semibold">{t('detail.holdTitle')}</span>
+                    <span className="text-xs">{t('detail.holdBody')}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>VPark Convenience Fee (12%)</span>
-                  <span>₹{pricing.platformFee.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-slate-500 text-[11px]">
-                  <span>Taxes (CGST 9% + SGST 9%)</span>
-                  <span>₹{pricing.totalTaxes.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-black text-slate-900 pt-2 border-t border-slate-200 text-sm">
-                  <span>Total Payable (INR)</span>
-                  <span className="text-[#0A5CFF]">₹{pricing.totalAmount.toFixed(2)}</span>
+                <div className="text-right">
+                  <span className="font-mono text-xl font-semibold" aria-live="off">
+                    {Math.floor(secondsRemaining / 60)}:{(secondsRemaining % 60).toString().padStart(2, '0')}
+                  </span>
+                  <span className="block text-[11px] font-semibold">{t('detail.holdRemaining')}</span>
                 </div>
               </div>
+            )}
 
-              {errorMessage && (
-                <div role="alert" className="p-3 rounded-xl bg-red-50 text-red-800 text-xs font-medium border border-red-200">
-                  {errorMessage}
+            {listing.isBookable ? (
+              <section aria-labelledby={`${ids.title}-reserve`} className="space-y-4 rounded-card border border-[var(--info-border)] bg-[var(--accent-soft)] p-4 sm:p-5 oled:bg-black">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 id={`${ids.title}-reserve`} className="text-base font-semibold text-ink">
+                    {t('detail.reserveTitle')}
+                  </h3>
+                  <span className="vp-badge vp-badge-warning">{t('detail.testBadge')}</span>
                 </div>
-              )}
 
-              <div className="pt-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor={ids.vehicle} className="vp-label">
+                      {t('detail.vehicleType')}
+                    </label>
+                    <select
+                      id={ids.vehicle}
+                      value={selectedVehicleType}
+                      onChange={(e) => setSelectedVehicleType(e.target.value as VehicleType)}
+                      className="vp-input"
+                    >
+                      {VEHICLE_ORDER.map((v) => (
+                        <option key={v} value={v}>
+                          {t(`vehicleExamples.${v}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor={ids.plate} className="vp-label">
+                      {t('detail.plate')}
+                    </label>
+                    <input
+                      id={ids.plate}
+                      type="text"
+                      value={plateNumber}
+                      onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
+                      placeholder={t('detail.platePlaceholder')}
+                      autoCapitalize="characters"
+                      aria-invalid={plateInvalid || undefined}
+                      aria-describedby={plateNumber.trim() ? ids.plateMsg : undefined}
+                      className="vp-input font-mono font-semibold"
+                    />
+                    {plateInvalid && (
+                      <p id={ids.plateMsg} className="vp-field-error">
+                        {t('detail.plateInvalid')}
+                      </p>
+                    )}
+                    {plateNumber.trim() && !plateInvalid && (
+                      <p id={ids.plateMsg} className="mt-1.5 flex items-center gap-1 text-xs font-medium text-[var(--success-ink)]">
+                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        {t('detail.plateValid')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <label htmlFor={ids.duration} className="font-semibold text-ink">
+                      {t('detail.duration')}: {tn('common.hours', durationHours)}
+                    </label>
+                    <span className="tabular-nums text-ink-2">
+                      {time(startTime)} → {time(endTimeIso)}
+                    </span>
+                  </div>
+                  <input
+                    id={ids.duration}
+                    type="range"
+                    min="1"
+                    max="12"
+                    value={durationHours}
+                    onChange={(e) => setDurationHours(parseInt(e.target.value, 10))}
+                    aria-valuetext={tn('common.hours', durationHours)}
+                    className="w-full cursor-pointer accent-[var(--transit-accent)]"
+                  />
+                </div>
+
+                <dl className="space-y-1.5 rounded-control border border-hairline bg-surface p-4 text-sm tabular-nums">
+                  <div className="flex justify-between gap-3 text-ink-2">
+                    <dt>{t('detail.feeParking', { hours: tn('common.hours', durationHours), rate: inr(listing.pricing.hourlyRate) })}</dt>
+                    <dd>{inr(pricing.parkingFee, { decimals: true })}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 text-ink-2">
+                    <dt>{t('detail.feeConvenience')}</dt>
+                    <dd>{inr(pricing.platformFee, { decimals: true })}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 text-xs text-ink-3">
+                    <dt>{t('detail.feeTaxes')}</dt>
+                    <dd>{inr(pricing.totalTaxes, { decimals: true })}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-t border-hairline pt-2 text-base font-bold text-ink">
+                    <dt>{t('detail.feeTotal')}</dt>
+                    <dd className="text-[var(--transit-accent)]">{total}</dd>
+                  </div>
+                </dl>
+
+                {errorMessage && (
+                  <div id={ids.error} role="alert" className="vp-alert vp-alert-danger">
+                    {errorMessage}
+                  </div>
+                )}
+
                 {!activeHold ? (
                   <button
                     type="button"
                     onClick={handleSecureHold}
                     disabled={isHolding}
-                    className="w-full py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] disabled:opacity-60 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                    className="vp-btn vp-btn-primary vp-btn-lg w-full rounded-control"
                   >
-                    <Lock className="w-4 h-4" />
+                    {isHolding ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Lock className="h-4 w-4" aria-hidden="true" />}
                     {!isAuthenticated
-                      ? `Log in to Reserve (₹${pricing.totalAmount.toFixed(2)})`
+                      ? t('detail.loginToReserve', { amount: total })
                       : isHolding
-                      ? 'Locking Hold...'
-                      : `Lock Slot for 10 Mins & Pay (₹${pricing.totalAmount.toFixed(2)})`}
+                      ? t('detail.holding')
+                      : t('detail.hold', { amount: total })}
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowPaymentModal(true)}
-                    className="w-full py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
-                  >
-                    Proceed to Payment (₹{pricing.totalAmount.toFixed(2)})
-                    <ChevronRight className="w-4 h-4" />
+                  <button type="button" onClick={() => setShowPaymentModal(true)} className="vp-btn vp-btn-primary vp-btn-lg w-full rounded-control">
+                    {t('detail.proceed', { amount: total })}
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
                   </button>
                 )}
-              </div>
-            </div>
-          ) : (
-            <div className="pt-2">
+              </section>
+            ) : (
               <a
                 href={`https://www.google.com/maps/dir/?api=1&destination=${listing.latitude},${listing.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all"
+                className="vp-btn vp-btn-primary vp-btn-lg w-full rounded-control"
               >
-                <ExternalLink className="w-4 h-4" />
-                Navigate to Public Spot via Google Maps
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                {t('detail.directions')}
               </a>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </ModalPanel>
 
-      {/* Simulated Razorpay Payment Modal */}
+      {/* Test-mode payment step */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-scale-in">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in">
+          <div
+            ref={paymentRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={ids.payTitle}
+            className="vp-card w-full max-w-md overflow-hidden shadow-raised animate-scale-in"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-4">
               <div>
-                <span className="text-[10px] font-sans text-blue-400 font-bold uppercase tracking-wider block">
-                  Razorpay Route · Pilot Test Mode
-                </span>
-                <span className="font-black text-lg">{APP_CONFIG.appName} Bengaluru</span>
+                <span className="vp-badge vp-badge-warning">{t('payment.badge')}</span>
+                <h3 id={ids.payTitle} className="mt-1.5 text-lg font-bold text-ink">
+                  {t('payment.merchant')}
+                </h3>
               </div>
               <button
                 type="button"
-                aria-label="Close payment modal"
+                aria-label={t('payment.close')}
                 onClick={() => setShowPaymentModal(false)}
-                className="p-1 text-slate-400 hover:text-white"
+                className="rounded-full p-2 text-ink-3 transition-colors hover:bg-surface-alt hover:text-ink"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+            <div className="space-y-4 p-5">
+              <div className="vp-panel flex items-center justify-between p-4">
                 <div>
-                  <span className="text-xs text-slate-500 font-medium block">Total Amount</span>
-                  <span className="text-2xl font-black text-slate-900">₹{pricing.totalAmount.toFixed(2)}</span>
+                  <span className="block text-xs text-ink-3">{t('payment.total')}</span>
+                  <span className="text-2xl font-bold tabular-nums text-ink">{total}</span>
                 </div>
-                <span className="text-xs font-mono text-slate-500">Ref: VPK-{listing.id.slice(-4)}</span>
+                <span className="font-mono text-xs text-ink-3">
+                  {t('payment.reference')}: VPK-{listing.id.slice(-4)}
+                </span>
               </div>
 
-              <div className="space-y-2 text-xs">
-                <span className="font-bold text-slate-700 block">Select Payment Method</span>
+              <fieldset className="space-y-2">
+                <legend className="mb-2 text-sm font-semibold text-ink">{t('payment.method')}</legend>
+                {PAYMENT_METHODS.map((method) => {
+                  const selected = selectedPaymentMethod === method;
+                  return (
+                    <label
+                      key={method}
+                      className={`flex min-h-[3rem] cursor-pointer items-center justify-between gap-3 rounded-control border px-3.5 py-2.5 text-sm transition-colors ${
+                        selected
+                          ? 'border-[var(--transit-accent)] bg-[var(--accent-soft)] font-semibold text-ink ring-1 ring-[var(--transit-accent)]'
+                          : 'border-hairline-strong text-ink-2 hover:bg-surface-alt'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name="vp-payment-method"
+                          value={method}
+                          checked={selected}
+                          onChange={() => setSelectedPaymentMethod(method)}
+                          className="vp-check"
+                        />
+                        {t(`payment.${method}`)}
+                      </span>
+                      {selected && <CheckCircle2 className="h-4 w-4 text-[var(--transit-accent)]" aria-hidden="true" />}
+                    </label>
+                  );
+                })}
+              </fieldset>
 
-                {(['UPI', 'CARD', 'NETBANKING'] as const).map((method) => (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => setSelectedPaymentMethod(method)}
-                    className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all ${
-                      selectedPaymentMethod === method
-                        ? 'border-[#0A5CFF] bg-blue-50 text-blue-950 font-bold ring-2 ring-[#0A5CFF]/20'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span>
-                      {method === 'UPI'
-                        ? 'Instant UPI (GPay / PhonePe / BHIM)'
-                        : method === 'CARD'
-                        ? 'Credit / Debit Card (RuPay, Visa, Mastercard)'
-                        : 'Netbanking (SBI, HDFC, ICICI, Axis)'}
-                    </span>
-                    {selectedPaymentMethod === method && <CheckCircle2 className="w-4 h-4 text-[#0A5CFF]" />}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleConfirmPayment}
-                disabled={isBooking}
-                className="w-full py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0047CC] text-white font-semibold text-sm shadow-xs transition-colors flex items-center justify-center gap-2"
-              >
-                {isBooking ? 'Confirming Reservation...' : `Pay ₹${pricing.totalAmount.toFixed(2)} Securely`}
+              <button type="button" onClick={handleConfirmPayment} disabled={isBooking} className="vp-btn vp-btn-primary vp-btn-lg w-full rounded-control">
+                {isBooking && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                {isBooking ? t('payment.confirming') : t('payment.pay', { amount: total })}
               </button>
             </div>
           </div>

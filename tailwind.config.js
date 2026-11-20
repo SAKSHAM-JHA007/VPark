@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+const plugin = require('tailwindcss/plugin');
 
 // Shared motion curve: fast start, long soft settle ("ease-out-quart").
 const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
@@ -35,7 +36,14 @@ module.exports = {
         accent: {
           DEFAULT: 'var(--transit-accent)',
           hover: 'var(--transit-accent-hover)',
+          soft: 'var(--accent-soft)',
+          'soft-ink': 'var(--accent-soft-ink)',
         },
+        success: { bg: 'var(--success-bg)', border: 'var(--success-border)', ink: 'var(--success-ink)' },
+        warning: { bg: 'var(--warning-bg)', border: 'var(--warning-border)', ink: 'var(--warning-ink)' },
+        danger: { bg: 'var(--danger-bg)', border: 'var(--danger-border)', ink: 'var(--danger-ink)' },
+        info: { bg: 'var(--info-bg)', border: 'var(--info-border)', ink: 'var(--info-ink)' },
+        host: { bg: 'var(--host-bg)', border: 'var(--host-border)', ink: 'var(--host-ink)' },
         brand: {
           DEFAULT: '#0A5CFF',
           hover: '#0047D4',
@@ -119,5 +127,10 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // `oled:` variant for the pure-black appearance mode (<html class="dark oled">).
+    plugin(({ addVariant }) => {
+      addVariant('oled', '.oled &');
+    }),
+  ],
 };

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { VParkLogo } from '@/components/VParkLogo';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeToggle } from '@/components/nav/ThemeToggle';
 import { signInWithGooglePopup, signOutFirebase } from '@/lib/firebase';
 import { ShieldCheck, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 

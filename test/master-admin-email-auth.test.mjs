@@ -8,10 +8,15 @@ import fs from 'node:fs';
 describe('Google-only Authentication UI & Wiring', () => {
   it('login UI uses Google Sign-In as the sole method with Remember Sign-In ID', () => {
     const authModalCode = fs.readFileSync('src/components/AuthModal.tsx', 'utf-8');
-    assert.ok(authModalCode.includes('Continue with Google'), 'Login UI must include Google Sign-In as primary method');
-    assert.ok(authModalCode.includes('Remember sign-in ID on this device'), 'Must have remember sign-in ID option');
+    // UI copy lives in the translation dictionaries (src/lib/i18n); the component renders it via t().
+    const enCopy = fs.readFileSync('src/lib/i18n/en.ts', 'utf-8');
+    assert.ok(authModalCode.includes("t('auth.google')") && enCopy.includes("google: 'Continue with Google'"), 'Login UI must include Google Sign-In as primary method');
+    assert.ok(authModalCode.includes("t('auth.remember')") && enCopy.includes("remember: 'Remember my account on this device'"), 'Must have remember sign-in ID option');
     assert.ok(authModalCode.includes('vpark_remembered_email'), 'Must store remembered sign-in ID');
-    assert.ok(authModalCode.includes('Mobile Number (User Contact Details)'), 'Phone number must be collected strictly in onboarding user details');
+    assert.ok(
+      authModalCode.includes("t('auth.phone')") && /step === 'onboarding'[\s\S]*t\('auth\.phone'\)/.test(authModalCode),
+      'Phone number must be collected strictly in onboarding user details'
+    );
   });
 
   it('the client sends a Firebase ID token, not self-asserted identity fields', () => {
