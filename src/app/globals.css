@@ -962,6 +962,7 @@ html.vp-theme-revealing::view-transition-new(root) {
 /* Colour transitions would otherwise replay inside the live new snapshot while it is
  * revealed (extra raster work and a smeared edge). Added in the same style recalc as the
  * theme classes, so it costs nothing extra. */
+html.vp-theme-revealing,
 html.vp-theme-revealing *,
 html.vp-theme-revealing *::before,
 html.vp-theme-revealing *::after {

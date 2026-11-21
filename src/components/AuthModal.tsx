@@ -96,19 +96,12 @@ export function AuthPanel({
         }
       }
 
-      // The server derives identity and establishes the session.
+      // The server derives identity only from this Firebase ID token, verified server-side.
       const idToken = await fbUser.getIdToken(true);
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idToken,
-          uid: fbUser.uid,
-          email: fbUser.email,
-          name: fbUser.displayName,
-          photoUrl: fbUser.photoURL,
-          intent,
-        }),
+        body: JSON.stringify({ idToken, intent }),
       });
 
       const data = await res.json();
