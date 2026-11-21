@@ -5,8 +5,12 @@ import React from 'react';
  * White car parked inside an electric-blue parking stall outline with a [P] parking sign.
  *
  * Theme behaviour (pure CSS via Tailwind `dark:` classes, no JS theme state):
- * - Light: daylight look, lamps off (clear lenses, no glow).
- * - Dark: warm amber headlights with a restrained glow and floor wash, red tail lamp.
+ * - Light: daylight look, lamps off (clear lenses, no glow), one lens glint on arrival.
+ * - OLED: warm amber headlights with a restrained glow and floor wash, red tail lamp.
+ *
+ * Arrival choreography (CSS, plays once; see "VPark motion language" in globals.css):
+ * bay edge draws in → car reverses in → indicator blinks twice → guidance chevrons
+ * fade through → headlight wash / glint confirms it has parked.
  *
  * The outer `.vp-hero-car` group carries the CSS settle animation; the inner group keeps
  * its SVG transform attribute (a CSS transform would override it).
@@ -72,27 +76,37 @@ export function FindParkingIllustration({ className = 'w-full h-full' }: { class
       </defs>
 
       {/* Atmospheric Floor Glow */}
-      <ellipse cx="170" cy="155" rx="150" ry="70" fill="url(#vpFloorGlow)" />
+      <ellipse cx="170" cy="155" rx="150" ry="70" fill="url(#vpFloorGlow)" className="vp-hero-glow" />
 
       {/* Blue Illuminated Parking Stall Perimeter (Perspective) */}
+      {/* The bay edge draws in and lights up as the car settles (once). */}
       <polygon
         points="45,175 145,115 305,125 210,195"
+        pathLength={1}
         stroke="#0A5CFF"
         strokeWidth="3.5"
         strokeLinejoin="round"
         fill="none"
         filter="url(#vpNeonGlow)"
         opacity="0.9"
-        className="vp-hero-glow"
+        className="vp-hero-bay"
       />
       <polygon
         points="45,175 145,115 305,125 210,195"
+        pathLength={1}
         stroke="#60A5FA"
         strokeWidth="1.2"
         strokeLinejoin="round"
         fill="none"
         opacity="0.95"
+        className="vp-hero-bay"
       />
+
+      {/* Reverse-in guidance: two chevrons appear briefly in the direction of travel. */}
+      <g transform="translate(258 146) rotate(-28)" stroke="#93C5FD" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+        <path d="M0 0 L5 4 L0 8" className="vp-hero-arrow" style={{ animationDelay: '420ms' }} />
+        <path d="M9 0 L14 4 L9 8" className="vp-hero-arrow" style={{ animationDelay: '540ms' }} />
+      </g>
 
       {/* Parking Sign [P] */}
       <g transform="translate(290, 48)">
@@ -106,7 +120,7 @@ export function FindParkingIllustration({ className = 'w-full h-full' }: { class
 
       <g className="vp-hero-car">
         {/* Night only: restrained warm wash from the headlights onto the bay floor */}
-        <polygon points="114,137 123,142 66,186 36,168" fill="url(#vpBeam)" className="hidden dark:inline" />
+        <polygon points="114,137 123,142 66,186 36,168" fill="url(#vpBeam)" className="vp-hero-beam hidden dark:inline" />
 
         <g transform="translate(95, 90)">
           {/* Tyre contact shadows (small and soft, replacing the old dark oval) */}
@@ -164,6 +178,11 @@ export function FindParkingIllustration({ className = 'w-full h-full' }: { class
             <polygon points="20,49 32,45 28,52" fill="#FFB938" opacity="0.9" filter="url(#vpLampGlow)" />
             <polygon points="20,49 32,45 28,52" fill="#FFE3A3" />
           </g>
+
+          {/* Turn indicator: blinks twice while the car settles, then stays off. */}
+          <circle cx="25" cy="53.5" r="2.1" fill="#FFB020" className="vp-hero-indicator" />
+          {/* Daylight: a single glint across the clear headlight lens once parked. */}
+          <ellipse cx="26" cy="48.5" rx="3.2" ry="1.4" fill="#FFFFFF" className="vp-hero-glint dark:hidden" />
 
           {/* Tail lamp: dark red lens by day, lit red with a subtle glow at night */}
           <polygon points="146,37 152.5,40.5 153.5,46 147.5,43" fill="#6E1B25" stroke="#4C0F17" strokeWidth="0.5" className="dark:hidden" />
