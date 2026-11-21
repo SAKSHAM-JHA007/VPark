@@ -109,8 +109,13 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
 
     let ring: HTMLDivElement | null = null;
     let safety: number | undefined;
+    // fill:'both' keeps a finished animation applied to its pseudo-element target, so it would stack
+    // under the next toggle's animation (and stop the clip-path from being composited). Cancel them.
+    let anims: Animation[] = [];
     const cleanup = () => {
       window.clearTimeout(safety);
+      anims.forEach((a) => a.cancel());
+      anims = [];
       ring?.remove();
       ring = null;
       root.classList.remove(REVEAL_CLASS);
@@ -139,13 +144,16 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       safety = window.setTimeout(finish, SAFETY_MS);
       transition.ready.then(
         () => {
+          if (cleanupRef.current !== cleanup) return; // already cleaned up (safety timeout / unmount)
           const timing: KeyframeAnimationOptions = {
             duration: THEME_REVEAL_DURATION_MS,
             easing: THEME_REVEAL_EASING,
             fill: 'both',
           };
-          root.animate(revealClipKeyframes(geometry), { ...timing, pseudoElement: '::view-transition-new(root)' });
-          root.animate(revealRingKeyframes(geometry), { ...timing, pseudoElement: '::view-transition-new(vp-theme-ring)' });
+          anims = [
+            root.animate(revealClipKeyframes(geometry), { ...timing, pseudoElement: '::view-transition-new(root)' }),
+            root.animate(revealRingKeyframes(geometry), { ...timing, pseudoElement: '::view-transition-new(vp-theme-ring)' }),
+          ];
         },
         () => {
           // Skipped or failed before animating: the DOM update has still run.
