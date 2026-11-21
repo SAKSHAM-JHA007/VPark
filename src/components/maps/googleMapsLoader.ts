@@ -34,7 +34,11 @@ let authFailed = false;
 const authFailureListeners = new Set<() => void>();
 
 export function getGoogleMapsApiKey(): string {
-  return process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  return (
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+    ''
+  );
 }
 
 export function hasGoogleMapsAuthFailed(): boolean {

@@ -70,7 +70,10 @@ export function InteractiveMap({
   const anchorMarkerRef = useRef<any>(null);
 
   // Read API Key strictly from environment variable (never exposed on client UI)
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  const apiKey =
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+    '';
   const [isJsApiLoaded, setIsJsApiLoaded] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [mapType, setMapType] = useState<'roadmap' | 'satellite' | 'hybrid'>('roadmap');

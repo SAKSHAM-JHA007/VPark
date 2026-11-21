@@ -21,7 +21,7 @@ interface ListingLocationPickerProps {
 
 type MapStatus = 'loading' | 'ready' | 'fallback';
 
-const TILE_TIMEOUT_MS = 8000;
+const TILE_TIMEOUT_MS = 4000;
 
 // VPark branded pin SVG path
 const PIN_PATH =
