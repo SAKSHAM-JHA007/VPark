@@ -131,8 +131,8 @@ export function revealGeometry(
  * a soft settle, with no velocity discontinuities. Chosen by measuring viewport coverage
  * over time; the previous two-keyframe curve paused for ~200 ms at 35 % and then lurched.
  */
-export const THEME_REVEAL_DURATION_MS = 760;
-export const THEME_REVEAL_EASING = 'cubic-bezier(0.33, 1, 0.68, 1)';
+export const THEME_REVEAL_DURATION_MS = 420;
+export const THEME_REVEAL_EASING = 'cubic-bezier(0.4, 0, 0.2, 1)';
 
 /** The glow ring is a 240 px element whose brightest band sits at 84 px from its centre. */
 export const THEME_RING_SIZE_PX = 240;

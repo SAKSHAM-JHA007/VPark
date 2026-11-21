@@ -140,6 +140,7 @@
 html {
   background-color: var(--canvas-bg);
   -webkit-text-size-adjust: 100%;
+  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
@@ -149,6 +150,7 @@ body {
   letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   overflow-wrap: break-word;
+  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1), color 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Kannada and Devanagari: negative tracking breaks conjunct shaping, and the scripts
@@ -966,12 +968,22 @@ html.vp-theme-revealing *::after {
   transition: none !important;
 }
 
-/* Fallback without View Transitions: a short colour cross-fade, no movement. */
+/* Fallback and cross-browser smooth theme cross-fade */
 html.vp-theme-fading,
-html.vp-theme-fading *,
+html.vp-theme-fading body,
+html.vp-theme-fading .vp-nav,
+html.vp-theme-fading .vp-card,
+html.vp-theme-fading .vp-panel,
+html.vp-theme-fading .vp-input,
+html.vp-theme-fading [class*='bg-'],
+html.vp-theme-fading [class*='text-'],
+html.vp-theme-fading [class*='border-'],
 html.vp-theme-fading *::before,
 html.vp-theme-fading *::after {
-  transition: background-color 260ms ease, color 260ms ease, border-color 260ms ease, fill 260ms ease, stroke 260ms ease !important;
+  transition: background-color 350ms cubic-bezier(0.4, 0, 0.2, 1),
+              color 350ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 350ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 350ms cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Respect the OS "reduce motion" preference for every CSS animation and transition. */

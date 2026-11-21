@@ -92,8 +92,10 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
     if (mode === 'fade') {
       window.clearTimeout(fadeTimer.current);
       root.classList.add(FADE_CLASS);
-      apply(true);
-      fadeTimer.current = window.setTimeout(() => root.classList.remove(FADE_CLASS), FADE_MS + 40);
+      requestAnimationFrame(() => {
+        apply(true);
+        fadeTimer.current = window.setTimeout(() => root.classList.remove(FADE_CLASS), 350);
+      });
       return;
     }
 
@@ -167,14 +169,27 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       onClick={onClick}
       aria-label={mounted ? label : t('theme.label')}
       title={mounted ? label : undefined}
-      className={`vp-nav-control overflow-hidden ${className}`}
+      className={`vp-nav-control overflow-hidden transition-all duration-300 ${className}`}
     >
       {mounted ? (
-        <Icon
-          key={`${theme}-${swapCount}`}
-          className={`h-4 w-4 ${theme === 'light' ? 'text-amber-500' : 'text-[var(--accent-soft-ink)]'} ${spinIcon && swapCount > 0 ? 'animate-spin-in' : ''}`}
-          aria-hidden="true"
-        />
+        <span className="relative flex items-center justify-center w-4 h-4">
+          <Sun
+            className={`h-4 w-4 text-amber-500 absolute transition-all duration-300 ease-out ${
+              theme === 'light'
+                ? 'rotate-0 scale-100 opacity-100'
+                : 'rotate-90 scale-0 opacity-0'
+            }`}
+            aria-hidden="true"
+          />
+          <MoonStar
+            className={`h-4 w-4 text-[var(--accent-soft-ink)] absolute transition-all duration-300 ease-out ${
+              theme === 'oled'
+                ? 'rotate-0 scale-100 opacity-100'
+                : '-rotate-90 scale-0 opacity-0'
+            }`}
+            aria-hidden="true"
+          />
+        </span>
       ) : (
         <Sun className="h-4 w-4 opacity-0" aria-hidden="true" />
       )}
