@@ -20,6 +20,7 @@ import {
   YELAHANKA_ANCHORS,
   PROVIDER_SITUATION_EVIDENCE,
 } from '@/lib/constants';
+import { ListingLocationPicker } from '@/components/maps/ListingLocationPicker';
 import {
   Building2,
   PlusCircle,
@@ -297,16 +298,6 @@ export function ProviderHub({
       const next = exists ? prev.vehicleTypes.filter((t) => t !== vt) : [...prev.vehicleTypes, vt];
       return { ...prev, vehicleTypes: next.length > 0 ? next : [vt] };
     });
-  };
-
-  // Pin click inside compact Yelahanka bounding box (13.06..13.12 lat, 77.575..77.620 lng)
-  const handleMapPinClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const xRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const yRatio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-    const lng = Number((77.575 + xRatio * (77.620 - 77.575)).toFixed(4));
-    const lat = Number((13.120 - yRatio * (13.120 - 13.060)).toFixed(4));
-    setFormData((prev) => ({ ...prev, latitude: lat, longitude: lng, pinConfirmed: true }));
   };
 
   const handlePhotoUpload = async (files: FileList | null) => {
@@ -599,8 +590,6 @@ export function ProviderHub({
   }
 
   const displayName = currentUser?.name || currentUser?.phone || 'Host';
-  const pinLeftPct = ((formData.longitude - 77.575) / (77.620 - 77.575)) * 100;
-  const pinTopPct = ((13.120 - formData.latitude) / (13.120 - 13.060)) * 100;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -966,38 +955,20 @@ export function ProviderHub({
                     </div>
                   </div>
 
-                  {/* Interactive Map Pin Picker (PRD 7.2) */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-700 dark:text-ink-2">Confirm Map Pin (Click anywhere on grid)</span>
-                      <span className="font-mono text-[11px] text-[#0A5CFF] dark:text-[var(--transit-accent)] font-bold">
-                        Pin: {formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)}
-                      </span>
-                    </div>
-                    <div
-                      onClick={handleMapPinClick}
-                      role="application"
-                      aria-label="Click to confirm parking coordinates"
-                      className="relative h-36 rounded-xl border border-slate-300 dark:border-hairline-strong bg-[#f4f6f8] dark:bg-surface-alt overflow-hidden cursor-crosshair select-none"
-                    >
-                      <div className="absolute inset-0 opacity-40 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:16px_16px]" />
-                      <span className="absolute top-2 left-2.5 text-[10px] font-bold text-slate-500 dark:text-ink-3 uppercase">
-                        Yelahanka Map Grid
-                      </span>
-                      <div
-                        style={{
-                          left: `${Math.max(5, Math.min(95, pinLeftPct))}%`,
-                          top: `${Math.max(8, Math.min(92, pinTopPct))}%`,
-                        }}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none"
-                      >
-                        <div className="px-2 py-0.5 rounded-full bg-[#0A5CFF] text-white font-bold text-[10px] shadow-md flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          Exact Bay
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Interactive Map Pin Picker (Google Maps) */}
+                  <ListingLocationPicker
+                    latitude={formData.latitude}
+                    longitude={formData.longitude}
+                    locality={formData.locality}
+                    onChange={(lat, lng) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        latitude: lat,
+                        longitude: lng,
+                        pinConfirmed: true,
+                      }))
+                    }
+                  />
                 </div>
               )}
 
