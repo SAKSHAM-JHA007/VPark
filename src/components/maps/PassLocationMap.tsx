@@ -9,7 +9,6 @@ import {
   onGoogleMapsAuthFailure,
 } from '@/components/maps/googleMapsLoader';
 import { DARK_MAP_STYLES, LIGHT_MAP_STYLES } from '@/components/maps/mapStyles';
-import { useI18n } from '@/components/i18n/LanguageProvider';
 
 interface PassLocationMapProps {
   latitude: number;
@@ -40,7 +39,6 @@ const PIN_PATH =
  */
 export function PassLocationMap({ latitude, longitude, title, className = 'h-48' }: PassLocationMapProps) {
   const apiKey = getGoogleMapsApiKey();
-  const { t } = useI18n();
   const isDark = useIsDarkTheme();
   const isDarkRef = useRef(isDark);
   isDarkRef.current = isDark;
@@ -149,7 +147,7 @@ export function PassLocationMap({ latitude, longitude, title, className = 'h-48'
       <div className="space-y-1.5">
         <div className={frameClass}>
           <iframe
-            title={t('map.mapOf', { title })}
+            title={`Map of ${title}`}
             src={embedUrl}
             width="100%"
             height="100%"
@@ -160,16 +158,16 @@ export function PassLocationMap({ latitude, longitude, title, className = 'h-48'
             className="h-full w-full"
           />
         </div>
-        <p className="hidden text-[11px] text-ink-3 dark:block">{t('map.lightStyleNote')}</p>
+        <p className="hidden text-[11px] text-ink-3 dark:block">Map shown in Google&apos;s standard light style.</p>
       </div>
     );
   }
 
   return (
     <div className={frameClass}>
-      <div ref={containerRef} className="h-full w-full" role="region" aria-label={t('map.mapOf', { title })} />
+      <div ref={containerRef} className="h-full w-full" role="region" aria-label={`Map of ${title}`} />
       {status === 'loading' && (
-        <div className="vp-skeleton absolute inset-0" role="status" aria-label={t('map.loading')} />
+        <div className="vp-skeleton absolute inset-0" role="status" aria-label="Loading map" />
       )}
     </div>
   );

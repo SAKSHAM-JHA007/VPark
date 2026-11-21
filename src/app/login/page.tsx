@@ -4,18 +4,18 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AuthPanel } from '@/components/AuthModal';
-import { PublicHeader } from '@/components/nav/PublicHeader';
-import { SiteFooter } from '@/components/nav/SiteFooter';
-import { useI18n } from '@/components/i18n/LanguageProvider';
+import { VParkLogo } from '@/components/VParkLogo';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { User } from '@/types';
+import { APP_CONFIG } from '@/lib/constants';
 import { ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { t } = useI18n();
   const [intent, setIntent] = useState<'driver' | 'provider'>('driver');
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const sp = new URLSearchParams(window.location.search);
     const intentParam = sp.get('intent');
     if (intentParam === 'provider' || intentParam === 'driver') {
@@ -36,27 +36,64 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-canvas text-ink">
-      <PublicHeader />
-
-      <main id="main-content" className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:py-14">
-        <div className="w-full max-w-md space-y-6">
-          <Link href="/driver/home" className="vp-btn vp-btn-ghost vp-btn-sm -ml-3">
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            {t('login.back')}
+    <div className="min-h-screen bg-[var(--canvas-bg)] text-[var(--ink)] flex flex-col justify-between">
+      <header className="bg-[var(--surface-bg)] border-b border-[var(--hairline)] px-4 sm:px-6 lg:px-8 h-15 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          <VParkLogo className="h-7 sm:h-8 w-auto" />
+          <span className="hidden sm:inline-block text-[10px] font-mono tracking-widest uppercase text-[var(--ink-tertiary)] border-l border-[var(--hairline)] pl-3 py-0.5">
+            Authentication Terminal
+          </span>
+        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link
+            href="/driver/home"
+            className="text-xs font-mono uppercase tracking-wider text-[var(--ink-secondary)] hover:text-[var(--ink)] flex items-center gap-1.5 transition-colors border border-[var(--hairline)] px-3 py-1.5 rounded-sm hover:bg-[var(--surface-alt)]"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to parking search
           </Link>
-          <div className="space-y-2 animate-fade-up">
-            <p className="vp-eyebrow">{t('login.eyebrow')}</p>
-            <h1 className="vp-h1 text-[1.75rem] sm:text-[2rem]">{t('login.title')}</h1>
-            <p className="text-sm text-ink-2">{t('login.body')}</p>
-          </div>
-          <div className="vp-card p-5 sm:p-6 animate-fade-up [animation-delay:90ms]">
-            <AuthPanel embedded initialIntent={intent} onAuthenticated={handleAuthenticated} />
-          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 space-y-6">
+        <div className="text-center space-y-1.5 max-w-md animate-fade-up">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--transit-accent)] block">
+            Pilot area · Yelahanka, Bengaluru
+          </span>
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight uppercase text-[var(--ink)]">
+            Sign in to VPark
+          </h1>
+          <p className="text-xs text-[var(--ink-secondary)]">
+            Use your email address. One account works for parking and for listing a space.
+          </p>
+        </div>
+
+        <div className="w-full max-w-md animate-fade-up [animation-delay:90ms]">
+        <AuthPanel
+          embedded
+          initialIntent={intent}
+          onAuthenticated={handleAuthenticated}
+        />
         </div>
       </main>
 
-      <SiteFooter />
+      <footer className="border-t border-[var(--hairline)] bg-[var(--surface-bg)] py-4 px-4 text-center font-mono text-xs text-[var(--ink-tertiary)] flex flex-wrap items-center justify-center gap-3">
+        <Link href="/" className="hover:text-[var(--ink)] transition-colors">
+          Home
+        </Link>
+        <span>·</span>
+        <Link href="/privacy" className="hover:text-[var(--ink)] transition-colors">
+          Privacy Policy
+        </Link>
+        <span>·</span>
+        <Link href="/contact" className="hover:text-[var(--ink)] transition-colors">
+          Contact Support
+        </Link>
+        <span>·</span>
+        <span>© {new Date().getFullYear()} {APP_CONFIG.appName}</span>
+      </footer>
     </div>
   );
 }
+

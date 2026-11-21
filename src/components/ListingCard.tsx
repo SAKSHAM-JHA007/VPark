@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { SearchResultItem } from '@/types';
-import { useI18n } from '@/components/i18n/LanguageProvider';
-import { MapPin, Star, ShieldCheck, AlertTriangle, Lock, Zap, Umbrella, Sun, ImageOff, ArrowRight } from 'lucide-react';
+import { MapPin, Star, ShieldCheck, AlertTriangle, Lock } from 'lucide-react';
 
 interface ListingCardProps {
   item: SearchResultItem;
@@ -12,158 +11,182 @@ interface ListingCardProps {
   onBook: () => void;
 }
 
-const CATEGORY_BADGE: Record<string, string> = {
-  COMMERCIAL: 'vp-badge vp-badge-info',
-  PRIVATE: 'vp-badge vp-badge-host',
-  OTHER: 'vp-badge vp-badge-warning',
-  PUBLIC: 'vp-badge',
-};
-
-/**
- * One search result. Shows only the public discovery projection: for non-public
- * spaces the location is the approximate area and the distance is measured to the
- * approximate point (see listing-privacy.mjs).
- */
 export function ListingCard({ item, isSelected, onSelect, onBook }: ListingCardProps) {
-  const { t, tn, inr, date } = useI18n();
   const { listing, distanceKm, availableCapacity } = item;
 
+  const categoryBadgeClass =
+    listing.category === 'COMMERCIAL'
+      ? 'border-[#0b45b8] text-[#0b45b8] dark:border-blue-400 dark:text-blue-400 bg-[var(--surface-alt)]'
+      : listing.category === 'PRIVATE'
+      ? 'border-purple-600 text-purple-700 dark:border-purple-400 dark:text-purple-400 bg-[var(--surface-alt)]'
+      : listing.category === 'OTHER'
+      ? 'border-amber-600 text-amber-700 dark:border-amber-400 dark:text-amber-400 bg-[var(--surface-alt)]'
+      : 'border-[var(--hairline-strong)] text-[var(--ink-secondary)] bg-[var(--surface-alt)]';
+
+  const categoryLabel =
+    listing.category === 'COMMERCIAL'
+      ? 'COMMERCIAL'
+      : listing.category === 'PRIVATE'
+      ? 'RESIDENTIAL'
+      : listing.category === 'OTHER'
+      ? 'OTHER'
+      : 'PUBLIC';
+
   const isFree = listing.pricing.hourlyRate === 0;
-  const photo = listing.photos[0];
-  const isPublic = listing.category === 'PUBLIC';
+  const confirmedLabel = listing.lastConfirmedAt
+    ? new Date(listing.lastConfirmedAt).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+      })
+    : 'Recently';
 
   return (
-    <article
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
-      aria-labelledby={`listing-${listing.id}-title`}
-      className={`vp-card group overflow-hidden transition-[border-color,box-shadow,transform] duration-200 ease-out-quart hover:shadow-raised motion-safe:hover:-translate-y-0.5 ${
-        isSelected ? 'border-[var(--transit-accent)] ring-1 ring-[var(--transit-accent)]' : 'hover:border-hairline-strong focus-within:border-hairline-strong'
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className={`group bg-[var(--surface-bg)] rounded-card p-4 border cursor-pointer transition-[border-color,box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5 ${
+        isSelected
+          ? 'border-[var(--transit-accent)] ring-1 ring-[var(--transit-accent)]'
+          : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]'
       }`}
     >
-      <div className="flex flex-col sm:flex-row">
-        {/* Photo (or an honest placeholder; never a stock image) */}
-        <div className="relative h-40 w-full flex-shrink-0 overflow-hidden bg-surface-alt sm:h-auto sm:min-h-[11rem] sm:w-44">
-          {photo ? (
-            <img
-              src={photo}
-              alt={t('listing.photoAlt', { title: listing.title })}
-              className="h-full w-full object-cover transition-transform duration-500 ease-out-quart motion-safe:group-hover:scale-[1.03]"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-ink-3">
-              <ImageOff className="h-6 w-6" aria-hidden="true" />
-              <span className="text-xs">{t('listing.noPhoto')}</span>
-            </div>
-          )}
-          <span className={`absolute left-2.5 top-2.5 ${CATEGORY_BADGE[listing.category] ?? 'vp-badge'} shadow-card`}>
-            {t(`categories.${listing.category}`)}
+      <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+        {/* Photo with category badge */}
+        <div className="relative w-full sm:w-44 h-32 sm:h-36 rounded-control overflow-hidden bg-[var(--surface-alt)] border border-[var(--hairline)] flex-shrink-0">
+          <img
+            src={listing.photos[0] || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800'}
+            alt={listing.title ? `Verified parking bay: ${listing.title}` : 'Verified parking space bay in Bengaluru'}
+            className="w-full h-full object-cover filter contrast-[1.02] transition-transform duration-500 ease-out-quart motion-safe:group-hover:scale-[1.04]"
+            loading="lazy"
+            decoding="async"
+          />
+
+          <span
+            className={`absolute top-2 left-2 px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border ${categoryBadgeClass}`}
+          >
+            {categoryLabel}
           </span>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <h3 id={`listing-${listing.id}-title`} className="min-w-0 text-[15px] font-semibold leading-snug text-ink">
-              {listing.title}
-            </h3>
-            <p className="flex-shrink-0 text-right tabular-nums">
-              {isFree ? (
-                <span className="text-base font-bold text-ink">{t('common.free')}</span>
+        {/* Content details */}
+        <div className="flex-1 flex flex-col justify-between min-w-0">
+          <div className="space-y-1.5">
+            {/* Row 1: Title & Price */}
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="font-bold text-sm text-[var(--ink)] tracking-tight hover:text-[var(--transit-accent)] transition-colors uppercase leading-snug">
+                {listing.title}
+              </h3>
+
+              <div className="text-right flex-shrink-0 font-mono">
+                {isFree ? (
+                  <span className="text-sm font-bold text-[var(--ink)]">FREE</span>
+                ) : (
+                  <span className="text-sm font-bold text-[var(--ink)]">
+                    ₹{listing.pricing.hourlyRate}
+                    <span className="text-[11px] font-normal text-[var(--ink-secondary)]">/HR</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2: Location & Distance (Precise location unlocked after payment) */}
+            <div className="flex items-center gap-1.5 text-xs text-[var(--ink-secondary)]">
+              <span className="truncate font-medium text-[var(--ink)]">
+                {listing.locality || 'Yelahanka'}{listing.landmark ? ` (Near ${listing.landmark})` : ''}
+              </span>
+              <span className="text-[var(--hairline-strong)]">·</span>
+              <span className="font-mono text-[11px] text-[var(--ink)] flex-shrink-0">{distanceKm} KM</span>
+              <span className="text-[var(--hairline-strong)]">·</span>
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-[var(--ink-tertiary)] font-mono flex-shrink-0">
+                <Lock className="w-2.5 h-2.5 text-[var(--transit-accent)]" />
+                Exact location after booking
+              </span>
+            </div>
+
+            {/* Row 3: Verification, Rating & Attributes */}
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-[var(--ink-secondary)] pt-1">
+              {listing.reviewCount > 0 ? (
+                <div className="flex items-center gap-1 font-semibold text-[var(--ink)]">
+                  <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                  <span>{listing.rating}</span>
+                  <span className="text-[var(--ink-tertiary)] font-normal">({listing.reviewCount})</span>
+                </div>
+              ) : (
+                <span className="border border-emerald-600/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.2 rounded-full text-[10px] uppercase">
+                  VERIFIED
+                </span>
+              )}
+
+              <span className="text-[var(--hairline-strong)]">·</span>
+              <span>{listing.isCovered ? 'COVERED' : 'OPEN'}</span>
+              <span className="text-[var(--hairline-strong)]">·</span>
+              <span>{listing.hasEvCharging ? 'EV READY' : 'STANDARD'}</span>
+
+              {listing.isStale ? (
+                <>
+                  <span className="text-[var(--hairline-strong)]">·</span>
+                  <span className="text-amber-700 dark:text-amber-400 uppercase">
+                    &gt;30D UNCONFIRMED
+                  </span>
+                </>
               ) : (
                 <>
-                  <span className="text-base font-bold text-ink">{inr(listing.pricing.hourlyRate)}</span>
-                  <span className="text-xs text-ink-3">{t('common.perHour')}</span>
+                  <span className="text-[var(--hairline-strong)]">·</span>
+                  <span className="text-[var(--ink-tertiary)]">CONFIRMED {confirmedLabel.toUpperCase()}</span>
                 </>
               )}
-            </p>
+            </div>
           </div>
 
-          {/* Area and distance (exact location only after booking) */}
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
-            <span className="inline-flex min-w-0 items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-ink-3" aria-hidden="true" />
-              <span className="truncate">
-                {listing.locality || 'Yelahanka'}
-                {listing.landmark ? ` · ${t('listing.near', { landmark: listing.landmark })}` : ''}
+          {/* Row 4: Availability & Action Button */}
+          <div className="flex items-center justify-between gap-3 pt-2.5 mt-2.5 border-t border-[var(--hairline)]">
+            {listing.category === 'PUBLIC' ? (
+              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border border-[var(--hairline-strong)] text-[var(--ink-secondary)]">
+                PUBLIC · NOT BOOKABLE
               </span>
-            </span>
-            <span className="font-medium tabular-nums text-ink">{t('listing.distance', { km: distanceKm })}</span>
-          </p>
-          {!isPublic && (
-            <p className="mt-1 inline-flex items-center gap-1 text-xs text-ink-3">
-              <Lock className="h-3 w-3 text-[var(--transit-accent)]" aria-hidden="true" />
-              {t('listing.exactAfterBooking')}
-            </p>
-          )}
-
-          {/* Attributes */}
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {listing.reviewCount > 0 ? (
-              <span className="vp-badge">
-                <Star className="h-3 w-3 fill-amber-500 text-amber-500" aria-hidden="true" />
-                <span className="text-ink">{listing.rating}</span>
-                <span>({tn('listing.reviews', listing.reviewCount)})</span>
-              </span>
-            ) : (
-              listing.status === 'VERIFIED' && (
-                <span className="vp-badge vp-badge-success">
-                  <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-                  {t('listing.verified')}
-                </span>
-              )
-            )}
-            <span className="vp-badge">
-              {listing.isCovered ? <Umbrella className="h-3 w-3" aria-hidden="true" /> : <Sun className="h-3 w-3" aria-hidden="true" />}
-              {listing.isCovered ? t('listing.covered') : t('listing.open')}
-            </span>
-            {listing.hasEvCharging && (
-              <span className="vp-badge vp-badge-info">
-                <Zap className="h-3 w-3" aria-hidden="true" />
-                {t('listing.evReady')}
-              </span>
-            )}
-          </div>
-
-          <p className="mt-2 text-xs">
-            {listing.isStale ? (
-              <span className="inline-flex items-center gap-1 font-medium text-[var(--warning-ink)]">
-                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                {t('listing.stale')}
-              </span>
-            ) : (
-              listing.lastConfirmedAt && (
-                <span className="text-ink-3">{t('listing.confirmed', { date: date(listing.lastConfirmedAt, { day: 'numeric', month: 'short' }) })}</span>
-              )
-            )}
-          </p>
-
-          {/* Availability and action */}
-          <div className="mt-auto flex items-center justify-between gap-3 border-t border-hairline pt-3 sm:mt-4">
-            {isPublic ? (
-              <span className="vp-badge">{t('listing.publicNotBookable')}</span>
             ) : availableCapacity > 0 ? (
-              <span className="vp-badge vp-badge-success">{tn('listing.bays', availableCapacity)}</span>
+              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border border-emerald-600/30 text-emerald-700 dark:text-emerald-400">
+                {availableCapacity} {availableCapacity === 1 ? 'BAY' : 'BAYS'} AVAILABLE
+              </span>
             ) : (
-              <span className="vp-badge vp-badge-warning">{t('listing.full')}</span>
+              <span className="px-2 py-0.5 rounded-full font-mono text-[10px] tracking-wider uppercase border border-amber-600/30 text-amber-700 dark:text-amber-400">
+                FULL FOR THIS TIME
+              </span>
             )}
 
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect();
-                onBook();
-              }}
-              aria-describedby={`listing-${listing.id}-title`}
-              className={`group/cta vp-btn vp-btn-sm ${listing.isBookable ? 'vp-btn-primary' : 'vp-btn-secondary'}`}
-            >
-              {listing.isBookable ? t('listing.reserve') : t('listing.viewDetails')}
-              <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" aria-hidden="true" />
-            </button>
+            {listing.isBookable ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBook();
+                }}
+                className="px-3.5 py-1.5 rounded-full bg-brand hover:bg-brand-hover text-white font-mono text-xs uppercase tracking-wider transition-[background-color,transform] duration-150 active:scale-[0.96]"
+              >
+                RESERVE BAY
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBook();
+                }}
+                className="px-3 py-1.5 rounded-full bg-[var(--surface-alt)] hover:bg-[var(--surface-bg)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider border border-[var(--hairline-strong)] transition-[background-color,transform] duration-150 active:scale-[0.96]"
+              >
+                VIEW DETAILS
+              </button>
+            )}
           </div>
         </div>
       </div>
-    </article>
+    </div>
   );
 }

@@ -6,7 +6,6 @@ import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
 import { CountUp } from '@/components/motion/CountUp';
 import { staggerStyle } from '@/components/motion/tokens';
 import { ListingSubmissionNotice } from '@/components/HowItWorks';
-import { useI18n } from '@/components/i18n/LanguageProvider';
 import {
   Listing,
   ProviderType,
@@ -37,9 +36,7 @@ import {
   Edit3,
   Clock,
   Lock,
-  X,
 } from 'lucide-react';
-import { useDialog } from '@/components/motion/useDialog';
 
 interface ProviderHubProps {
   currentUser?: User | null;
@@ -47,15 +44,24 @@ interface ProviderHubProps {
   onEnableProvider?: () => void;
 }
 
-const ALL_VEHICLE_TYPES: VehicleType[] = ['TWO_WHEELER', 'HATCHBACK', 'SEDAN', 'SUV', 'EV'];
+const ALL_VEHICLE_TYPES: { id: VehicleType; label: string }[] = [
+  { id: 'TWO_WHEELER', label: 'Two-wheeler' },
+  { id: 'HATCHBACK', label: 'Hatchback Car' },
+  { id: 'SEDAN', label: 'Sedan Car' },
+  { id: 'SUV', label: 'SUV / MUV' },
+  { id: 'EV', label: 'EV' },
+];
 
-const STATUS_TONE: Record<Listing['status'], string> = {
-  DRAFT: 'vp-badge',
-  PENDING_REVIEW: 'vp-badge vp-badge-warning',
-  NEEDS_INFO: 'vp-badge vp-badge-warning',
-  VERIFIED: 'vp-badge vp-badge-success',
-  REJECTED: 'vp-badge vp-badge-danger',
-  SUSPENDED: 'vp-badge vp-badge-danger',
+const STATUS_CHIP: Record<
+  Listing['status'],
+  { label: string; classes: string }
+> = {
+  DRAFT: { label: 'Draft', classes: 'bg-slate-100 dark:bg-surface-alt text-slate-700 dark:text-ink-2 border-slate-200 dark:border-hairline' },
+  PENDING_REVIEW: { label: 'Submitted', classes: 'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' },
+  NEEDS_INFO: { label: 'Needs info', classes: 'bg-orange-100 dark:bg-orange-500/15 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-500/30' },
+  VERIFIED: { label: 'Approved', classes: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' },
+  REJECTED: { label: 'Rejected', classes: 'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300 border-red-200 dark:border-red-500/30' },
+  SUSPENDED: { label: 'Suspended', classes: 'bg-red-100 dark:bg-red-500/15 text-red-900 dark:text-red-300 border-red-300 dark:border-red-500/30' },
 };
 
 function situationToProviderType(sit: ProviderSituation): ProviderType {
@@ -124,7 +130,6 @@ export function ProviderHub({
   onRequireAuth,
   onEnableProvider,
 }: ProviderHubProps) {
-  const { t, tn, inr, date } = useI18n();
   const [listings, setListings] = useState<Listing[]>([]);
   const [metrics, setMetrics] = useState<{
     totalListings: number;
@@ -303,7 +308,7 @@ export function ProviderHub({
       const uploadedUrls: string[] = [];
       for (const rawFile of Array.from(files).slice(0, 6 - formData.photos.length)) {
         if (rawFile.size > 5 * 1024 * 1024) {
-          setFormError(t('wizard.errPhotoTooBig', { name: rawFile.name }));
+          setFormError(`Photo "${rawFile.name}" exceeds the 5 MB limit.`);
           continue;
         }
         const stripped = await stripImageExif(rawFile);
@@ -315,7 +320,7 @@ export function ProviderHub({
         if (res.ok && data.success && data.url) {
           uploadedUrls.push(data.url);
         } else {
-          setFormError(data.error || t('wizard.errPhotoFailed'));
+          setFormError(data.error || 'Failed to upload photo.');
         }
       }
       if (uploadedUrls.length > 0) {
@@ -325,7 +330,7 @@ export function ProviderHub({
         }));
       }
     } catch {
-      setFormError(t('wizard.errPhotoNetwork'));
+      setFormError('Network error uploading space photos.');
     } finally {
       setUploadingPhoto(false);
     }
@@ -371,7 +376,7 @@ export function ProviderHub({
       }
       setFormData((prev) => ({ ...prev, photos: uploaded }));
     } catch {
-      setFormError(t('wizard.errSamplePhotos'));
+      setFormError('Could not prepare sample photos.');
     } finally {
       setUploadingPhoto(false);
     }
@@ -381,7 +386,7 @@ export function ProviderHub({
     if (!file) return;
     setFormError(null);
     if (file.size > 5 * 1024 * 1024) {
-      setFormError(t('wizard.errProofTooBig'));
+      setFormError('Proof document exceeds the 5 MB limit.');
       return;
     }
     setUploadingProof(true);
@@ -398,10 +403,10 @@ export function ProviderHub({
           docStorageKey: data.storageKey,
         }));
       } else {
-        setFormError(data.error || t('wizard.errProofFailed'));
+        setFormError(data.error || 'Could not upload verification document.');
       }
     } catch {
-      setFormError(t('wizard.errProofFailed'));
+      setFormError('Failed to upload verification document.');
     } finally {
       setUploadingProof(false);
     }
@@ -422,13 +427,13 @@ export function ProviderHub({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setStatusMessage(t('provider.reconfirmed'));
+        setStatusMessage('Availability reconfirmed! Freshness indicator updated and stale penalty cleared.');
         fetchProviderData();
       } else {
-        setStatusMessage(data.error || t('provider.reconfirmFailed'));
+        setStatusMessage(data.error || 'Failed to reconfirm availability.');
       }
     } catch {
-      setStatusMessage(t('provider.reconfirmFailed'));
+      setStatusMessage('Failed to reconfirm availability.');
     }
   };
 
@@ -436,28 +441,28 @@ export function ProviderHub({
     setFormError(null);
 
     if (!formData.title.trim() || !formData.address.trim()) {
-      setFormError(t('wizard.errTitleAddress'));
+      setFormError('Listing title and street address are required.');
       setWizardStep(1);
       return;
     }
     const cap = Number(formData.totalCapacity);
     if (!Number.isInteger(cap) || cap < 1) {
-      setFormError(t('wizard.errCapacity'));
+      setFormError('Capacity must be a whole number of at least 1 vehicle.');
       setWizardStep(2);
       return;
     }
     if (!formData.hourlyRate || Number(formData.hourlyRate) <= 0) {
-      setFormError(t('wizard.errRate'));
+      setFormError('Enter a valid hourly rate in ₹.');
       setWizardStep(3);
       return;
     }
     if (!asDraft && formData.photos.length < 3) {
-      setFormError(t('wizard.errMinPhotos'));
+      setFormError('Please upload at least 3 photos of the parking space before submitting.');
       setWizardStep(4);
       return;
     }
     if (!asDraft && !formData.docFileName) {
-      setFormError(t('wizard.errProof'));
+      setFormError('Please upload your right-to-rent verification proof before submitting.');
       setWizardStep(4);
       return;
     }
@@ -519,7 +524,7 @@ export function ProviderHub({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setFormError(data.error || t('wizard.errSave'));
+        setFormError(data.error || 'Could not save listing.');
       } else {
         setStatusMessage(data.message);
         setShowAddWizard(false);
@@ -527,31 +532,31 @@ export function ProviderHub({
         fetchProviderData();
       }
     } catch {
-      setFormError(t('wizard.errSaveNetwork'));
+      setFormError('Network error saving listing.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Capability gate views (PRD Section 6.6: unauthenticated 401 or non-provider 403)
-  if (!loading && (authStateError === 'UNAUTH' || authStateError === 'NO_CAPABILITY')) {
-    const unauth = authStateError === 'UNAUTH';
+  // Capability Gate Views (PRD Section 6.6: unauthenticated 401 or non-provider 403)
+  if (!loading && authStateError === 'UNAUTH') {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-14">
-        <div className="vp-card flex flex-col items-center gap-4 p-8 text-center">
-          <span className="vp-icon-tile h-12 w-12" aria-hidden="true">
-            {unauth ? <Lock className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
-          </span>
-          <h1 className="vp-h2">{unauth ? t('provider.signInTitle') : t('provider.enableTitle')}</h1>
-          <p className="max-w-md text-sm leading-relaxed text-ink-2">{unauth ? t('provider.signInBody') : t('provider.enableBody')}</p>
-          {unauth && onRequireAuth && (
-            <button type="button" onClick={onRequireAuth} className="vp-btn vp-btn-primary">
-              {t('provider.signIn')}
-            </button>
-          )}
-          {!unauth && onEnableProvider && (
-            <button type="button" onClick={onEnableProvider} className="vp-btn vp-btn-primary">
-              {t('provider.enable')}
+      <div className="max-w-3xl mx-auto px-4 py-14 text-center space-y-4">
+        <div className="bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline p-8 shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-[#0A5CFF] dark:text-[var(--transit-accent)] flex items-center justify-center mx-auto">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-ink">Sign in to manage your parking spaces</h1>
+          <p className="text-sm text-slate-600 dark:text-ink-2 max-w-md mx-auto">
+            Use one VPark phone OTP account to list spaces, upload verification documents, and track reservations.
+          </p>
+          {onRequireAuth && (
+            <button
+              type="button"
+              onClick={onRequireAuth}
+              className="px-6 py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-sm shadow-md"
+            >
+              Sign in with Phone OTP
             </button>
           )}
         </div>
@@ -559,719 +564,801 @@ export function ProviderHub({
     );
   }
 
-  const displayName = currentUser?.name || currentUser?.phone || t('provider.hostFallback');
-  const situationLabel = (sit: ProviderSituation) => t(`wizard.situations.${sit}`);
-  const required = <span aria-hidden="true" className="text-[var(--danger-ink)]">*</span>;
-  const optional = <span className="font-normal text-ink-3">({t('common.optional')})</span>;
+  if (!loading && authStateError === 'NO_CAPABILITY') {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-14 text-center space-y-4">
+        <div className="bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline p-8 shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-[#0A5CFF] dark:text-[var(--transit-accent)] flex items-center justify-center mx-auto">
+            <Building2 className="w-6 h-6" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-ink">Turn on Host mode in one click</h1>
+          <p className="text-sm text-slate-600 dark:text-ink-2 max-w-md mx-auto">
+            Your VPark account is currently active for Driver parking only. Add the Host capability without re-entering your personal information.
+          </p>
+          {onEnableProvider && (
+            <button
+              type="button"
+              onClick={onEnableProvider}
+              className="px-6 py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-sm shadow-md"
+            >
+              Enable Host Mode & Rent Your Space
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const displayName = currentUser?.name || currentUser?.phone || 'Host';
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-      {/* Welcome (PRD 7.1) */}
-      <div className="vp-card flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Top Welcome Banner (PRD 7.1) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-surface border border-slate-200 dark:border-hairline p-6 rounded-2xl shadow-sm">
         <div>
-          <p className="vp-eyebrow flex items-center gap-2">
-            <Building2 className="h-4 w-4" aria-hidden="true" />
-            {t('provider.eyebrow')}
+          <div className="flex items-center gap-2 text-xs font-bold text-[#0A5CFF] dark:text-[var(--transit-accent)] uppercase tracking-wider">
+            <Building2 className="w-4 h-4" />
+            <span>Host Dashboard · /owner/dashboard</span>
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-ink mt-1">
+            Welcome, {displayName}
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-ink-2 mt-1">
+            Add unused driveways, gated bays, or commercial slots and keep availability confirmed.
           </p>
-          <h1 className="vp-h2 mt-1.5">{t('provider.welcome', { name: displayName })}</h1>
-          <p className="mt-1 text-sm text-ink-2">{t('provider.intro')}</p>
         </div>
-        <button type="button" onClick={openNewWizard} className="vp-btn vp-btn-primary self-start sm:self-auto">
-          <PlusCircle className="h-4 w-4" aria-hidden="true" />
-          {t('provider.add')}
+
+        <button
+          type="button"
+          onClick={openNewWizard}
+          className="px-5 py-3 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold text-sm shadow-md flex items-center gap-2 self-start sm:self-auto transition-[background-color,box-shadow,transform] duration-150 hover:shadow-lg active:scale-[0.97]"
+        >
+          <PlusCircle className="w-4 h-4" />
+          Add your parking space
         </button>
       </div>
 
       <ListingSubmissionNotice />
 
       {statusMessage && (
-        <div role="status" className="vp-alert vp-alert-info items-center justify-between animate-fade-in">
+        <div role="status" className="p-3.5 bg-blue-50 dark:bg-blue-500/10 text-blue-900 dark:text-blue-300 text-xs font-semibold rounded-2xl border border-blue-200 dark:border-blue-500/30 flex items-center justify-between animate-fade-in">
           <span>{statusMessage}</span>
-          <button type="button" onClick={() => setStatusMessage(null)} aria-label={t('common.dismiss')} className="rounded-full p-1">
-            <X className="h-4 w-4" aria-hidden="true" />
+          <button type="button" onClick={() => setStatusMessage(null)} className="text-blue-700 dark:text-blue-300 font-bold ml-3">
+            ✕
           </button>
         </div>
       )}
 
-      {/* Honest summary cards (PRD 7.1: never invent bookings or earnings) */}
+      {/* Honest Summary Cards (PRD 7.1 — never invent fake bookings/earnings) */}
       {metrics && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="vp-card p-4 animate-fade-up">
-            <span className="block text-sm font-medium text-ink-2">{t('provider.metricTotal')}</span>
-            <span className="mt-1 block text-2xl font-bold tabular-nums text-ink">
-              <CountUp value={metrics.totalListings} />
-            </span>
-            <span className="mt-0.5 block text-xs text-ink-3">
-              {t('provider.metricTotalMeta', { draft: metrics.draftListings, pending: metrics.pendingListings })}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          <div className="p-4 bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline shadow-sm animate-fade-up [animation-delay:0ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
+            <span className="text-slate-500 dark:text-ink-3 block font-semibold">Total listings</span>
+            <span className="text-2xl font-black text-slate-900 dark:text-ink mt-1 block tabular-nums"><CountUp value={metrics.totalListings} /></span>
+            <span className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5 block">
+              {metrics.draftListings} draft · {metrics.pendingListings} in review
             </span>
           </div>
-          <div className="vp-card p-4 animate-fade-up [animation-delay:60ms]">
-            <span className="block text-sm font-medium text-ink-2">{t('provider.metricActive')}</span>
-            <span className="mt-1 block text-2xl font-bold tabular-nums text-[var(--success-ink)]">
-              <CountUp value={metrics.verifiedListings} />
-            </span>
-            <span className="mt-0.5 block text-xs text-ink-3">{t('provider.metricActiveMeta')}</span>
+
+          <div className="p-4 bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline shadow-sm animate-fade-up [animation-delay:60ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
+            <span className="text-slate-500 dark:text-ink-3 block font-semibold">Active listings</span>
+            <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1 block tabular-nums"><CountUp value={metrics.verifiedListings} /></span>
+            <span className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5 block">Approved &amp; visible to drivers</span>
           </div>
-          <div className="vp-card p-4 animate-fade-up [animation-delay:120ms]">
-            <span className="block text-sm font-medium text-ink-2">{t('provider.metricBookings')}</span>
+
+          <div className="p-4 bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline shadow-sm animate-fade-up [animation-delay:120ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
+            <span className="text-slate-500 dark:text-ink-3 block font-semibold">Bookings</span>
             {metrics.totalBookingsCount > 0 ? (
               <>
-                <span className="mt-1 block text-2xl font-bold tabular-nums text-ink">
-                  <CountUp value={metrics.totalBookingsCount} />
+                <span className="text-2xl font-black text-slate-900 dark:text-ink mt-1 block tabular-nums"><CountUp value={metrics.totalBookingsCount} /></span>
+                <span className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5 block">
+                  {metrics.activeBookingsCount} active now
                 </span>
-                <span className="mt-0.5 block text-xs text-ink-3">{t('provider.metricBookingsMeta', { count: metrics.activeBookingsCount })}</span>
               </>
             ) : (
-              <span className="mt-2 block text-sm text-ink-3">{t('provider.metricBookingsEmpty')}</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-ink-3 mt-2 block">
+                Bookings will appear here once reservations open.
+              </span>
             )}
           </div>
-          <div className="vp-card p-4 animate-fade-up [animation-delay:180ms]">
-            <span className="block text-sm font-medium text-ink-2">{t('provider.metricEarnings')}</span>
+
+          <div className="p-4 bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline shadow-sm animate-fade-up [animation-delay:180ms] transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-md motion-safe:hover:-translate-y-0.5">
+            <span className="text-slate-500 dark:text-ink-3 block font-semibold">Earnings</span>
             {metrics.totalEarnings > 0 ? (
               <>
-                <span className="mt-1 block text-2xl font-bold tabular-nums text-[var(--transit-accent)]">
-                  <CountUp value={metrics.totalEarnings} format={(n) => inr(n, { decimals: true })} />
+                <span className="text-2xl font-black text-[#0A5CFF] dark:text-[var(--transit-accent)] mt-1 block tabular-nums">
+                  <CountUp value={metrics.totalEarnings} format={(n) => `₹${n.toFixed(2)}`} />
                 </span>
-                <span className="mt-0.5 block text-xs text-ink-3">{t('provider.metricEarningsMeta')}</span>
+                <span className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5 block">Host gross parking fees</span>
               </>
             ) : (
-              <span className="mt-2 block text-sm text-ink-3">{t('provider.metricEarningsEmpty')}</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-ink-3 mt-2 block">
+                No earnings yet. Verify email before payouts begin.
+              </span>
             )}
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        <section className="space-y-3 lg:col-span-2" aria-labelledby="provider-listings">
-          <h2 id="provider-listings" className="vp-h3">
-            {t('provider.listingsTitle')}
-          </h2>
+      {/* Listings & Activity Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 space-y-3">
+          <h2 className="font-black text-slate-900 dark:text-ink text-base">Your Parking Spaces</h2>
 
           {loading ? (
-            <div role="status" className="space-y-3">
-              <span className="sr-only">{t('provider.loading')}</span>
-              {[0, 1].map((i) => (
-                <div key={i} aria-hidden="true" className="vp-card space-y-3 p-5">
-                  <div className="vp-skeleton h-4 w-24 rounded-full" />
-                  <div className="vp-skeleton h-5 w-2/3 rounded-full" />
-                  <div className="vp-skeleton h-3 w-1/2 rounded-full" />
-                </div>
-              ))}
+            <div role="status" className="p-8 text-center bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline text-slate-500 dark:text-ink-3 text-xs animate-fade-in">
+              Loading your listings...
             </div>
           ) : listings.length === 0 ? (
-            <div className="vp-card flex flex-col items-center gap-3 p-10 text-center animate-fade-in">
-              <span className="vp-icon-tile h-12 w-12 rounded-full" aria-hidden="true">
-                <MapPin className="h-6 w-6" />
-              </span>
-              <p className="text-base font-semibold text-ink">{t('provider.emptyTitle')}</p>
-              <p className="max-w-md text-sm text-ink-2">{t('provider.emptyBody')}</p>
-              <button type="button" onClick={openNewWizard} className="vp-btn vp-btn-primary">
-                <PlusCircle className="h-4 w-4" aria-hidden="true" />
-                {t('provider.add')}
+            <div className="p-10 text-center bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline text-slate-500 dark:text-ink-3 text-xs space-y-3 animate-fade-in">
+              <p className="font-semibold text-slate-700 dark:text-ink-2 text-sm">You haven&apos;t added a parking space yet.</p>
+              <p>Start with a draft and upload 3 photos + ownership/society proof when ready.</p>
+              <button
+                type="button"
+                onClick={openNewWizard}
+                className="px-4 py-2 rounded-xl bg-[#0A5CFF] text-white font-bold text-xs"
+              >
+                Add your parking space
               </button>
             </div>
           ) : (
-            <ul className="space-y-3">
+            <div className="space-y-3">
               {listings.map((l, index) => {
+                const chip = STATUS_CHIP[l.status];
                 const canEdit = l.status === 'DRAFT' || l.status === 'NEEDS_INFO' || l.status === 'REJECTED';
                 return (
-                  <li key={l.id} style={staggerStyle(index)} className="vp-card space-y-3 p-5 text-sm animate-fade-up">
-                    <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-                      <div className="min-w-0 space-y-1.5">
+                  <div
+                    key={l.id}
+                    style={staggerStyle(index)}
+                    className="bg-white dark:bg-surface rounded-2xl p-5 border border-slate-200 dark:border-hairline shadow-sm space-y-3 text-xs animate-fade-up transition-shadow duration-200 hover:shadow-md"
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="space-y-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className={STATUS_TONE[l.status]}>{t(`provider.statuses.${l.status}`)}</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${chip.classes}`}>
+                            {chip.label}
+                          </span>
                           {l.status === 'VERIFIED' && l.isStale && (
-                            <span className="vp-badge vp-badge-warning">
-                              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-                              {t('provider.stale')}
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              Unconfirmed &gt;30d (Demoted)
                             </span>
                           )}
-                          <span className="text-xs tabular-nums text-ink-3">
-                            {tn('provider.photos', l.photos.length)} · {tn('provider.slots', l.totalCapacity)}
+                          <span className="text-slate-400 dark:text-ink-3 font-mono text-[11px]">
+                            {l.photos.length} photos · {l.totalCapacity} {l.totalCapacity === 1 ? 'slot' : 'slots'}
                           </span>
                         </div>
-                        <h3 className="text-base font-semibold text-ink">{l.title}</h3>
-                        <p className="text-ink-2">{l.address}</p>
-                        <p className="text-xs tabular-nums text-ink-3">
-                          {inr(l.pricing.hourlyRate)}
-                          {t('common.perHour')}
-                          {l.pricing.dailyRate ? ` · ${inr(l.pricing.dailyRate)}${t('common.perDay')}` : ''}
-                          {l.pricing.monthlyRate ? ` · ${inr(l.pricing.monthlyRate)}${t('common.perMonth')}` : ''} ·{' '}
-                          {l.isCovered ? t('listing.covered') : t('listing.open')} · {t('provider.confirmed', { date: date(l.lastConfirmedAt) })}
+
+                        <h3 className="font-black text-base text-slate-900 dark:text-ink">{l.title}</h3>
+                        <p className="text-slate-600 dark:text-ink-2">{l.address}</p>
+                        <p className="text-slate-500 dark:text-ink-3 text-[11px]">
+                          ₹{l.pricing.hourlyRate}/hr
+                          {l.pricing.dailyRate ? ` · ₹${l.pricing.dailyRate}/day` : ''}
+                          {l.pricing.monthlyRate ? ` · ₹${l.pricing.monthlyRate}/mo` : ''} · {l.isCovered ? 'Covered' : 'Open'} · Confirmed{' '}
+                          {new Date(l.lastConfirmedAt).toLocaleDateString('en-IN')}
                         </p>
                       </div>
 
-                      <div className="flex flex-shrink-0 flex-wrap items-center gap-2 self-end sm:self-auto">
+                      <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
                         {canEdit && (
-                          <button type="button" onClick={() => openEditWizard(l)} className="vp-btn vp-btn-secondary vp-btn-sm">
-                            <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
-                            {t('provider.edit')}
+                          <button
+                            type="button"
+                            onClick={() => openEditWizard(l)}
+                            className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-surface-alt hover:bg-slate-200 dark:hover:bg-hairline-strong text-slate-900 dark:text-ink font-bold flex items-center gap-1.5"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Edit / Submit
                           </button>
                         )}
                         {l.status === 'VERIFIED' && (
-                          <button type="button" onClick={() => handleReconfirm(l.id)} className="vp-btn vp-btn-secondary vp-btn-sm">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-[var(--transit-accent)]" aria-hidden="true" />
-                            {t('provider.reconfirm')}
+                          <button
+                            type="button"
+                            onClick={() => handleReconfirm(l.id)}
+                            className="px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-[#0A5CFF] dark:text-[var(--transit-accent)] font-bold border border-blue-200 dark:border-blue-500/30 flex items-center gap-1.5 transition-colors"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Reconfirm Availability
                           </button>
                         )}
                       </div>
                     </div>
 
                     {l.reviewReason && (l.status === 'NEEDS_INFO' || l.status === 'REJECTED' || l.status === 'SUSPENDED') && (
-                      <div className="vp-alert vp-alert-warning">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                      <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-300 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
                         <div>
-                          <span className="block font-semibold">{t('provider.reviewerNote')}</span>
+                          <span className="font-bold block">Reviewer Note:</span>
                           <span>{l.reviewReason}</span>
                         </div>
                       </div>
                     )}
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           )}
-        </section>
+        </div>
 
-        {/* Activity and notices (PRD 7.1) */}
-        <section className="space-y-3" aria-labelledby="provider-activity">
-          <h2 id="provider-activity" className="vp-h3">
-            {t('provider.activityTitle')}
-          </h2>
-          <div className="vp-card space-y-3 p-4 text-sm">
+        {/* Activity & Notices (PRD 7.1) */}
+        <div className="space-y-3 text-xs">
+          <h2 className="font-black text-slate-900 dark:text-ink text-base">Activity &amp; Notices</h2>
+          <div className="bg-white dark:bg-surface rounded-2xl border border-slate-200 dark:border-hairline p-4 space-y-3 shadow-sm">
             {!currentUser?.email && (
-              <div className="vp-alert vp-alert-warning block">
-                <span className="block font-semibold">{t('provider.emailNeeded')}</span>
-                <span className="block text-xs">{t('provider.emailNeededBody')}</span>
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-300 space-y-1">
+                <span className="font-bold block">Email needed for payouts</span>
+                <span className="text-[11px] block">
+                  Optional at sign-up, required before bank settlement payouts open.
+                </span>
               </div>
             )}
             {listings.length === 0 ? (
-              <p className="text-ink-3">{t('provider.activityEmpty')}</p>
+              <p className="text-slate-500 dark:text-ink-3">
+                Verification updates, admin review requests, and reconfirmation reminders will appear here.
+              </p>
             ) : (
-              <ul className="space-y-2.5">
-                {listings.slice(0, 5).map((l) => (
-                  <li key={l.id} className="flex items-start gap-2 border-b border-hairline pb-2.5 last:border-b-0 last:pb-0">
-                    <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-ink-3" aria-hidden="true" />
-                    <div className="min-w-0">
-                      <span className="block font-semibold text-ink">{l.title}</span>
-                      <span className="text-xs text-ink-3">
-                        {t('provider.activityStatus', { status: t(`provider.statuses.${l.status}`), date: date(l.updatedAt) })}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              listings.slice(0, 5).map((l) => (
+                <div key={l.id} className="pb-2.5 border-b border-slate-100 dark:border-hairline last:border-b-0 last:pb-0 flex items-start gap-2">
+                  <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-ink-3 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="font-bold text-slate-800 dark:text-ink block">{l.title}</span>
+                    <span className="text-slate-500 dark:text-ink-3">
+                      Status: <strong>{STATUS_CHIP[l.status].label}</strong> · Updated{' '}
+                      {new Date(l.updatedAt).toLocaleDateString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              ))
             )}
           </div>
-        </section>
+        </div>
       </div>
 
-      {/* 4-step listing creation / edit wizard (PRD 7.2 & 7.3) */}
+      {/* 4-Step Listing Creation / Edit Wizard Modal (PRD 7.2 & 7.3) */}
       <Presence>
-        {showAddWizard && (
-          <ModalBackdrop key="listing-wizard" className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
-            <ModalPanel className="my-auto w-full max-w-2xl">
-              <WizardDialog onClose={() => setShowAddWizard(false)} label={t('wizard.dialogLabel')}>
-                <div className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-4 sm:px-6">
-                  <div>
-                    <span className="block text-xs font-semibold text-[var(--transit-accent)]">
-                      {t('wizard.step', { step: wizardStep })} · {editingListingId ? t('wizard.editTitle') : t('wizard.newTitle')}
-                    </span>
-                    <h2 className="mt-0.5 text-lg font-bold text-ink">{t('wizard.heading')}</h2>
-                  </div>
-                  <button
-                    type="button"
-                    aria-label={t('wizard.close')}
-                    onClick={() => setShowAddWizard(false)}
-                    className="rounded-full p-2 text-ink-3 transition-colors hover:bg-surface-alt hover:text-ink"
-                  >
-                    <X className="h-5 w-5" aria-hidden="true" />
-                  </button>
-                </div>
+      {showAddWizard && (
+        <ModalBackdrop
+          key="listing-wizard"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add or edit parking space"
+        >
+          <ModalPanel className="w-full max-w-2xl bg-white dark:bg-surface rounded-2xl shadow-2xl border border-slate-200 dark:border-hairline overflow-hidden my-auto max-h-[92vh] flex flex-col">
+            <div className="bg-slate-900 dark:bg-surface-alt dark:border-b dark:border-hairline text-white dark:text-ink px-6 py-4 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-mono uppercase text-blue-400 font-bold block">
+                  Step {wizardStep} of 4 · {editingListingId ? 'Edit Listing' : 'Add your parking space'}
+                </span>
+                <h2 className="font-black text-lg">Space Details &amp; Verification</h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Close wizard"
+                onClick={() => setShowAddWizard(false)}
+                className="text-slate-400 dark:text-ink-3 hover:text-white p-1"
+              >
+                ✕
+              </button>
+            </div>
 
-                <div
-                  role="progressbar"
-                  aria-label={t('wizard.step', { step: wizardStep })}
-                  aria-valuemin={1}
-                  aria-valuemax={4}
-                  aria-valuenow={wizardStep}
-                  className="h-1 bg-surface-alt"
-                >
-                  <div
-                    className="h-full w-full origin-left bg-[var(--transit-accent)] transition-transform duration-500 ease-out-quart"
-                    style={{ transform: `scaleX(${wizardStep / 4})` }}
+            {/* Step progress (mirrors the existing "Step N of 4" label) */}
+            <div aria-hidden="true" className="h-1 bg-slate-800">
+              <div
+                className="h-full w-full origin-left bg-[#0A5CFF] transition-transform duration-500 ease-out-quart"
+                style={{ transform: `scaleX(${wizardStep / 4})` }}
+              />
+            </div>
+
+            <div className="p-6 space-y-4 text-xs overflow-y-auto">
+              <ListingSubmissionNotice />
+
+              {formError && (
+                <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-300 font-semibold animate-fade-in">
+                  {formError}
+                </div>
+              )}
+
+              {/* STEP 1 */}
+              {wizardStep === 1 && (
+                <div key="wizard-step-1" className={`${wizardStepEnter} space-y-3.5`}>
+                  <h3 className="font-black text-slate-900 dark:text-ink text-sm">1. Provider Situation, Type &amp; Map Pin</h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="prov-situation" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Your Situation (PRD 7.3)
+                      </label>
+                      <select
+                        id="prov-situation"
+                        value={formData.providerSituation}
+                        onChange={(e) => handleSituationChange(e.target.value as ProviderSituation)}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
+                      >
+                        {(Object.keys(PROVIDER_SITUATION_EVIDENCE) as ProviderSituation[]).map((key) => (
+                          <option key={key} value={key}>
+                            {PROVIDER_SITUATION_EVIDENCE[key].label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="space-category" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Space Type
+                      </label>
+                      <select
+                        id="space-category"
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value as ParkingCategory })}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
+                      >
+                        <option value="PRIVATE">Residential Slot (Driveway / Stilt / Villa)</option>
+                        <option value="COMMERCIAL">Commercial Lot / Complex</option>
+                        <option value="OTHER">Other Authorized Space</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="listing-title" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                      Space Title *
+                    </label>
+                    <input
+                      id="listing-title"
+                      type="text"
+                      placeholder="e.g. Shree Nivas Covered Driveway"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="listing-address" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Complete Address *
+                      </label>
+                      <input
+                        id="listing-address"
+                        type="text"
+                        placeholder="#142, 4th Phase, Yelahanka New Town"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="listing-locality" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Neighbourhood / Anchor
+                      </label>
+                      <select
+                        id="listing-locality"
+                        value={formData.locality}
+                        onChange={(e) => {
+                          const anchor = YELAHANKA_ANCHORS.find((a) => a.locality === e.target.value);
+                          setFormData({
+                            ...formData,
+                            locality: e.target.value,
+                            latitude: anchor ? anchor.latitude : formData.latitude,
+                            longitude: anchor ? anchor.longitude : formData.longitude,
+                          });
+                        }}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
+                      >
+                        {YELAHANKA_ANCHORS.map((a) => (
+                          <option key={a.id} value={a.locality}>
+                            {a.locality}
+                          </option>
+                        ))}
+                        <option value="Kogilu Cross">Kogilu Cross</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Interactive Map Pin Picker (Google Maps) */}
+                  <ListingLocationPicker
+                    latitude={formData.latitude}
+                    longitude={formData.longitude}
+                    locality={formData.locality}
+                    onChange={(lat, lng) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        latitude: lat,
+                        longitude: lng,
+                        pinConfirmed: true,
+                      }))
+                    }
                   />
                 </div>
+              )}
 
-                <div className="space-y-4 overflow-y-auto p-5 text-sm sm:p-6">
-                  <ListingSubmissionNotice />
+              {/* STEP 2 */}
+              {wizardStep === 2 && (
+                <div key="wizard-step-2" className={`${wizardStepEnter} space-y-4`}>
+                  <h3 className="font-black text-slate-900 dark:text-ink text-sm">2. Capacity, Vehicles &amp; Dimensions</h3>
 
-                  {formError && (
-                    <div role="alert" className="vp-alert vp-alert-danger animate-fade-in">
-                      {formError}
-                    </div>
-                  )}
-
-                  {wizardStep === 1 && (
-                    <fieldset key="wizard-step-1" className={`${wizardStepEnter} space-y-4`}>
-                      <legend className="vp-h3 mb-3">1. {t('wizard.step1')}</legend>
-
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label htmlFor="prov-situation" className="vp-label">
-                            {t('wizard.situation')}
-                          </label>
-                          <select
-                            id="prov-situation"
-                            value={formData.providerSituation}
-                            onChange={(e) => handleSituationChange(e.target.value as ProviderSituation)}
-                            className="vp-input"
-                          >
-                            {(Object.keys(PROVIDER_SITUATION_EVIDENCE) as ProviderSituation[]).map((key) => (
-                              <option key={key} value={key}>
-                                {situationLabel(key)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="space-category" className="vp-label">
-                            {t('wizard.spaceType')}
-                          </label>
-                          <select
-                            id="space-category"
-                            value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value as ParkingCategory })}
-                            className="vp-input"
-                          >
-                            <option value="PRIVATE">{t('wizard.spaceTypes.PRIVATE')}</option>
-                            <option value="COMMERCIAL">{t('wizard.spaceTypes.COMMERCIAL')}</option>
-                            <option value="OTHER">{t('wizard.spaceTypes.OTHER')}</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label htmlFor="listing-title" className="vp-label">
-                          {t('wizard.title')} {required}
-                        </label>
-                        <input
-                          id="listing-title"
-                          type="text"
-                          required
-                          placeholder={t('wizard.titlePlaceholder')}
-                          value={formData.title}
-                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          className="vp-input"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label htmlFor="listing-address" className="vp-label">
-                            {t('wizard.address')} {required}
-                          </label>
-                          <input
-                            id="listing-address"
-                            type="text"
-                            required
-                            placeholder={t('wizard.addressPlaceholder')}
-                            value={formData.address}
-                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                            className="vp-input"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="listing-locality" className="vp-label">
-                            {t('wizard.locality')}
-                          </label>
-                          <select
-                            id="listing-locality"
-                            value={formData.locality}
-                            onChange={(e) => {
-                              const anchor = YELAHANKA_ANCHORS.find((a) => a.locality === e.target.value);
-                              setFormData({
-                                ...formData,
-                                locality: e.target.value,
-                                latitude: anchor ? anchor.latitude : formData.latitude,
-                                longitude: anchor ? anchor.longitude : formData.longitude,
-                              });
-                            }}
-                            className="vp-input"
-                          >
-                            {YELAHANKA_ANCHORS.map((a) => (
-                              <option key={a.id} value={a.locality}>
-                                {a.locality}
-                              </option>
-                            ))}
-                            <option value="Kogilu Cross">Kogilu Cross</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Google Maps pin picker (host listing wizard) */}
-                      <ListingLocationPicker
-                        latitude={formData.latitude}
-                        longitude={formData.longitude}
-                        locality={formData.locality}
-                        onChange={(lat, lng) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            latitude: lat,
-                            longitude: lng,
-                            pinConfirmed: true,
-                          }))
-                        }
-                      />
-                    </fieldset>
-                  )}
-
-                  {wizardStep === 2 && (
-                    <fieldset key="wizard-step-2" className={`${wizardStepEnter} space-y-4`}>
-                      <legend className="vp-h3 mb-3">2. {t('wizard.step2')}</legend>
-
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label htmlFor="total-capacity" className="vp-label">
-                            {t('wizard.capacity')} {required}
-                          </label>
-                          <input
-                            id="total-capacity"
-                            type="number"
-                            min={1}
-                            max={200}
-                            step={1}
-                            value={formData.totalCapacity}
-                            onChange={(e) => setFormData({ ...formData, totalCapacity: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                            className="vp-input tabular-nums"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="cover-type" className="vp-label">
-                            {t('wizard.coverLabel')}
-                          </label>
-                          <select
-                            id="cover-type"
-                            value={formData.isCovered ? 'true' : 'false'}
-                            onChange={(e) => setFormData({ ...formData, isCovered: e.target.value === 'true' })}
-                            className="vp-input"
-                          >
-                            <option value="true">{t('wizard.coveredOption')}</option>
-                            <option value="false">{t('wizard.openOption')}</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div role="group" aria-labelledby="wizard-vehicles">
-                        <span id="wizard-vehicles" className="vp-label">
-                          {t('wizard.vehicles')}
-                        </span>
-                        <div className="flex flex-wrap gap-2">
-                          {ALL_VEHICLE_TYPES.map((vt) => {
-                            const checked = formData.vehicleTypes.includes(vt);
-                            return (
-                              <button
-                                key={vt}
-                                type="button"
-                                aria-pressed={checked}
-                                onClick={() => handleToggleVehicle(vt)}
-                                className={`inline-flex min-h-[2.25rem] items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors ${
-                                  checked
-                                    ? 'border-[var(--transit-accent)] bg-[var(--accent-soft)] text-[var(--accent-soft-ink)]'
-                                    : 'border-hairline-strong bg-surface text-ink-2 hover:text-ink'
-                                }`}
-                              >
-                                {checked && <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
-                                {t(`wizard.vehicleTypes.${vt}`)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label htmlFor="dim-notes" className="vp-label">
-                            {t('wizard.dims')} {optional}
-                          </label>
-                          <input
-                            id="dim-notes"
-                            type="text"
-                            placeholder={t('wizard.dimsPlaceholder')}
-                            value={formData.dimensionsNotes}
-                            onChange={(e) => setFormData({ ...formData, dimensionsNotes: e.target.value })}
-                            className="vp-input"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="height-clear" className="vp-label">
-                            {t('wizard.height')} {optional}
-                          </label>
-                          <input
-                            id="height-clear"
-                            type="number"
-                            step="0.1"
-                            placeholder={t('wizard.heightPlaceholder')}
-                            value={formData.heightClearanceMeters}
-                            onChange={(e) => setFormData({ ...formData, heightClearanceMeters: e.target.value })}
-                            className="vp-input tabular-nums"
-                          />
-                        </div>
-                      </div>
-
-                      <label className="vp-panel flex cursor-pointer items-center justify-between gap-3 p-3.5">
-                        <span>
-                          <span className="block font-semibold text-ink">{t('wizard.ev')}</span>
-                          <span className="block text-xs text-ink-3">{t('wizard.evHint')}</span>
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={formData.hasEvCharging}
-                          onChange={(e) => setFormData({ ...formData, hasEvCharging: e.target.checked })}
-                          className="vp-check h-5 w-5"
-                        />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="total-capacity" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Total Vehicle Capacity (Whole Number) *
                       </label>
-                    </fieldset>
-                  )}
+                      <input
+                        id="total-capacity"
+                        type="number"
+                        min={1}
+                        max={200}
+                        step={1}
+                        value={formData.totalCapacity}
+                        onChange={(e) =>
+                          setFormData({ ...formData, totalCapacity: Math.max(1, parseInt(e.target.value, 10) || 1) })
+                        }
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="cover-type" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Covered or Open *
+                      </label>
+                      <select
+                        id="cover-type"
+                        value={formData.isCovered ? 'true' : 'false'}
+                        onChange={(e) => setFormData({ ...formData, isCovered: e.target.value === 'true' })}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
+                      >
+                        <option value="true">Covered / Basement / Stilt</option>
+                        <option value="false">Open Ground / Driveway</option>
+                      </select>
+                    </div>
+                  </div>
 
-                  {wizardStep === 3 && (
-                    <fieldset key="wizard-step-3" className={`${wizardStepEnter} space-y-4`}>
-                      <legend className="vp-h3 mb-3">3. {t('wizard.step3')}</legend>
+                  <div>
+                    <span className="font-bold text-slate-700 dark:text-ink-2 block mb-1.5">Allowed Vehicle Types</span>
+                    <div className="flex flex-wrap gap-2">
+                      {ALL_VEHICLE_TYPES.map((vt) => {
+                        const checked = formData.vehicleTypes.includes(vt.id);
+                        return (
+                          <button
+                            key={vt.id}
+                            type="button"
+                            onClick={() => handleToggleVehicle(vt.id)}
+                            className={`px-3 py-1.5 rounded-full border font-semibold transition-colors ${
+                              checked
+                                ? 'bg-blue-50 dark:bg-blue-500/10 border-[#0A5CFF] text-[#0A5CFF] dark:text-[var(--transit-accent)]'
+                                : 'bg-white dark:bg-surface border-slate-200 dark:border-hairline text-slate-600 dark:text-ink-2'
+                            }`}
+                          >
+                            {checked ? '✓ ' : ''}
+                            {vt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                      <div className="grid grid-cols-1 gap-3 tabular-nums sm:grid-cols-3">
-                        <div>
-                          <label htmlFor="rate-hourly" className="vp-label">
-                            {t('wizard.hourly')} {required}
-                          </label>
-                          <input
-                            id="rate-hourly"
-                            type="number"
-                            min={10}
-                            value={formData.hourlyRate}
-                            onChange={(e) => setFormData({ ...formData, hourlyRate: parseInt(e.target.value, 10) || 40 })}
-                            className="vp-input font-semibold"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="rate-daily" className="vp-label">
-                            {t('wizard.daily')} {optional}
-                          </label>
-                          <input
-                            id="rate-daily"
-                            type="number"
-                            value={formData.dailyRate}
-                            onChange={(e) => setFormData({ ...formData, dailyRate: parseInt(e.target.value, 10) || 0 })}
-                            className="vp-input font-semibold"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="rate-monthly" className="vp-label">
-                            {t('wizard.monthly')} {optional}
-                          </label>
-                          <input
-                            id="rate-monthly"
-                            type="number"
-                            value={formData.monthlyRate}
-                            onChange={(e) => setFormData({ ...formData, monthlyRate: parseInt(e.target.value, 10) || 0 })}
-                            className="vp-input font-semibold"
-                          />
-                        </div>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="dim-notes" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Dimensions / Notes (Optional)
+                      </label>
+                      <input
+                        id="dim-notes"
+                        type="text"
+                        placeholder="e.g. Fits SUVs up to 4.7m; straight reverse entry"
+                        value={formData.dimensionsNotes}
+                        onChange={(e) => setFormData({ ...formData, dimensionsNotes: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="height-clear" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Height Clearance in meters (Optional)
+                      </label>
+                      <input
+                        id="height-clear"
+                        type="number"
+                        step="0.1"
+                        placeholder="e.g. 2.2"
+                        value={formData.heightClearanceMeters}
+                        onChange={(e) => setFormData({ ...formData, heightClearanceMeters: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-mono"
+                      />
+                    </div>
+                  </div>
 
-                      <div>
-                        <label htmlFor="access-method" className="vp-label">
-                          {t('wizard.accessMethod')}
-                        </label>
-                        <select
-                          id="access-method"
-                          value={formData.accessMethod}
-                          onChange={(e) => setFormData({ ...formData, accessMethod: e.target.value as AccessMethod })}
-                          className="vp-input"
-                        >
-                          <option value="GATE_GUARD">{t('accessMethods.GATE_GUARD')}</option>
-                          <option value="BOOM_BARRIER">{t('accessMethods.BOOM_BARRIER')}</option>
-                          <option value="LOCKBOX_KEY">{t('accessMethods.LOCKBOX_KEY')}</option>
-                          <option value="REMOTE_CALL">{t('accessMethods.REMOTE_CALL')}</option>
-                          <option value="RFID">{t('accessMethods.RFID')}</option>
-                        </select>
-                      </div>
+                  <div className="p-3 bg-blue-50/70 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/30 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-slate-900 dark:text-ink block">EV Charging Point Available?</span>
+                      <span className="text-[11px] text-slate-600 dark:text-ink-2">Attract EV commuters needing slow/7.4kW charging</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      aria-label="EV charging available"
+                      checked={formData.hasEvCharging}
+                      onChange={(e) => setFormData({ ...formData, hasEvCharging: e.target.checked })}
+                      className="w-5 h-5 accent-[#0A5CFF] rounded"
+                    />
+                  </div>
+                </div>
+              )}
 
-                      <div>
-                        <label htmlFor="access-instructions" className="vp-label">
-                          {t('wizard.instructions')}
-                        </label>
-                        <textarea
-                          id="access-instructions"
-                          rows={2}
-                          value={formData.accessInstructions}
-                          onChange={(e) => setFormData({ ...formData, accessInstructions: e.target.value })}
-                          placeholder={t('wizard.instructionsPlaceholder')}
-                          aria-describedby="access-instructions-help"
-                          className="vp-input"
-                        />
-                        <p id="access-instructions-help" className="mt-1.5 flex items-center gap-1 text-xs font-medium text-[var(--info-ink)]">
-                          <Lock className="h-3 w-3" aria-hidden="true" />
-                          {t('wizard.instructionsPrivacy')}
-                        </p>
-                      </div>
+              {/* STEP 3 */}
+              {wizardStep === 3 && (
+                <div key="wizard-step-3" className={`${wizardStepEnter} space-y-4`}>
+                  <h3 className="font-black text-slate-900 dark:text-ink text-sm">3. Pricing (₹) &amp; Access Instructions</h3>
 
-                      <div>
-                        <label htmlFor="house-rules" className="vp-label">
-                          {t('wizard.houseRules')}
-                        </label>
+                  <div className="grid grid-cols-3 gap-2 font-mono">
+                    <div>
+                      <label htmlFor="rate-hourly" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Hourly (₹) *
+                      </label>
+                      <input
+                        id="rate-hourly"
+                        type="number"
+                        min={10}
+                        value={formData.hourlyRate}
+                        onChange={(e) => setFormData({ ...formData, hourlyRate: parseInt(e.target.value, 10) || 40 })}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="rate-daily" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Daily Optional (₹)
+                      </label>
+                      <input
+                        id="rate-daily"
+                        type="number"
+                        value={formData.dailyRate}
+                        onChange={(e) => setFormData({ ...formData, dailyRate: parseInt(e.target.value, 10) || 0 })}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="rate-monthly" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                        Monthly Optional (₹)
+                      </label>
+                      <input
+                        id="rate-monthly"
+                        type="number"
+                        value={formData.monthlyRate}
+                        onChange={(e) => setFormData({ ...formData, monthlyRate: parseInt(e.target.value, 10) || 0 })}
+                        className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="access-method" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                      Entry Access Method
+                    </label>
+                    <select
+                      id="access-method"
+                      value={formData.accessMethod}
+                      onChange={(e) => setFormData({ ...formData, accessMethod: e.target.value as AccessMethod })}
+                      className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5 font-semibold"
+                    >
+                      <option value="GATE_GUARD">Security Guard / Gate Verification</option>
+                      <option value="BOOM_BARRIER">Boom Barrier / Scanner</option>
+                      <option value="LOCKBOX_KEY">Key Lockbox</option>
+                      <option value="REMOTE_CALL">Call Host on Arrival</option>
+                      <option value="RFID">RFID Tag</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="access-instructions" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                      Driver Entry Instructions
+                    </label>
+                    <textarea
+                      id="access-instructions"
+                      rows={2}
+                      value={formData.accessInstructions}
+                      onChange={(e) => setFormData({ ...formData, accessInstructions: e.target.value })}
+                      placeholder="e.g. Ring bell at Gate 2 or share QR pass with society watchman."
+                      className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5"
+                    />
+                    <span className="text-[11px] text-[#0A5CFF] dark:text-[var(--transit-accent)] mt-1 block font-medium">
+                      Privacy rule: shown to drivers only after confirmed booking.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label htmlFor="house-rules" className="font-bold text-slate-700 dark:text-ink-2 block mb-1">
+                      House Rules (comma-separated)
+                    </label>
+                    <input
+                      id="house-rules"
+                      type="text"
+                      value={formData.houseRules}
+                      onChange={(e) => setFormData({ ...formData, houseRules: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-surface-alt border border-slate-300 dark:border-hairline-strong rounded-xl p-2.5"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: Photos (Min 3, EXIF stripped) & Right-to-Rent Proof */}
+              {wizardStep === 4 && (
+                <div key="wizard-step-4" className={`${wizardStepEnter} space-y-4`}>
+                  <div>
+                    <h3 className="font-black text-slate-900 dark:text-ink text-sm">
+                      4. Space Photos (Min 3, EXIF Stripped) &amp; Verification Proof
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-ink-3 mt-0.5">
+                      Required evidence for <strong>{PROVIDER_SITUATION_EVIDENCE[formData.providerSituation].label}</strong>:{' '}
+                      {PROVIDER_SITUATION_EVIDENCE[formData.providerSituation].requirement}.
+                    </p>
+                  </div>
+
+                  {/* Photos Uploader */}
+                  <div className="p-4 bg-slate-50 dark:bg-surface-alt rounded-2xl border border-slate-200 dark:border-hairline space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-bold text-slate-800 dark:text-ink">
+                        Space Photos ({formData.photos.length}/3 minimum required)
+                      </span>
+                      <div className="flex gap-2">
                         <input
-                          id="house-rules"
-                          type="text"
-                          value={formData.houseRules}
-                          onChange={(e) => setFormData({ ...formData, houseRules: e.target.value })}
-                          className="vp-input"
+                          ref={photoInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => handlePhotoUpload(e.target.files)}
                         />
-                      </div>
-                    </fieldset>
-                  )}
-
-                  {wizardStep === 4 && (
-                    <fieldset key="wizard-step-4" className={`${wizardStepEnter} space-y-4`}>
-                      <legend className="vp-h3 mb-3">4. {t('wizard.step4')}</legend>
-                      <p className="text-xs text-ink-2">
-                        {t('wizard.evidenceFor', {
-                          situation: situationLabel(formData.providerSituation),
-                          requirement: t(`wizard.requirements.${formData.providerSituation}`),
-                        })}
-                      </p>
-
-                      {/* Photos */}
-                      <div className="vp-panel space-y-3 p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-semibold text-ink">{t('wizard.photos', { count: formData.photos.length })}</span>
-                          <div className="flex flex-wrap gap-2">
-                            <input
-                              ref={photoInputRef}
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              multiple
-                              className="hidden"
-                              onChange={(e) => handlePhotoUpload(e.target.files)}
-                            />
-                            <button type="button" disabled={uploadingPhoto} onClick={() => photoInputRef.current?.click()} className="vp-btn vp-btn-primary vp-btn-sm">
-                              <Camera className="h-3.5 w-3.5" aria-hidden="true" />
-                              {uploadingPhoto ? t('wizard.uploading') : t('wizard.upload')}
-                            </button>
-                            {formData.photos.length < 3 && (
-                              <button type="button" disabled={uploadingPhoto} onClick={handleGenerateSamplePhotos} className="vp-btn vp-btn-secondary vp-btn-sm">
-                                {t('wizard.testPhotos')}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {formData.photos.length > 0 ? (
-                          <div className="grid grid-cols-3 gap-2">
-                            {formData.photos.map((url, idx) => (
-                              <div key={idx} className="relative h-24 overflow-hidden rounded-control border border-hairline bg-surface">
-                                <img src={url} alt={t('wizard.photoAlt', { n: idx + 1 })} className="h-full w-full object-cover" />
-                                <button
-                                  type="button"
-                                  aria-label={t('wizard.removePhoto', { n: idx + 1 })}
-                                  onClick={() =>
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      photos: prev.photos.filter((_, i) => i !== idx),
-                                    }))
-                                  }
-                                  className="absolute right-1 top-1 rounded-full bg-black/75 p-1.5 text-white hover:bg-red-600"
-                                >
-                                  <Trash2 className="h-3 w-3" aria-hidden="true" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-ink-3">{t('wizard.photosHint')}</p>
-                        )}
-                      </div>
-
-                      {/* Private right-to-rent proof */}
-                      <div className="vp-panel space-y-2.5 p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <span className="block font-semibold text-ink">{t('wizard.proof')}</span>
-                            <span className="text-xs text-ink-3">{t('wizard.docType', { type: t(`wizard.docTypes.${formData.docType}`) })}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <input
-                              ref={proofInputRef}
-                              type="file"
-                              accept=".pdf,image/jpeg,image/png,image/webp"
-                              className="hidden"
-                              onChange={(e) => handleProofUpload(e.target.files?.[0] || null)}
-                            />
-                            <button type="button" disabled={uploadingProof} onClick={() => proofInputRef.current?.click()} className="vp-btn vp-btn-inverse vp-btn-sm">
-                              <Upload className="h-3.5 w-3.5" aria-hidden="true" />
-                              {uploadingProof ? t('wizard.uploading') : t('wizard.selectDoc')}
-                            </button>
-                            {!formData.docFileName && (
-                              <button type="button" disabled={uploadingProof} onClick={handleGenerateSampleProof} className="vp-btn vp-btn-secondary vp-btn-sm">
-                                {t('wizard.samplePdf')}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {formData.docFileName ? (
-                          <div className="vp-alert vp-alert-success text-xs">
-                            <FileText className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                            <span>{t('wizard.uploaded', { file: formData.docFileName })}</span>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-ink-3">{t('wizard.docHint')}</p>
-                        )}
-                      </div>
-                    </fieldset>
-                  )}
-
-                  {/* Footer: back / save draft / next or submit */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {wizardStep > 1 && (
-                        <button type="button" onClick={() => setWizardStep(wizardStep - 1)} className="vp-btn vp-btn-ghost vp-btn-sm">
-                          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                          {t('wizard.back')}
+                        <button
+                          type="button"
+                          disabled={uploadingPhoto}
+                          onClick={() => photoInputRef.current?.click()}
+                          className="px-3 py-1.5 rounded-lg bg-[#0A5CFF] text-white font-bold flex items-center gap-1"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          {uploadingPhoto ? 'Uploading...' : 'Upload Photos'}
                         </button>
-                      )}
-                      <button type="button" disabled={isSubmitting} onClick={() => handleSaveListing(true)} className="vp-btn vp-btn-secondary vp-btn-sm">
-                        {t('wizard.draft')}
-                      </button>
+                        {formData.photos.length < 3 && (
+                          <button
+                            type="button"
+                            disabled={uploadingPhoto}
+                            onClick={handleGenerateSamplePhotos}
+                            className="px-3 py-1.5 rounded-lg bg-white dark:bg-surface border border-slate-300 dark:border-hairline-strong text-slate-700 dark:text-ink-2 font-semibold hover:bg-slate-100 dark:hover:bg-hairline"
+                          >
+                            + Add 3 Test Photos
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {wizardStep < 4 ? (
-                      <button type="button" onClick={() => setWizardStep(wizardStep + 1)} className="group/cta vp-btn vp-btn-primary vp-btn-sm">
-                        {t('wizard.next')}
-                        <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" aria-hidden="true" />
-                      </button>
+                    {formData.photos.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {formData.photos.map((url, idx) => (
+                          <div key={idx} className="relative h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-hairline bg-white dark:bg-surface">
+                            <img src={url} alt={`Space photo ${idx + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              aria-label="Remove photo"
+                              onClick={() =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  photos: prev.photos.filter((_, i) => i !== idx),
+                                }))
+                              }
+                              className="absolute top-1 right-1 p-1 rounded-full bg-slate-900/75 text-white hover:bg-red-600"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <button type="button" disabled={isSubmitting} onClick={() => handleSaveListing(false)} className="vp-btn vp-btn-primary vp-btn-sm">
-                        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                        {isSubmitting ? t('wizard.submitting') : t('wizard.submit')}
-                      </button>
+                      <p className="text-[11px] text-slate-500 dark:text-ink-3">
+                        Upload clear entrance, parking bay, and lane approach photos (JPEG/PNG/WebP, max 5 MB each; GPS EXIF removed automatically).
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Private Verification Proof Upload */}
+                  <div className="p-4 bg-slate-50 dark:bg-surface-alt rounded-2xl border border-slate-200 dark:border-hairline space-y-2.5">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-ink block">
+                          Proof of Right to Rent (Private &amp; Audit-Logged)
+                        </span>
+                        <span className="text-[11px] text-slate-500 dark:text-ink-3">
+                          Document type: <strong>{formData.docType.replace(/_/g, ' ')}</strong>
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          ref={proofInputRef}
+                          type="file"
+                          accept=".pdf,image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={(e) => handleProofUpload(e.target.files?.[0] || null)}
+                        />
+                        <button
+                          type="button"
+                          disabled={uploadingProof}
+                          onClick={() => proofInputRef.current?.click()}
+                          className="px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-700 text-white font-bold flex items-center gap-1"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          {uploadingProof ? 'Uploading...' : 'Select Document'}
+                        </button>
+                        {!formData.docFileName && (
+                          <button
+                            type="button"
+                            disabled={uploadingProof}
+                            onClick={handleGenerateSampleProof}
+                            className="px-3 py-1.5 rounded-lg bg-white dark:bg-surface border border-slate-300 dark:border-hairline-strong text-slate-700 dark:text-ink-2 font-semibold hover:bg-slate-100 dark:hover:bg-hairline"
+                          >
+                            Attach Sample PDF
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {formData.docFileName ? (
+                      <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-300 flex items-center gap-2 font-mono text-[11px]">
+                        <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>Uploaded to private storage: {formData.docFileName}</span>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-500 dark:text-ink-3">
+                        Stored outside public web directories; only accessible to authorized trust reviewers.
+                      </p>
                     )}
                   </div>
                 </div>
-              </WizardDialog>
-            </ModalPanel>
-          </ModalBackdrop>
-        )}
-      </Presence>
-    </div>
-  );
-}
+              )}
 
-/** Dialog shell for the listing wizard: focus trap, Escape to close, labelled. */
-function WizardDialog({ onClose, label, children }: { onClose: () => void; label: string; children: React.ReactNode }) {
-  const ref = useDialog<HTMLDivElement>(onClose);
-  return (
-    <div ref={ref} role="dialog" aria-modal="true" aria-label={label} className="vp-card flex max-h-[92vh] flex-col overflow-hidden shadow-raised">
-      {children}
+              {/* Footer Nav & Save Draft / Submit */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-100 dark:border-hairline">
+                <div className="flex items-center gap-2">
+                  {wizardStep > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(wizardStep - 1)}
+                      className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-surface-alt hover:bg-slate-200 dark:hover:bg-hairline-strong text-slate-700 dark:text-ink-2 font-semibold flex items-center gap-1"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      Back
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleSaveListing(true)}
+                    className="px-4 py-2 rounded-xl border border-slate-300 dark:border-hairline-strong hover:bg-slate-50 dark:hover:bg-surface-alt text-slate-800 dark:text-ink font-bold"
+                  >
+                    Save as Draft
+                  </button>
+                </div>
+
+                {wizardStep < 4 ? (
+                  <button
+                    type="button"
+                    onClick={() => setWizardStep(wizardStep + 1)}
+                    className="group/cta px-5 py-2 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold flex items-center gap-1 shadow-md transition-[background-color,transform] duration-150 active:scale-[0.97]"
+                  >
+                    Next Step
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 ease-out-quart group-hover/cta:translate-x-0.5" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleSaveListing(false)}
+                    className="px-5 py-2.5 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] disabled:opacity-60 text-white font-bold flex items-center gap-1.5 shadow-md"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    {isSubmitting ? 'Submitting...' : 'Submit for Verification'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </ModalPanel>
+        </ModalBackdrop>
+      )}
+      </Presence>
     </div>
   );
 }

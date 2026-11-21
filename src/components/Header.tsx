@@ -1,27 +1,43 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User, UserRole } from '@/types';
-import { useI18n } from '@/components/i18n/LanguageProvider';
-import { SiteHeader, type SiteNavItem } from '@/components/nav/SiteHeader';
-import { MenuLabel, NavMenu } from '@/components/nav/NavMenu';
-import { Bell, ChevronDown, FileText, Car, Calendar, LogOut, PlusCircle, ShieldCheck, Building2 } from 'lucide-react';
-
-type Tab = 'search' | 'bookings' | 'monthly' | 'provider' | 'admin';
+import { Language, getT, translations } from '@/lib/i18n';
+import { VParkLogo } from '@/components/VParkLogo';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { Presence } from '@/components/motion/Presence';
+import { DropdownSurface } from '@/components/motion/AnimatedModal';
+import { useSlidingIndicator } from '@/components/motion/useSlidingIndicator';
+import { MobileNav } from '@/components/MobileNav';
+import {
+  MapPin,
+  Bell,
+  User as UserIcon,
+  ChevronDown,
+  FileText,
+  Car,
+  Calendar,
+  LogOut,
+  PlusCircle,
+  ShieldCheck,
+  Globe,
+  Users,
+} from 'lucide-react';
 
 interface HeaderProps {
   currentUser: User | null;
   currentRole: UserRole;
   onRoleChange: (role: UserRole) => void;
   onAddCapability: (role: 'DRIVER' | 'PROVIDER') => void;
+  onSwitchDemoPersona?: (role: UserRole) => void;
   onOpenLogin: (intent?: 'driver' | 'provider') => void;
   onLogout: () => void;
-  activeTab: Tab;
-  onTabChange: (tab: Tab) => void;
+  activeTab: 'search' | 'bookings' | 'monthly' | 'provider' | 'admin';
+  onTabChange: (tab: 'search' | 'bookings' | 'monthly' | 'provider' | 'admin') => void;
   onOpenDpdp: () => void;
   onScrollHowItWorks: () => void;
-  /** Called after a new search location is chosen in the navbar. */
-  onLocationSelected: () => void;
+  currentLang?: Language;
+  onLangChange?: (lang: Language) => void;
   bookingsCount?: number;
 }
 
@@ -30,16 +46,22 @@ export function Header({
   currentRole,
   onRoleChange,
   onAddCapability,
+  onSwitchDemoPersona,
   onOpenLogin,
   onLogout,
   activeTab,
   onTabChange,
   onOpenDpdp,
   onScrollHowItWorks,
-  onLocationSelected,
+  currentLang = 'en',
+  onLangChange,
   bookingsCount = 0,
 }: HeaderProps) {
-  const { t } = useI18n();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const navPill = useSlidingIndicator(
+    activeTab === 'search' || activeTab === 'provider' || activeTab === 'monthly' ? activeTab : null
+  );
+  const t = getT(currentLang) || translations?.en || ({} as any);
 
   const hasDriver = currentUser?.roles?.includes('DRIVER') ?? false;
   const hasProvider = currentUser?.roles?.includes('PROVIDER') ?? false;
@@ -58,253 +80,408 @@ export function Header({
     onTabChange('provider');
   };
 
-  const navItems: SiteNavItem[] = [
-    { key: 'search', label: t('nav.findParking'), active: activeTab === 'search', onClick: () => onTabChange('search') },
-    { key: 'provider', label: t('nav.listSpace'), active: activeTab === 'provider', onClick: handleListSpaceClick },
-    { key: 'monthly', label: t('nav.forBusinesses'), active: activeTab === 'monthly', onClick: () => onTabChange('monthly') },
-    {
-      key: 'how',
-      label: t('nav.howItWorks'),
-      onClick: () => {
-        onTabChange('search');
-        setTimeout(onScrollHowItWorks, 50);
-      },
-    },
-    ...(hasAdmin
-      ? [
-          {
-            key: 'admin',
-            label: t('nav.admin'),
-            active: activeTab === 'admin',
-            icon: <ShieldCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />,
-            onClick: () => onTabChange('admin'),
-          },
-        ]
-      : []),
-  ];
-
-  const menuRow = (active: boolean) => `vp-menu-item ${active ? 'bg-surface-alt text-ink font-semibold' : ''}`;
-
   return (
-    <SiteHeader
-      navItems={navItems}
-      onLogoClick={() => onTabChange('search')}
-      locationMode="inline"
-      onLocationSelected={onLocationSelected}
-      actions={() =>
-        !currentUser ? (
-          <div className="hidden items-center gap-1 sm:flex">
+    <header className="vp-nav sticky top-0 z-40 select-none">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        {/* Brand Logo + Primary Navigation */}
+        <div className="flex items-center gap-5 lg:gap-8 min-w-0">
+          <button
+            type="button"
+            onClick={() => onTabChange('search')}
+            aria-label="VPark home: find parking"
+            className="flex items-center text-left rounded-sm flex-shrink-0"
+          >
+            <VParkLogo className="h-7 sm:h-8 w-auto" />
+          </button>
+
+          <nav
+            ref={navPill.containerRef}
+            aria-label="Main navigation"
+            className="relative hidden md:flex items-center gap-1"
+          >
+            {navPill.ready && (
+              <span
+                aria-hidden="true"
+                style={navPill.indicatorStyle}
+                className={`${navPill.indicatorClassName} vp-nav-pill rounded-full`}
+              />
+            )}
             <button
               type="button"
-              onClick={() => onOpenLogin('driver')}
-              className="vp-nav-cta inline-flex min-h-[2.25rem] items-center whitespace-nowrap rounded-full px-4 text-sm font-semibold"
+              ref={navPill.register('search')}
+              onClick={() => onTabChange('search')}
+              aria-current={activeTab === 'search' ? 'page' : undefined}
+              className={`vp-nav-link ${
+                activeTab === 'search' ? `vp-nav-link-active ${navPill.ready ? '' : 'vp-nav-pill'}` : ''
+              }`}
             >
-              {t('nav.logIn')}
+              {t.findParking}
             </button>
+
+            <button
+              type="button"
+              ref={navPill.register('provider')}
+              onClick={handleListSpaceClick}
+              aria-current={activeTab === 'provider' ? 'page' : undefined}
+              className={`vp-nav-link ${
+                activeTab === 'provider' ? `vp-nav-link-active ${navPill.ready ? '' : 'vp-nav-pill'}` : ''
+              }`}
+            >
+              {t.listSpace}
+            </button>
+
+            <button
+              type="button"
+              ref={navPill.register('monthly')}
+              onClick={() => onTabChange('monthly')}
+              aria-current={activeTab === 'monthly' ? 'page' : undefined}
+              className={`vp-nav-link ${
+                activeTab === 'monthly' ? `vp-nav-link-active ${navPill.ready ? '' : 'vp-nav-pill'}` : ''
+              }`}
+            >
+              For Businesses
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                onTabChange('search');
+                setTimeout(onScrollHowItWorks, 50);
+              }}
+              className="vp-nav-link"
+            >
+              {t.howItWorks}
+            </button>
+
+            {hasAdmin && (
+              <button
+                type="button"
+                onClick={() => onTabChange('admin')}
+                aria-current={activeTab === 'admin' ? 'page' : undefined}
+                className={`vp-nav-link gap-1.5 ${
+                  activeTab === 'admin'
+                    ? 'bg-amber-500/15 !text-amber-700 dark:!text-amber-300 ring-1 ring-inset ring-amber-500/40'
+                    : ''
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                {t.adminConsole}
+              </button>
+            )}
+          </nav>
+        </div>
+
+        {/* Right Side: Location, Language, Theme Toggle, Log in / Profile */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          {/* Pilot city (informational only) */}
+          <div className="vp-nav-control hidden xl:flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap">
+            <MapPin className="w-3.5 h-3.5 text-[var(--transit-accent)]" aria-hidden="true" />
+            <span>Bengaluru</span>
           </div>
-        ) : (
-          <>
+
+          {/* Current language (changed from the account menu) */}
+          {onLangChange && (
+            <span
+              className="vp-nav-ghost hidden lg:flex items-center gap-1 px-1.5 py-1 text-[11px] font-semibold uppercase"
+              title="Language can be changed from the account menu"
+            >
+              <Globe className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="sr-only">Language: </span>
+              {currentLang}
+            </span>
+          )}
+
+          <ThemeToggle />
+
+          {currentUser && (
             <button
               type="button"
               onClick={() => onTabChange('bookings')}
-              aria-label={t('nav.bookingsBadge', { count: bookingsCount })}
-              title={t('account.myBookings')}
-              className="vp-nav-control relative hidden sm:inline-flex"
+              aria-label="My Bookings & Notifications"
+              title="My Bookings & Notifications"
+              className="vp-nav-control relative h-8 w-8 flex items-center justify-center rounded-full"
             >
-              <Bell className="h-4 w-4" aria-hidden="true" />
+              <Bell className="w-3.5 h-3.5" />
               {bookingsCount > 0 && (
                 <span
                   key={bookingsCount}
-                  aria-hidden="true"
-                  className="absolute -right-1 -top-1 min-w-[1.125rem] rounded-full bg-brand px-1 text-center text-[10px] font-bold leading-[1.125rem] text-white animate-pop"
+                  className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-brand text-white text-[9px] font-bold leading-tight animate-pop"
                 >
                   {bookingsCount}
                 </span>
               )}
             </button>
+          )}
 
-            <NavMenu
-              panelClassName="w-72"
-              trigger={(props) => (
-                <button {...props} aria-label={t('account.openMenu')} className="vp-nav-control gap-2 pl-1 pr-2 sm:pr-2.5">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-bold text-white" aria-hidden="true">
-                    {(currentUser.name || 'V')[0].toUpperCase()}
-                  </span>
-                  <span className="hidden max-w-[8rem] truncate text-sm font-medium text-[var(--nav-ink)] md:inline">
-                    {currentUser.name || currentUser.phone}
-                  </span>
-                  <ChevronDown className="hidden h-3.5 w-3.5 sm:block" aria-hidden="true" />
-                </button>
-              )}
-            >
-              {({ close }) => (
-                <div role="menu" aria-label={t('account.openMenu')}>
-                  <div className="border-b border-hairline px-3 pb-2.5 pt-2">
-                    <span className="block truncate text-sm font-semibold text-ink">{currentUser.name || t('account.member')}</span>
-                    {currentUser.email && <span className="block truncate text-xs text-ink-3">{currentUser.email}</span>}
+          {!currentUser ? (
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenLogin('driver')}
+                className="vp-nav-ghost px-2 sm:px-3 py-1.5 text-xs font-semibold whitespace-nowrap"
+              >
+                {t.logIn}
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenLogin('driver')}
+                className="vp-nav-cta hidden sm:inline-flex px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap active:scale-[0.96]"
+              >
+                Sign up
+              </button>
+            </div>
+          ) : (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                aria-expanded={showProfileMenu}
+                aria-label="Open account menu"
+                className="vp-nav-control flex items-center gap-2 p-1.5 pl-2 sm:pl-2.5 pr-2 rounded-full"
+              >
+                <div className="w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center font-bold text-[10px]">
+                  {(currentUser.name || 'V')[0].toUpperCase()}
+                </div>
+                <span className="hidden sm:inline text-xs font-medium text-[var(--nav-ink)] max-w-[120px] truncate">
+                  {currentUser.name || currentUser.phone}
+                </span>
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform duration-200 ease-out-quart ${
+                    showProfileMenu ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              <Presence>
+              {showProfileMenu && (
+                <DropdownSurface
+                  className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-surface rounded-card border border-hairline-strong shadow-raised p-2 z-50 text-xs text-ink"
+                >
+                  <div className="px-3 py-2 border-b border-[var(--hairline)]">
+                    <span className="font-semibold text-[var(--ink)] block text-xs">
+                      {currentUser.name || 'VPark Member'}
+                    </span>
+                    <span className="text-[var(--ink-tertiary)] text-[11px] font-mono">
+                      {currentUser.phone} · BLR
+                    </span>
                   </div>
 
-                  <div role="group" aria-label={t('account.modes')} className="py-1.5">
-                    <MenuLabel>{t('account.modes')}</MenuLabel>
+                  {/* Account Capability Mode Switcher (PRD Section 4) */}
+                  <div className="py-1.5 space-y-0.5">
+                    <div className="px-3 py-1 font-mono text-[10px] text-[var(--ink-tertiary)] uppercase tracking-wider">
+                      Account Modes
+                    </div>
+
                     {hasDriver ? (
                       <button
                         type="button"
-                        role="menuitem"
                         onClick={() => {
                           onRoleChange('DRIVER');
                           onTabChange('search');
-                          close();
+                          setShowProfileMenu(false);
                         }}
-                        className={menuRow(currentRole === 'DRIVER' && activeTab !== 'provider')}
+                        className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between ${
+                          currentRole === 'DRIVER' && activeTab !== 'provider'
+                            ? 'bg-blue-50 dark:bg-blue-950/60 text-[#0A5CFF] dark:text-blue-400 font-semibold'
+                            : 'text-ink-2 hover:bg-surface-alt hover:text-ink'
+                        }`}
                       >
-                        <Car className="h-4 w-4 text-[var(--transit-accent)]" aria-hidden="true" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block">{t('account.driverMode')}</span>
-                          <span className="block text-xs font-normal text-ink-3">{t('account.driverModeHint')}</span>
+                        <span className="flex items-center gap-2">
+                          <Car className="w-4 h-4 text-[#0A5CFF]" />
+                          Driver Mode (Get parking)
                         </span>
-                        {currentRole === 'DRIVER' && <span className="vp-badge vp-badge-info">{t('common.active')}</span>}
+                        {currentRole === 'DRIVER' && (
+                          <span className="text-[10px] bg-blue-100 dark:bg-blue-900/60 text-[#0A5CFF] dark:text-blue-300 px-1.5 py-0.5 rounded font-bold">Active</span>
+                        )}
                       </button>
                     ) : (
                       <button
                         type="button"
-                        role="menuitem"
                         onClick={() => {
                           onAddCapability('DRIVER');
                           onTabChange('search');
-                          close();
+                          setShowProfileMenu(false);
                         }}
-                        className="vp-menu-item text-[var(--transit-accent)]"
+                        className="w-full text-left px-3 py-2 rounded-lg text-[#0A5CFF] dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 font-medium flex items-center gap-2"
                       >
-                        <PlusCircle className="h-4 w-4" aria-hidden="true" />
-                        {t('account.enableDriver')}
+                        <PlusCircle className="w-4 h-4" />
+                        Enable Driver Mode (1-click)
                       </button>
                     )}
 
                     {hasProvider ? (
                       <button
                         type="button"
-                        role="menuitem"
                         onClick={() => {
                           onRoleChange('PROVIDER');
                           onTabChange('provider');
-                          close();
+                          setShowProfileMenu(false);
                         }}
-                        className={menuRow(currentRole === 'PROVIDER' || activeTab === 'provider')}
+                        className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between ${
+                          currentRole === 'PROVIDER' || activeTab === 'provider'
+                            ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 font-semibold'
+                            : 'text-ink-2 hover:bg-surface-alt hover:text-ink'
+                        }`}
                       >
-                        <Building2 className="h-4 w-4 text-[var(--host-ink)]" aria-hidden="true" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block">{t('account.hostDashboard')}</span>
-                          <span className="block text-xs font-normal text-ink-3">{t('account.hostHint')}</span>
-                        </span>
-                        {currentRole === 'PROVIDER' && <span className="vp-badge vp-badge-host">{t('common.active')}</span>}
+                        <span>Host Dashboard (Rent your space)</span>
+                        {currentRole === 'PROVIDER' && (
+                          <span className="text-[10px] bg-purple-200 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 px-1.5 py-0.5 rounded font-bold">Active</span>
+                        )}
                       </button>
                     ) : (
                       <button
                         type="button"
-                        role="menuitem"
                         onClick={() => {
                           onAddCapability('PROVIDER');
                           onTabChange('provider');
-                          close();
+                          setShowProfileMenu(false);
                         }}
-                        className="vp-menu-item text-[var(--host-ink)]"
+                        className="w-full text-left px-3 py-2 rounded-lg text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/50 font-medium flex items-center gap-2"
                       >
-                        <PlusCircle className="h-4 w-4" aria-hidden="true" />
-                        {t('account.enableHost')}
+                        <PlusCircle className="w-4 h-4" />
+                        Add Host Capability (Rent space)
                       </button>
                     )}
 
                     {hasAdmin && (
                       <button
                         type="button"
-                        role="menuitem"
                         onClick={() => {
                           onRoleChange('ADMIN');
                           onTabChange('admin');
-                          close();
+                          setShowProfileMenu(false);
                         }}
-                        className={menuRow(activeTab === 'admin')}
+                        className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between ${
+                          activeTab === 'admin'
+                            ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold'
+                            : 'text-ink-2 hover:bg-surface-alt hover:text-ink'
+                        }`}
                       >
-                        <ShieldCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
-                        <span className="flex-1">{t('account.adminQueue')}</span>
-                        {activeTab === 'admin' && <span className="vp-badge vp-badge-warning">{t('common.active')}</span>}
+                        <span>Admin Verification Queue</span>
+                        {activeTab === 'admin' && (
+                          <span className="text-[10px] bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold">Active</span>
+                        )}
                       </button>
                     )}
                   </div>
 
-                  <div className="border-t border-hairline py-1.5">
+                  {/* Navigation Shortcuts & DPDP */}
+                  <div className="py-1.5 border-t border-hairline space-y-0.5">
                     <button
                       type="button"
-                      role="menuitem"
                       onClick={() => {
                         onTabChange('bookings');
-                        close();
+                        setShowProfileMenu(false);
                       }}
-                      className="vp-menu-item"
+                      className="w-full text-left px-3 py-2 rounded-lg text-ink-2 hover:bg-surface-alt hover:text-ink flex items-center gap-2"
                     >
-                      <Car className="h-4 w-4 text-ink-3" aria-hidden="true" />
-                      <span className="flex-1">{t('account.myBookings')}</span>
-                      {bookingsCount > 0 && <span className="vp-badge">{bookingsCount}</span>}
+                      <Car className="w-4 h-4 text-[#0A5CFF]" />
+                      {t.myBookings}
                     </button>
+
                     <button
                       type="button"
-                      role="menuitem"
                       onClick={() => {
                         onTabChange('monthly');
-                        close();
+                        setShowProfileMenu(false);
                       }}
-                      className="vp-menu-item"
+                      className="w-full text-left px-3 py-2 rounded-lg text-ink-2 hover:bg-surface-alt hover:text-ink flex items-center gap-2"
                     >
-                      <Calendar className="h-4 w-4 text-ink-3" aria-hidden="true" />
-                      {t('account.monthlyPasses')}
+                      <Calendar className="w-4 h-4 text-indigo-500" />
+                      {t.monthlyPasses}
                     </button>
+
                     <button
                       type="button"
-                      role="menuitem"
                       onClick={() => {
                         onOpenDpdp();
-                        close(false);
+                        setShowProfileMenu(false);
                       }}
-                      className="vp-menu-item"
+                      className="w-full text-left px-3 py-2 rounded-lg text-ink-2 hover:bg-surface-alt hover:text-ink flex items-center gap-2"
                     >
-                      <FileText className="h-4 w-4 text-ink-3" aria-hidden="true" />
-                      {t('account.privacy')}
+                      <FileText className="w-4 h-4 text-ink-3" />
+                      DPDP 2023 Data Privacy
                     </button>
                   </div>
 
-                  <div className="border-t border-hairline pt-1.5">
+                  {/* Language Selector (PRD Section 10) */}
+                  {onLangChange && (
+                    <div className="py-1.5 px-3 border-t border-hairline flex items-center justify-between">
+                      <span className="text-ink-3 flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5" />
+                        Language
+                      </span>
+                      <div className="flex gap-1">
+                        {(['en', 'kn', 'hi'] as Language[]).map((langCode) => (
+                          <button
+                            key={langCode}
+                            type="button"
+                            onClick={() => onLangChange(langCode)}
+                            className={`px-2 py-0.5 rounded font-semibold uppercase text-xs ${
+                              currentLang === langCode
+                                ? 'bg-[#0A5CFF] text-white'
+                                : 'bg-surface-alt text-ink-2 hover:bg-hairline'
+                            }`}
+                          >
+                            {langCode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Profile Actions: Logout */}
+                  <div className="pt-1.5 border-t border-slate-100 dark:border-slate-700">
+
                     <button
                       type="button"
-                      role="menuitem"
                       onClick={() => {
-                        close(false);
+                        setShowProfileMenu(false);
                         onLogout();
                       }}
-                      className="vp-menu-item text-[var(--danger-ink)] hover:text-[var(--danger-ink)]"
+                      className="w-full text-left px-3 py-2 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-medium flex items-center gap-2 transition-colors"
                     >
-                      <LogOut className="h-4 w-4" aria-hidden="true" />
-                      {t('account.signOut')}
+                      <LogOut className="w-4 h-4" />
+                      Sign out
                     </button>
                   </div>
-                </div>
+                </DropdownSurface>
               )}
-            </NavMenu>
-          </>
-        )
-      }
-      mobileFooter={
-        !currentUser ? (
-          <button type="button" onClick={() => onOpenLogin('driver')} className="vp-btn vp-btn-inverse w-full">
-            {t('nav.logIn')}
-          </button>
-        ) : (
-          <button type="button" onClick={() => onTabChange('bookings')} className="vp-btn vp-btn-secondary w-full">
-            <Bell className="h-4 w-4" aria-hidden="true" />
-            {t('account.myBookings')}
-            {bookingsCount > 0 && <span className="vp-badge">{bookingsCount}</span>}
-          </button>
-        )
-      }
-    />
+              </Presence>
+            </div>
+          )}
+
+          <MobileNav
+            items={[
+              { key: 'search', label: t.findParking, active: activeTab === 'search', onClick: () => onTabChange('search') },
+              { key: 'provider', label: t.listSpace, active: activeTab === 'provider', onClick: handleListSpaceClick },
+              { key: 'monthly', label: 'For Businesses', active: activeTab === 'monthly', onClick: () => onTabChange('monthly') },
+              {
+                key: 'how',
+                label: t.howItWorks,
+                onClick: () => {
+                  onTabChange('search');
+                  setTimeout(onScrollHowItWorks, 50);
+                },
+              },
+              ...(hasAdmin
+                ? [{ key: 'admin', label: t.adminConsole, active: activeTab === 'admin', onClick: () => onTabChange('admin') }]
+                : []),
+            ]}
+            footer={
+              !currentUser ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenLogin('driver')}
+                  className="vp-nav-cta w-full rounded-control px-3 py-2.5 text-sm font-bold sm:hidden"
+                >
+                  Sign up
+                </button>
+              ) : undefined
+            }
+          />
+        </div>
+      </div>
+    </header>
   );
 }

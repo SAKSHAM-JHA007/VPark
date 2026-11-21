@@ -1,10 +1,8 @@
 'use client';
 
-import React, { useId, useState } from 'react';
+import React, { useState } from 'react';
 import { ModalBackdrop, ModalPanel } from '@/components/motion/AnimatedModal';
-import { useDialog } from '@/components/motion/useDialog';
-import { useI18n } from '@/components/i18n/LanguageProvider';
-import { X, Download, Trash2, CheckCircle2, Lock, Loader2 } from 'lucide-react';
+import { X, Download, Trash2, CheckCircle2, Lock } from 'lucide-react';
 
 interface DpdpExportModalProps {
   onClose: () => void;
@@ -12,19 +10,20 @@ interface DpdpExportModalProps {
 }
 
 export function DpdpExportModal({ onClose, onDeleted }: DpdpExportModalProps) {
-  const { t } = useI18n();
-  const titleId = useId();
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [deletedSuccess, setDeletedSuccess] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const ref = useDialog<HTMLDivElement>(onClose);
 
   const handleDownload = () => {
     window.open('/api/user/export', '_blank');
   };
 
   const handleDelete = async () => {
-    if (!confirm(t('dpdp.confirm'))) {
+    if (
+      !confirm(
+        'Are you sure you want to permanently request deletion of your VPark account and personal data under DPDP 2023?'
+      )
+    ) {
       return;
     }
     setIsDeleting(true);
@@ -33,13 +32,13 @@ export function DpdpExportModal({ onClose, onDeleted }: DpdpExportModalProps) {
       const res = await fetch('/api/user/delete', { method: 'POST' });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error || t('dpdp.failed'));
+        setError(data.error || 'Could not process deletion request.');
       } else {
         setDeletedSuccess(true);
         if (onDeleted) setTimeout(onDeleted, 1200);
       }
     } catch {
-      setError(t('dpdp.network'));
+      setError('Network error submitting deletion request.');
     } finally {
       setIsDeleting(false);
     }
@@ -47,71 +46,86 @@ export function DpdpExportModal({ onClose, onDeleted }: DpdpExportModalProps) {
 
   return (
     <ModalBackdrop
-      className="fixed inset-0 z-60 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="DPDP Data Privacy"
     >
-      <ModalPanel className="my-auto w-full max-w-lg">
-        <div ref={ref} role="dialog" aria-modal="true" aria-labelledby={titleId} className="vp-card overflow-hidden shadow-raised">
-          <div className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-4">
-            <div className="flex items-center gap-2.5">
-              <Lock className="h-5 w-5 text-[var(--transit-accent)]" aria-hidden="true" />
-              <div>
-                <h2 id={titleId} className="text-base font-semibold text-ink">
-                  {t('dpdp.title')}
-                </h2>
-                <span className="text-xs text-ink-3">{t('dpdp.subtitle')}</span>
-              </div>
+      <ModalPanel className="w-full max-w-lg bg-white dark:bg-surface rounded-3xl shadow-2xl border border-slate-200 dark:border-hairline overflow-hidden">
+        <div className="bg-slate-900 dark:bg-surface-alt dark:border-b dark:border-hairline text-white dark:text-ink p-5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-blue-400" />
+            <div>
+              <span className="font-bold text-base block">Data Privacy & Consent Rights</span>
+              <span className="text-[11px] text-slate-400 dark:text-ink-3">
+                India Digital Personal Data Protection Act, 2023 (DPDP)
+              </span>
             </div>
-            <button
-              type="button"
-              aria-label={t('dpdp.close')}
-              onClick={onClose}
-              className="rounded-full p-2 text-ink-3 transition-colors hover:bg-surface-alt hover:text-ink"
-            >
-              <X className="h-5 w-5" aria-hidden="true" />
-            </button>
           </div>
+          <button
+            type="button"
+            aria-label="Close privacy dialog"
+            onClick={onClose}
+            className="p-1 rounded-full text-slate-400 dark:text-ink-3 hover:text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-          <div className="space-y-4 p-5 text-sm sm:p-6">
-            <p className="leading-relaxed text-ink-2">{t('dpdp.intro')}</p>
+        <div className="p-6 space-y-4 text-xs">
+          <p className="text-slate-600 dark:text-ink-2 leading-relaxed">
+            Under India&apos;s DPDP Act 2023 (PRD Section 10), your accepted legal consent versions, timestamps, IP audit trail, registered vehicles, listings, and bookings belong to you.
+          </p>
 
-            {error && (
-              <div role="alert" className="vp-alert vp-alert-danger">
-                {error}
-              </div>
-            )}
+          {error && (
+            <div role="alert" className="p-3 bg-red-50 dark:bg-red-500/10 text-red-800 dark:text-red-300 rounded-xl border border-red-200 dark:border-red-500/30 font-medium">
+              {error}
+            </div>
+          )}
 
-            <div className="vp-panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-3 pt-2">
+            <div className="p-4 bg-slate-50 dark:bg-surface-alt rounded-2xl border border-slate-200 dark:border-hairline flex items-center justify-between gap-4">
               <div>
-                <h3 className="font-semibold text-ink">{t('dpdp.exportTitle')}</h3>
-                <p className="mt-0.5 text-xs text-ink-3">{t('dpdp.exportBody')}</p>
+                <span className="font-bold text-slate-900 dark:text-ink text-sm block">Download Personal Data Archive</span>
+                <span className="text-slate-500 dark:text-ink-3 text-[11px] block">
+                  Export complete JSON archive including consent logs, profile, vehicles, and bookings.
+                </span>
               </div>
-              <button type="button" onClick={handleDownload} className="vp-btn vp-btn-primary vp-btn-sm flex-shrink-0">
-                <Download className="h-4 w-4" aria-hidden="true" />
-                {t('dpdp.exportCta')}
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="px-4 py-2 rounded-xl bg-[#0A5CFF] hover:bg-[#0046D5] text-white font-bold flex items-center gap-1.5 shadow-sm flex-shrink-0"
+              >
+                <Download className="w-4 h-4" />
+                Export
               </button>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-control border border-[var(--danger-border)] bg-[var(--danger-bg)] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="p-4 bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-200 dark:border-red-500/30 flex items-center justify-between gap-4">
               <div>
-                <h3 className="font-semibold text-[var(--danger-ink)]">{t('dpdp.deleteTitle')}</h3>
-                <p className="mt-0.5 text-xs text-ink-2">{t('dpdp.deleteBody')}</p>
+                <span className="font-bold text-red-900 dark:text-red-300 text-sm block">Request Data Deletion</span>
+                <span className="text-red-700 dark:text-red-300 text-[11px] block">
+                  Soft-delete account, anonymise PII, and suspend active listings immediately.
+                </span>
               </div>
-              <button type="button" onClick={handleDelete} disabled={isDeleting || deletedSuccess} className="vp-btn vp-btn-danger vp-btn-sm flex-shrink-0">
-                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
-                {deletedSuccess ? t('dpdp.deleted') : isDeleting ? t('dpdp.deleting') : t('dpdp.deleteCta')}
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting || deletedSuccess}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold flex items-center gap-1.5 shadow-sm flex-shrink-0"
+              >
+                <Trash2 className="w-4 h-4" />
+                {deletedSuccess ? 'Deleted' : isDeleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
-
-            {deletedSuccess && (
-              <div role="status" className="vp-alert vp-alert-success">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                <span>{t('dpdp.deletedNotice')}</span>
-              </div>
-            )}
           </div>
+
+          {deletedSuccess && (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 rounded-xl border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Account marked deletion-pending and personal data purged. Signing out...</span>
+            </div>
+          )}
         </div>
       </ModalPanel>
     </ModalBackdrop>

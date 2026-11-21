@@ -1,18 +1,9 @@
 'use client';
 
-import React, { useId, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { useI18n } from '@/components/i18n/LanguageProvider';
-
-type Field = 'name' | 'email' | 'subject' | 'message';
 
 export function ContactForm() {
-  const { t } = useI18n();
-  const uid = useId();
-  const fieldId = (f: Field) => `${uid}-${f}`;
-  const errorId = (f: Field) => `${uid}-${f}-error`;
-  const formRef = useRef<HTMLFormElement>(null);
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -23,85 +14,61 @@ export function ContactForm() {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<Field, string>>>({});
-
-  const validate = (): Partial<Record<Field, string>> => {
-    const errors: Partial<Record<Field, string>> = {};
-    if (formData.name.trim().length < 2) errors.name = t('contactForm.errName');
-    if (!formData.email.trim() || !formData.email.includes('@')) errors.email = t('contactForm.errEmail');
-    if (formData.subject.trim().length < 3) errors.subject = t('contactForm.errSubject');
-    if (formData.message.trim().length < 10) errors.message = t('contactForm.errMessage');
-    return errors;
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const errors = validate();
-    setFieldErrors(errors);
-    const firstInvalid = (Object.keys(errors) as Field[])[0];
-    if (firstInvalid) {
-      setErrorMessage(t('contactForm.errSummary'));
-      formRef.current?.querySelector<HTMLElement>(`#${CSS.escape(fieldId(firstInvalid))}`)?.focus();
+    // Validation
+    if (!formData.name.trim() || formData.name.trim().length < 2) {
+      setErrorMessage('Please provide your name (minimum 2 characters).');
+      return;
+    }
+    if (!formData.email.trim() || !formData.email.includes('@')) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+    if (!formData.subject.trim() || formData.subject.trim().length < 3) {
+      setErrorMessage('Please provide a subject for your inquiry.');
+      return;
+    }
+    if (!formData.message.trim() || formData.message.trim().length < 10) {
+      setErrorMessage('Message must be at least 10 characters long.');
       return;
     }
 
     setSubmitting(true);
+
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+
       const data = await res.json();
+
       if (res.ok && data.success) {
-        setSuccessMessage(data.message || t('contactForm.successDefault'));
+        setSuccessMessage(data.message || 'Thank you for your message! Our team will respond within 24 hours.');
         setFormData({ name: '', email: '', subject: '', message: '', hp: '' });
       } else {
-        setErrorMessage(data.error || t('contactForm.errFailed'));
+        setErrorMessage(data.error || 'Failed to send message. Please try again.');
       }
     } catch {
-      setErrorMessage(t('common.networkError'));
+      setErrorMessage('A network error occurred while submitting. Please check your connection.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const update = (field: Field, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (fieldErrors[field]) setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  const inputProps = (field: Field) => ({
-    id: fieldId(field),
-    'aria-invalid': fieldErrors[field] ? true : undefined,
-    'aria-describedby': fieldErrors[field] ? errorId(field) : undefined,
-    className: 'vp-input',
-  });
-
-  const label = (field: Field, text: string) => (
-    <label htmlFor={fieldId(field)} className="vp-label">
-      {text} <span aria-hidden="true" className="text-[var(--danger-ink)]">*</span>
-      <span className="sr-only">({t('common.required')})</span>
-    </label>
-  );
-
-  const fieldError = (field: Field) =>
-    fieldErrors[field] ? (
-      <p id={errorId(field)} className="vp-field-error">
-        {fieldErrors[field]}
-      </p>
-    ) : null;
-
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       {/* Honeypot field for bot spam prevention */}
       <div className="hidden" aria-hidden="true">
-        <label htmlFor={`${uid}-hp`}>{t('contactForm.honeypot')}</label>
+        <label htmlFor="form_hp_field">Do not fill this</label>
         <input
-          id={`${uid}-hp`}
+          id="form_hp_field"
           type="text"
           value={formData.hp}
           onChange={(e) => setFormData({ ...formData, hp: e.target.value })}
@@ -111,82 +78,111 @@ export function ContactForm() {
       </div>
 
       {successMessage && (
-        <div role="status" className="vp-alert vp-alert-success animate-fade-in">
-          <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 animate-pop" aria-hidden="true" />
-          <div className="space-y-0.5">
-            <p className="font-semibold">{t('contactForm.successTitle')}</p>
-            <p>{successMessage}</p>
+        <div
+          role="status"
+          className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 flex items-start gap-3 text-sm animate-fade-in"
+        >
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold">Message Delivered</p>
+            <p className="text-xs leading-relaxed">{successMessage}</p>
           </div>
         </div>
       )}
 
       {errorMessage && (
-        <div role="alert" className="vp-alert vp-alert-danger animate-fade-in">
-          <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" aria-hidden="true" />
-          <p className="font-semibold">{errorMessage}</p>
+        <div
+          role="alert"
+          className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 flex items-start gap-3 text-sm animate-fade-in"
+        >
+          <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs font-semibold">{errorMessage}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          {label('name', t('contactForm.name'))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label htmlFor="contact_name" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+            Full Name <span className="text-rose-500">*</span>
+          </label>
           <input
-            {...inputProps('name')}
+            id="contact_name"
             type="text"
             required
             autoComplete="name"
-            placeholder={t('contactForm.namePlaceholder')}
+            placeholder="e.g. Ramesh Patel"
             value={formData.name}
-            onChange={(e) => update('name', e.target.value)}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5CFF] transition-all"
           />
-          {fieldError('name')}
         </div>
-        <div>
-          {label('email', t('contactForm.email'))}
+
+        <div className="space-y-1.5">
+          <label htmlFor="contact_email" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+            Email Address <span className="text-rose-500">*</span>
+          </label>
           <input
-            {...inputProps('email')}
+            id="contact_email"
             type="email"
             required
             autoComplete="email"
-            placeholder={t('contactForm.emailPlaceholder')}
+            placeholder="name@example.com"
             value={formData.email}
-            onChange={(e) => update('email', e.target.value)}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5CFF] transition-all"
           />
-          {fieldError('email')}
         </div>
       </div>
 
-      <div>
-        {label('subject', t('contactForm.subject'))}
+      <div className="space-y-1.5">
+        <label htmlFor="contact_subject" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+          Subject / Inquiry Type <span className="text-rose-500">*</span>
+        </label>
         <input
-          {...inputProps('subject')}
+          id="contact_subject"
           type="text"
           required
-          placeholder={t('contactForm.subjectPlaceholder')}
+          placeholder="e.g. Host listing inquiry, EV charger request, or booking support"
           value={formData.subject}
-          onChange={(e) => update('subject', e.target.value)}
+          onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5CFF] transition-all"
         />
-        {fieldError('subject')}
       </div>
 
-      <div>
-        {label('message', t('contactForm.message'))}
+      <div className="space-y-1.5">
+        <label htmlFor="contact_message" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+          Your Message <span className="text-rose-500">*</span>
+        </label>
         <textarea
-          {...inputProps('message')}
+          id="contact_message"
           required
           rows={5}
-          maxLength={2000}
-          placeholder={t('contactForm.messagePlaceholder')}
+          placeholder="Please describe how we can assist you..."
           value={formData.message}
-          onChange={(e) => update('message', e.target.value)}
+          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A5CFF] transition-all resize-y"
         />
-        {fieldError('message')}
-        <p className="mt-1 text-right text-xs tabular-nums text-ink-3">{t('contactForm.chars', { count: formData.message.length })}</p>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 text-right">
+          {formData.message.length}/2000 characters
+        </p>
       </div>
 
-      <button type="submit" disabled={submitting} className="vp-btn vp-btn-primary w-full sm:w-auto">
-        {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
-        {submitting ? t('contactForm.sending') : t('contactForm.send')}
+      <button
+        type="submit"
+        disabled={submitting}
+        className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#0A5CFF] hover:bg-[#0047d4] text-white font-bold text-sm inline-flex items-center justify-center gap-2 transition-[background-color,box-shadow,transform] duration-150 hover:shadow-lg enabled:active:scale-[0.97] shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {submitting ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Sending Message...</span>
+          </>
+        ) : (
+          <>
+            <Send className="w-4 h-4" />
+            <span>Send Message</span>
+          </>
+        )}
       </button>
     </form>
   );
