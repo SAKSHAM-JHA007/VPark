@@ -4,42 +4,55 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { VParkLogo } from '@/components/VParkLogo';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
+import { ThemeToggle } from '@/components/nav/ThemeToggle';
+import { signInWithGooglePopup, signOutFirebase } from '@/lib/firebase';
+import { ShieldCheck, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 
+// Admin access is granted only to Google accounts whose Firebase UID is on the
+// server-side VPARK_ADMIN_FIREBASE_UIDS allowlist. There is no admin password.
 export default function MasterAdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAdminSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleAdminSignIn = async () => {
     setError(null);
     setLoading(true);
-    // Scratchpad ready for your new custom admin authentication
     try {
-      const res = await fetch('/api/auth/login', {
+      const cred = await signInWithGooglePopup();
+      const idToken = await cred.user.getIdToken(true);
+      const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role: 'ADMIN' }),
+        body: JSON.stringify({ idToken, intent: 'driver' }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error || 'Authentication endpoint ready to be built.');
+        setError(data.error || 'Google sign-in could not be verified.');
+        return;
+      }
+      if (!data.isMasterAdmin) {
+        // Not an administrator: do not leave a session behind from the admin page.
+        await fetch('/api/auth/logout', { method: 'POST' });
+        await signOutFirebase();
+        setError('This Google account is not authorized for the admin console.');
         return;
       }
       router.push('/driver/home?tab=admin');
-    } catch {
-      setError('Admin auth ready for implementation.');
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') {
+        setError('Google sign-in window was closed.');
+      } else {
+        setError('Google sign-in is unavailable right now. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between font-mono">
+    <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between font-sans">
+      {/* Header */}
       <header className="vp-nav px-4 sm:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <VParkLogo className="h-7 w-auto" />
@@ -59,17 +72,18 @@ export default function MasterAdminLoginPage() {
         </div>
       </header>
 
+      {/* Main Terminal */}
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-md bg-surface rounded-card border border-hairline p-6 sm:p-8 shadow-raised space-y-6 animate-scale-in">
           <div className="space-y-2 text-center">
-            <div className="w-12 h-12 rounded-control bg-[var(--nav-active-bg)] text-[var(--transit-accent)] flex items-center justify-center mx-auto shadow-inner">
+            <div className="w-12 h-12 rounded-control bg-[var(--nav-active-bg)] text-[var(--transit-accent)] flex items-center justify-center mx-auto shadow-inner animate-pop [animation-delay:150ms]">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <h1 className="text-lg font-bold uppercase tracking-wider text-ink">
               Master Admin Terminal
             </h1>
             <p className="text-xs text-ink-2">
-              Clean admin scratchpad ready for your new auth flow.
+              Restricted access for system administrator only.
             </p>
           </div>
 
@@ -79,48 +93,38 @@ export default function MasterAdminLoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleAdminSignIn} className="space-y-4">
-            <div>
-              <label className="block text-[11px] uppercase tracking-wider text-ink-2 mb-1">
-                Admin Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@vpark.in"
-                className="w-full px-3 py-2 text-xs rounded-sm border border-hairline bg-canvas text-ink focus:outline-none focus:border-brand"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] uppercase tracking-wider text-ink-2 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-3 py-2 text-xs rounded-sm border border-hairline bg-canvas text-ink focus:outline-none focus:border-brand"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-sm bg-brand hover:bg-brand-hover text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign In'}
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={handleGoogleAdminSignIn}
+            disabled={loading}
+            className="w-full py-3 rounded-control bg-brand hover:bg-brand-hover text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 enabled:active:scale-[0.98] shadow-lg shadow-blue-500/20 disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Verifying Google identity...</span>
+              </>
+            ) : (
+              <>
+                <span>Continue with Google</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+
+          <p className="text-[11px] text-ink-3 text-center">
+            Sign in with an authorized administrator Google account. Access is verified on the server.
+          </p>
 
           <div className="pt-2 border-t border-hairline text-center">
-            <Link href="/" className="text-[11px] text-ink-3 hover:text-ink transition-colors">
-              Return to Platform Home
+            <Link href="/login" className="text-[11px] text-ink-3 hover:text-ink transition-colors">
+              Return to Standard Login
             </Link>
           </div>
         </div>
       </main>
 
+      {/* Footer */}
       <footer className="border-t border-hairline py-3 text-center text-[10px] text-ink-3">
         VPark · Admin access only
       </footer>

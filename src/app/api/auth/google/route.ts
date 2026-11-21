@@ -10,7 +10,21 @@ export async function POST(req: NextRequest) {
     if (!getSessionManager()) return sessionUnavailableResponse();
 
     const body = await req.json();
-    const { uid, email, name, photoUrl, intent } = body || {};
+    let { uid, email, name, photoUrl, intent, idToken } = body || {};
+
+    // If email wasn't passed directly, extract standard claims from the client ID token
+    if ((!email || !uid) && idToken && typeof idToken === 'string') {
+      try {
+        const parts = idToken.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+          email = email || payload.email;
+          uid = uid || payload.user_id || payload.sub;
+          name = name || payload.name;
+          photoUrl = photoUrl || payload.picture;
+        }
+      } catch {}
+    }
 
     const cleanEmail = (email || '').trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
